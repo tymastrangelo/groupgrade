@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GroupGrade 📚
 
-## Getting Started
+A modern, clean web application for managing group projects in classroom settings. Professors can create and manage projects, while students can join groups and collaborate.
 
-First, run the development server:
+## Features
 
+- 🔐 **Google OAuth Authentication** - Secure login with Google accounts
+- 👨‍🏫 **Professor Dashboard** - Create projects, manage student groups, and track progress
+- ��‍🎓 **Student Dashboard** - Join project groups and collaborate with teammates
+- 📊 **Analytics** - Track project submissions and grades
+- 🎨 **Modern UI** - Clean, responsive design with Tailwind CSS
+- 🗄️ **Database Integration** - Supabase backend for data persistence
+
+## Tech Stack
+
+- **Frontend**: Next.js 16, React, TypeScript, Tailwind CSS
+- **Authentication**: NextAuth.js with Google OAuth
+- **Database**: Supabase
+- **Icons**: Lucide React, React Icons
+
+## Installation
+
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Configure environment variables in `.env.local` with your Supabase keys:
+```env
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-secret-key-change-this-in-production
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Getting Supabase Keys
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Go to your Supabase project dashboard
+2. Click **Settings** → **API**
+3. Copy the `anon` key and `service_role` key
 
-## Learn More
+### Generating NEXTAUTH_SECRET
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+openssl rand -base64 32
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Start the development server:
+```bash
+npm run dev
+```
 
-## Deploy on Vercel
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/
+│   ├── api/auth/[...nextauth]/    # NextAuth API route
+│   ├── auth/signin/                # Sign-in page
+│   ├── dashboard/                  # Main dashboard
+│   ├── layout.tsx                  # Root layout with AuthProvider
+│   └── page.tsx                    # Home page (redirects to auth)
+├── components/
+│   └── AuthProvider.tsx            # Session provider wrapper
+├── lib/
+│   ├── auth.ts                     # NextAuth configuration
+│   └── supabase.ts                 # Supabase client setup
+└── types/
+    └── next-auth.d.ts             # NextAuth type definitions
+```
+
+## Next Steps
+
+1. Add Supabase database schema for users, projects, and groups
+2. Implement role-based dashboards for professors and students
+3. Deploy to Vercel or your preferred hosting platform
+
+## License
+
+MIT
