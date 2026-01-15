@@ -5,33 +5,81 @@ import { FcGoogle } from 'react-icons/fc';
 
 export default function SignInPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-xl p-8 space-y-6">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">GroupGrade</h1>
-          <p className="text-gray-600">Manage group projects with ease</p>
-        </div>
+    <>
+      <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+          font-family: 'Lexend', sans-serif;
+        }
+      `}} />
+      
+      <div className="min-h-screen bg-[#f6f6f8] dark:bg-[#101622] flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Branding Card */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-3 mb-4">
+              <div className="size-12 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg">
+                <span className="material-symbols-outlined text-2xl">account_balance</span>
+              </div>
+              <div className="flex flex-col text-left">
+                <h1 className="text-[#111318] dark:text-white text-2xl font-bold leading-tight">GroupGrade</h1>
+                <p className="text-[#616f89] text-sm font-normal">Academic Portal</p>
+              </div>
+            </div>
+          </div>
 
-        <div className="space-y-4">
-          <p className="text-center text-gray-700">
-            Sign in with your Google account to get started
-          </p>
+          {/* Sign In Card */}
+          <div className="bg-white dark:bg-[#1a202c] rounded-xl shadow-lg border border-[#e5e7eb] dark:border-[#2d3748] p-8 space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold text-[#111318] dark:text-white">Welcome Back</h2>
+              <p className="text-[#616f89] text-sm">
+                Sign in with your Google account to continue
+              </p>
+            </div>
 
-          <button
-            onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
-            className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-900 font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-md active:scale-95"
-          >
-            <FcGoogle className="text-2xl" />
-            Sign in with Google
-          </button>
-        </div>
+            <div className="space-y-4 pt-4">
+              <button
+                onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+                className="w-full flex items-center justify-center gap-3 bg-white dark:bg-[#1a202c] border-2 border-[#e5e7eb] dark:border-[#2d3748] hover:border-primary dark:hover:border-primary text-[#111318] dark:text-white font-semibold py-3.5 px-4 rounded-lg transition-all duration-200 hover:shadow-md active:scale-[0.98]"
+              >
+                <FcGoogle className="text-2xl" />
+                <span className="text-sm">Continue with Google</span>
+              </button>
 
-        <div className="pt-6 border-t border-gray-200">
-          <p className="text-xs text-center text-gray-500">
-            By signing in, you agree to our Terms of Service and Privacy Policy
-          </p>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-[#e5e7eb] dark:border-[#2d3748]"></div>
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="px-2 bg-white dark:bg-[#1a202c] text-[#616f89]">
+                    Secure authentication via Google
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-[#e5e7eb] dark:border-[#2d3748]">
+              <p className="text-xs text-center text-[#616f89]">
+                By signing in, you agree to our{' '}
+                <a href="#" className="text-primary hover:underline font-medium">Terms of Service</a>
+                {' '}and{' '}
+                <a href="#" className="text-primary hover:underline font-medium">Privacy Policy</a>
+              </p>
+            </div>
+          </div>
+
+          {/* Additional Info */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-[#616f89]">
+              Need help? <a href="#" className="text-primary hover:underline font-medium">Contact Support</a>
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
