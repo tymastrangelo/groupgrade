@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { TeacherContent } from './TeacherContent';
 import { StudentContent } from './StudentContent';
 
@@ -9,9 +9,8 @@ export default function Dashboard() {
   const { data: session } = useSession();
   const [userRole, setUserRole] = useState<'teacher' | 'student'>('teacher');
 
-  const handleSignOut = () => {
-    // For demo mode, just redirect to signin page
-    window.location.href = '/auth/signin';
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: '/' });
   };
 
   const isTeacher = userRole === 'teacher';
