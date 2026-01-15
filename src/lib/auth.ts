@@ -10,21 +10,8 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: {
     signIn: '/auth/signin',
+    error: '/auth/signin',
   },
-  callbacks: {
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.sub || '';
-        session.user.email = token.email || '';
-        session.user.name = token.name || '';
-      }
-      return session;
-    },
-    async jwt({ token, user }) {
-      if (user) {
-        token.sub = user.id;
-      }
-      return token;
-    },
-  },
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: true,
 };
