@@ -1,13 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { signIn } from 'next-auth/react';
 
 export default function Home() {
-  const handleGoogleSignIn = async () => {
-    await signIn('google', { callbackUrl: '/dashboard' });
-  };
-
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-white dark:bg-background-dark">
       {/* Navigation Bar */}
@@ -33,12 +28,12 @@ export default function Home() {
 
           {/* Right Buttons */}
           <div className="flex items-center gap-4">
-            <button className="hidden sm:flex min-w-[100px] items-center justify-center rounded-lg h-10 px-4 bg-transparent border border-[#dbdfe6] dark:border-[#2a303c] text-sm font-bold text-[#111318] dark:text-white hover:bg-white/10">
-              <Link href="/auth/signin">Log In</Link>
-            </button>
-            <button onClick={handleGoogleSignIn} className="flex min-w-[120px] items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+            <Link href="/auth/signin" className="hidden sm:flex min-w-[100px] items-center justify-center rounded-lg h-10 px-4 bg-transparent border border-[#dbdfe6] dark:border-[#2a303c] text-sm font-bold text-[#111318] dark:text-white hover:bg-white/10">
+              Log In
+            </Link>
+            <Link href="/auth/signin" className="flex min-w-[120px] items-center justify-center rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
               Get Started
-            </button>
+            </Link>
           </div>
         </div>
       </header>
@@ -62,8 +57,8 @@ export default function Home() {
                   The accountability platform for college courses that ensures every student's contribution is seen, tracked, and graded fairly.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <button
-                    onClick={handleGoogleSignIn}
+                  <Link
+                    href="/auth/signin"
                     className="flex w-full sm:w-auto min-w-[240px] items-center justify-center gap-3 rounded-xl h-14 px-6 bg-[#135bec] text-white text-lg font-bold shadow-xl shadow-primary/30 hover:translate-y-[-2px] transition-all"
                   >
                     <svg className="w-6 h-6" viewBox="0 0 24 24">
@@ -73,7 +68,7 @@ export default function Home() {
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="currentColor"></path>
                     </svg>
                     Sign in with Google
-                  </button>
+                  </Link>
                   <span className="text-sm font-medium text-gray-500">No credit card required</span>
                 </div>
               </div>
@@ -215,15 +210,15 @@ export default function Home() {
                 Join thousands of students and instructors who have brought transparency to the classroom.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full justify-center">
-                <button
-                  onClick={handleGoogleSignIn}
+                <Link
+                  href="/auth/signin"
                   className="flex min-w-[200px] items-center justify-center rounded-xl h-14 px-8 bg-white text-primary text-lg font-bold shadow-2xl hover:bg-gray-50 transition-all"
                 >
                   Sign up for free
-                </button>
-                <button className="flex min-w-[200px] items-center justify-center rounded-xl h-14 px-8 bg-primary/20 border border-white/30 text-white text-lg font-bold hover:bg-primary/30 transition-all">
-                  <Link href="/auth/signin">For Instructors</Link>
-                </button>
+                </Link>
+                <Link href="/auth/signin" className="flex min-w-[200px] items-center justify-center rounded-xl h-14 px-8 bg-primary/20 border border-white/30 text-white text-lg font-bold hover:bg-primary/30 transition-all">
+                  For Instructors
+                </Link>
               </div>
             </div>
           </div>
