@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 
 interface SkillRating {
   name: string;
@@ -21,9 +21,9 @@ const SKILLS: Omit<SkillRating, 'value'>[] = [
 export default function SurveyPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [skills, setSkills] = useState<SkillRating[]>(
-    SKILLS.map(skill => ({ ...skill, value: 3 }))
-  );
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [skills, setSkills] = useState<SkillRating[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +33,42 @@ export default function SurveyPage() {
       router.push('/auth/signin');
     }
   }, [status, router]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Prefill existing ratings when retaking
+  useEffect(() => {
+    const loadExisting = async () => {
+      try {
+        const res = await fetch('/api/survey');
+        if (!res.ok) return; // No existing survey or unauthorized
+        const data = await res.json();
+        const r = data?.ratings;
+        if (!r) return;
+        const map: Record<string, number> = {
+          'Research': Number(r.research_rating ?? 3),
+          'Writing & Editing': Number(r.writing_rating ?? 3),
+          'Visual Design': Number(r.design_rating ?? 3),
+          'Technical / Implementation': Number(r.technical_rating ?? 3),
+        };
+        setSkills(SKILLS.map(s => ({ ...s, value: Math.min(5, Math.max(1, map[s.name] || 3)) })));
+      } catch {
+        // silently ignore
+      }
+    };
+    if (status === 'authenticated') {
+      loadExisting();
+    }
+  }, [status]);
 
   if (status === 'loading') {
     return (
@@ -45,10 +81,11 @@ export default function SurveyPage() {
     );
   }
 
-  const completedCount = skills.filter(skill => skill.value > 0).length;
-  const progressPercent = Math.round((completedCount / skills.length) * 100);
+  const completedCount = skills ? skills.filter(skill => skill.value > 0).length : 0;
+  const progressPercent = skills ? Math.round((completedCount / skills.length) * 100) : 0;
 
   const handleSkillChange = (index: number, newValue: number) => {
+    if (!skills) return;
     const updated = [...skills];
     updated[index].value = newValue;
     setSkills(updated);
@@ -59,6 +96,7 @@ export default function SurveyPage() {
     setError(null);
 
     try {
+      if (!skills) throw new Error('Survey not ready');
       const response = await fetch('/api/survey', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -82,9 +120,7 @@ export default function SurveyPage() {
     }
   };
 
-  const handleSkip = () => {
-    router.push('/dashboard');
-  };
+  // Removed Skip/Back actions per retake context
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark">
@@ -99,16 +135,46 @@ export default function SurveyPage() {
           </div>
           <h2 className="text-lg font-bold leading-tight tracking-[-0.015em]">GroupGrade</h2>
         </div>
-        <div className="flex items-center gap-4">
-          <button className="flex items-center justify-center rounded-lg h-10 bg-[#f0f2f4] dark:bg-[#2d3748] text-[#111318] dark:text-white px-3 hover:bg-primary/10 transition-colors">
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="flex items-center gap-3 rounded-lg h-10 px-3 bg-[#f0f2f4] dark:bg-[#2d3748] text-[#111318] dark:text-white hover:bg-primary/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
             <span className="material-symbols-outlined text-xl">account_circle</span>
+            {session?.user?.image && (
+              <div
+                className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border-2 border-primary shadow-sm"
+                style={{ backgroundImage: `url('${session.user.image}')` }}
+              ></div>
+            )}
           </button>
-          {session?.user?.image && (
-            <div
-              className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary"
-              style={{ backgroundImage: `url("${session.user.image}")` }}
-            ></div>
-          )}
+
+          {/* Dropdown */}
+          <div
+            className={`absolute right-0 mt-2 w-56 origin-top-right rounded-lg border border-[#dbdfe6] dark:border-[#2d3748] bg-white dark:bg-[#1c2433] shadow-xl transition-all ${menuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'} `}
+            role="menu"
+          >
+            <div className="py-2">
+              <button
+                onClick={() => { setMenuOpen(false); router.push('/survey'); }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-[#f6f6f8] dark:hover:bg-[#2d3748] transition-colors"
+                role="menuitem"
+              >
+                <span className="material-symbols-outlined text-primary">refresh</span>
+                Retake Survey
+              </button>
+              <button
+                onClick={async () => { setMenuOpen(false); await signOut({ callbackUrl: '/' }); }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-[#f6f6f8] dark:hover:bg-[#2d3748] transition-colors"
+                role="menuitem"
+              >
+                <span className="material-symbols-outlined text-[#e11d48]">logout</span>
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -123,16 +189,16 @@ export default function SurveyPage() {
                   <h1 className="text-2xl font-bold tracking-tight">Tell us your strengths</h1>
                   <p className="text-[#616f89] dark:text-gray-400 text-sm mt-1">Rate your skills to help your team distribute tasks fairly.</p>
                 </div>
-                <p className="text-primary text-lg font-bold">{progressPercent}%</p>
+                <p className="text-primary text-lg font-bold">{skills ? `${progressPercent}%` : '...'}</p>
               </div>
               <div className="rounded-full bg-[#dbdfe6] dark:bg-[#2d3748] h-3 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-primary transition-all duration-500"
-                  style={{ width: `${progressPercent}%` }}
+                  style={{ width: `${skills ? progressPercent : 0}%` }}
                 ></div>
               </div>
               <p className="text-[#616f89] dark:text-gray-400 text-xs font-medium">
-                {progressPercent === 100 ? 'All skills rated!' : 'Almost there! Just a few more skills.'}
+                {!skills ? 'Loading previous ratings…' : (progressPercent === 100 ? 'All skills rated!' : 'Almost there! Just a few more skills.')}
               </p>
             </div>
           </div>
@@ -147,7 +213,7 @@ export default function SurveyPage() {
               )}
 
               {/* Skills */}
-              {skills.map((skill, index) => (
+              {skills ? skills.map((skill, index) => (
                 <div key={index} className="flex flex-col gap-4">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
@@ -189,29 +255,20 @@ export default function SurveyPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-[#616f89] dark:text-gray-400 text-sm">Loading survey…</div>
+              )}
             </div>
 
             {/* Footer */}
-            <div className="border-t border-[#dbdfe6] dark:border-[#2d3748] bg-gray-50 dark:bg-[#1a202c] p-6 flex justify-between items-center">
+            <div className="border-t border-[#dbdfe6] dark:border-[#2d3748] bg-gray-50 dark:bg-[#1a202c] p-6 flex justify-end items-center">
               <button
-                onClick={handleSkip}
-                className="text-[#616f89] dark:text-gray-400 font-semibold hover:text-[#111318] dark:hover:text-white transition-colors"
+                onClick={handleSave}
+                disabled={isLoading || !skills}
+                className="rounded-lg h-11 px-8 bg-primary text-white font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
               >
-                Skip for now
+                {isLoading ? 'Saving...' : 'Save & Continue'}
               </button>
-              <div className="flex gap-4">
-                <button className="rounded-lg h-11 px-6 bg-[#dbdfe6] dark:bg-[#2d3748] text-[#111318] dark:text-white font-bold hover:bg-[#cfd4dc] dark:hover:bg-[#3d4758] transition-colors">
-                  Back
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isLoading}
-                  className="rounded-lg h-11 px-8 bg-primary text-white font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
-                >
-                  {isLoading ? 'Saving...' : 'Save & Continue'}
-                </button>
-              </div>
             </div>
           </div>
 

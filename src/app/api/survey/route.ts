@@ -47,16 +47,19 @@ export async function POST(request: NextRequest) {
 
     console.log('User found:', user.id);
 
-    // Store survey responses
+    // Upsert survey responses (allow retakes by updating existing record)
+    const payload = {
+      user_id: user.id,
+      research_rating: skills.find((s: any) => s.name === 'Research')?.rating || 0,
+      writing_rating: skills.find((s: any) => s.name === 'Writing & Editing')?.rating || 0,
+      design_rating: skills.find((s: any) => s.name === 'Visual Design')?.rating || 0,
+      technical_rating: skills.find((s: any) => s.name === 'Technical / Implementation')?.rating || 0,
+      updated_at: new Date().toISOString(),
+    };
+
     const { error: surveyError } = await supabase
       .from('student_strengths')
-      .insert({
-        user_id: user.id,
-        research_rating: skills.find((s: any) => s.name === 'Research')?.rating || 0,
-        writing_rating: skills.find((s: any) => s.name === 'Writing & Editing')?.rating || 0,
-        design_rating: skills.find((s: any) => s.name === 'Visual Design')?.rating || 0,
-        technical_rating: skills.find((s: any) => s.name === 'Technical / Implementation')?.rating || 0,
-      });
+      .upsert(payload, { onConflict: 'user_id' });
 
     if (surveyError) {
       console.error('Survey save error:', surveyError);
@@ -73,5 +76,42 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  }
+}
+
+// Fetch existing survey ratings for the signed-in user
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Lookup user id by email
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', session.user.email)
+      .single();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const { data: strengths, error: strengthsError } = await supabase
+      .from('student_strengths')
+      .select('research_rating, writing_rating, design_rating, technical_rating, updated_at')
+      .eq('user_id', user.id)
+      .single();
+
+    if (strengthsError) {
+      return NextResponse.json({ error: 'No survey found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ ratings: strengths });
+  } catch (error) {
+    console.error('GET /api/survey error:', error);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

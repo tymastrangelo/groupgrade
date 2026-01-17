@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { TeacherContent } from './TeacherContent';
 import { StudentContent } from './StudentContent';
@@ -8,12 +8,23 @@ import { StudentContent } from './StudentContent';
 export default function Dashboard() {
   const { data: session } = useSession();
   const [userRole, setUserRole] = useState<'teacher' | 'student'>('teacher');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/' });
   };
 
   const isTeacher = userRole === 'teacher';
+    useEffect(() => {
+      const handler = (e: MouseEvent) => {
+        if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+          setMenuOpen(false);
+        }
+      };
+      document.addEventListener('mousedown', handler);
+      return () => document.removeEventListener('mousedown', handler);
+    }, []);
   
   // Get user name from session, fallback to default
   const userName = session?.user?.name || 'User';
@@ -106,7 +117,7 @@ export default function Dashboard() {
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#616f89] hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">logout</span>
-                <span className="text-sm font-medium">Sign Out</span>
+                <span className="text-sm font-medium">Log Out</span>
               </button>
               {isTeacher && (
                 <button className="w-full bg-primary hover:bg-blue-700 text-white rounded-lg py-2.5 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all mt-4">
@@ -146,23 +157,67 @@ export default function Dashboard() {
                   {isTeacher && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#1a202c]"></span>}
                 </button>
                 {isTeacher ? (
-                  <div className="flex items-center gap-3 pl-4 border-l border-[#e5e7eb] dark:border-[#2d3748]">
+                  <div className="flex items-center gap-3 pl-4 border-l border-[#e5e7eb] dark:border-[#2d3748] relative" ref={menuRef}>
                     <div className="flex flex-col text-right">
                       <span className="text-xs font-bold text-[#111318] dark:text-white">{displayName}</span>
                       <span className="text-[10px] text-[#616f89]">{userTitle}</span>
                     </div>
-                    <div className="w-9 h-9 rounded-full bg-primary/20 bg-cover bg-center overflow-hidden">
+                    <button
+                      onClick={() => setMenuOpen(o => !o)}
+                      className="w-9 h-9 rounded-full bg-primary/20 overflow-hidden ring-0 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-transform active:scale-95"
+                      aria-haspopup="menu"
+                      aria-expanded={menuOpen}
+                    >
                       <img alt={`Profile picture of ${displayName}`} className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAG_72JB6xGkHKNSnnuFARXYvidpQLP1_Sk1hlSY2d2dls78fBSJW8N2YUjpNEc0IGoTozEy1eQ3OBILcT5XlH97kWTqmqL3NRjrgXB2uSBOERFqRGD6TKQaupvJE_uEKN7yo5UF3bf2-ZKKdCCzUVMbalYjW40LIvE-I-2daAE2MgbGe593mHvF_C6_WQ-iNiGIpr33LZB-fDNKl4_H-DP484eevYAA41fBQ3hja2J_nC9RnhkrbITXBarIxK8zOVfHk7eSyHR3Qc"/>
+                    </button>
+
+                    {/* Dropdown */}
+                    <div
+                      className={`absolute right-0 top-12 w-56 origin-top-right rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-white dark:bg-[#1a202c] shadow-xl transition-all ${menuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
+                      role="menu"
+                    >
+                      <div className="py-2">
+                        <a href="/survey" className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-[#f6f6f8] dark:hover:bg-[#2d3748] transition-colors" role="menuitem">
+                          <span className="material-symbols-outlined text-primary">refresh</span>
+                          Retake Survey
+                        </a>
+                        <button onClick={handleSignOut} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-[#f6f6f8] dark:hover:bg-[#2d3748] transition-colors" role="menuitem">
+                          <span className="material-symbols-outlined text-[#e11d48]">logout</span>
+                          Logout
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 pl-4 border-l border-[#e5e7eb] dark:border-[#2d3748]">
+                  <div className="flex items-center gap-3 pl-4 border-l border-[#e5e7eb] dark:border-[#2d3748] relative" ref={menuRef}>
                     <div className="flex flex-col text-right">
                       <span className="text-xs font-bold text-[#111318] dark:text-white">{displayName}</span>
                       <span className="text-[10px] text-[#616f89]">{userTitle}</span>
                     </div>
-                    <div className="w-9 h-9 rounded-full bg-primary/20 bg-cover bg-center overflow-hidden">
+                    <button
+                      onClick={() => setMenuOpen(o => !o)}
+                      className="w-9 h-9 rounded-full bg-primary/20 overflow-hidden ring-0 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-transform active:scale-95"
+                      aria-haspopup="menu"
+                      aria-expanded={menuOpen}
+                    >
                       <img alt={`Profile picture of ${displayName}`} className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUGqezVimvcF7moM5CnrGWw-KMHrGSfQbIV-cHEgDhlHZRoK4xnWY6f4ff-BR7E2dZ8dTaH55ZOtG_6xae40_BKI1xoguID-lUJ-CMliNt4dE0ZvRnfStOMgmKNysIC-waGuT9SydPMrZLFBs-scQcWMzrSX71Oy1GsktPwXEK2u0BbCre-28diaIsx15d29GcZJoV0Ck_7EzZYAAPWaOfv1frkwlk_Ea2z7JtRN06T4DtPCtm9R8Ad7DlFrxktlpUNJZL0xe5oyg"/>
+                    </button>
+
+                    {/* Dropdown */}
+                    <div
+                      className={`absolute right-0 top-12 w-56 origin-top-right rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-white dark:bg-[#1a202c] shadow-xl transition-all ${menuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
+                      role="menu"
+                    >
+                      <div className="py-2">
+                        <a href="/survey" className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-[#f6f6f8] dark:hover:bg-[#2d3748] transition-colors" role="menuitem">
+                          <span className="material-symbols-outlined text-primary">refresh</span>
+                          Retake Survey
+                        </a>
+                        <button onClick={handleSignOut} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-[#f6f6f8] dark:hover:bg-[#2d3748] transition-colors" role="menuitem">
+                          <span className="material-symbols-outlined text-[#e11d48]">logout</span>
+                          Logout
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
