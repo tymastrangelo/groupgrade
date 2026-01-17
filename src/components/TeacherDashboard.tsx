@@ -40,7 +40,7 @@ export default function TeacherDashboard() {
                 </a>
                 <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#616f89] hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors">
                   <span className="material-symbols-outlined text-sm">logout</span>
-                  <span className="text-sm font-medium">Log Out</span>
+                  <span className="text-sm font-medium">Logout</span>
                 </button>
                 <button className="w-full bg-primary hover:bg-blue-700 text-white rounded-lg py-2.5 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all mt-4">
                   <span className="material-symbols-outlined text-sm">add</span>

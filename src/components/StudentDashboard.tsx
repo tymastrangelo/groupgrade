@@ -57,7 +57,7 @@ export default function StudentDashboard() {
             </div>
             <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#616f89] dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors">
               <span className="material-symbols-outlined text-sm">logout</span>
-              <span className="text-sm font-medium">Log Out</span>
+              <span className="text-sm font-medium">Logout</span>
             </button>
           </div>
         </aside>
