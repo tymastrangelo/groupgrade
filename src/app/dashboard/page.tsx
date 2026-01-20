@@ -7,7 +7,10 @@ import DashboardLayout from '@/components/DashboardLayout';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ as?: string }> }) {
+  const { as } = await searchParams;
+  const overrideRole = as;
+
   const session = await getServerSession(authOptions);
 
   console.log('[Dashboard] Session:', session ? 'exists' : 'missing');
@@ -15,6 +18,11 @@ export default async function Dashboard() {
   if (!session?.user?.email) {
     console.log('[Dashboard] Redirecting to signin - no valid session');
     redirect('/auth/signin');
+  }
+
+  // Developer override for testing: /dashboard?as=teacher or ?as=student
+  if (overrideRole === 'teacher' || overrideRole === 'student') {
+    return <DashboardLayout initialRole={overrideRole} />;
   }
 
   // Check if user has completed the survey
@@ -27,20 +35,34 @@ export default async function Dashboard() {
     .from('users')
     .select('id, role')
     .eq('email', session.user.email)
-    .single();
+    .maybeSingle();
 
-  if (user && user.role === 'student') {
+  const normalizedRole = user?.role === 'professor' ? 'teacher' : user?.role;
+
+  // Role-based routing
+  if (!user || !normalizedRole) {
+    redirect('/role');
+  }
+
+  if (normalizedRole === 'teacher') {
+    redirect('/teacher');
+  }
+
+  if (normalizedRole === 'student') {
+    // Enforce survey completion before allowing student home
     const { data: survey } = await supabase
       .from('student_strengths')
       .select('id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    // If student hasn't completed survey, redirect to survey
     if (!survey) {
       redirect('/survey');
     }
+
+    redirect('/student');
   }
 
+  // Fallback
   return <DashboardLayout />;
 }

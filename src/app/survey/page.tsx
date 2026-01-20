@@ -26,6 +26,7 @@ export default function SurveyPage() {
   const [skills, setSkills] = useState<SkillRating[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const defaultSkills = SKILLS.map(s => ({ ...s, value: 3 }));
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -49,11 +50,38 @@ export default function SurveyPage() {
   useEffect(() => {
     const loadExisting = async () => {
       try {
+        // Check role first; teachers shouldn't take survey
+        const meRes = await fetch('/api/me');
+        if (meRes.status === 401) {
+          router.push('/auth/signin');
+          return;
+        }
+        const me = await meRes.json();
+        const role = me?.user?.normalizedRole || me?.user?.role;
+        if (!role) {
+          router.push('/role');
+          return;
+        }
+        if (role === 'teacher' || role === 'professor') {
+          router.push('/teacher');
+          return;
+        }
+
         const res = await fetch('/api/survey');
-        if (!res.ok) return; // No existing survey or unauthorized
+        if (res.status === 404) {
+          setSkills(defaultSkills);
+          return;
+        }
+        if (!res.ok) {
+          setSkills(defaultSkills);
+          return;
+        }
         const data = await res.json();
         const r = data?.ratings;
-        if (!r) return;
+        if (!r) {
+          setSkills(defaultSkills);
+          return;
+        }
         const map: Record<string, number> = {
           'Research': Number(r.research_rating ?? 3),
           'Writing & Editing': Number(r.writing_rating ?? 3),
@@ -62,7 +90,7 @@ export default function SurveyPage() {
         };
         setSkills(SKILLS.map(s => ({ ...s, value: Math.min(5, Math.max(1, map[s.name] || 3)) })));
       } catch {
-        // silently ignore
+        setSkills(defaultSkills);
       }
     };
     if (status === 'authenticated') {

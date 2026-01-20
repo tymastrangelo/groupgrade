@@ -1,0 +1,9 @@
+list of where notifications will need to be sent
+
+to student
+when teacher posts announcement
+when teacher posts project in class
+when teacher assigns a project
+
+to teacher
+when student submits work for project

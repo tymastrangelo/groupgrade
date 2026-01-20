@@ -245,7 +245,7 @@ export default function TeacherDashboard() {
                       <span className="text-sm font-bold text-[#111318] dark:text-white">Team Delta</span>
                       <span className="text-[9px] px-1.5 py-0.5 bg-red-100 text-red-600 rounded font-bold uppercase">Critical</span>
                     </div>
-                    <p className="text-xs text-[#616f89] font-medium leading-relaxed">Low engagement: 3 members haven't logged in for 7 days.</p>
+                    <p className="text-xs text-[#616f89] font-medium leading-relaxed">Low engagement: 3 members haven&apos;t logged in for 7 days.</p>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-[10px] font-bold text-[#616f89] uppercase tracking-wider">CS402</span>
                       <button className="text-primary text-xs font-bold">Nudge Team</button>

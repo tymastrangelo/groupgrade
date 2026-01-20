@@ -1,6 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { createClient } from '@supabase/supabase-js';
+import { getRandomAvatarUrl } from './avatars';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -32,7 +33,7 @@ export const authOptions: NextAuthOptions = {
         console.log('[AUTH] Checking for existing user:', user.email);
         const { data: existingUser, error: selectError } = await supabase
           .from('users')
-          .select('id')
+          .select('id, role, avatar_url')
           .eq('email', user.email)
           .maybeSingle();
 
@@ -42,12 +43,19 @@ export const authOptions: NextAuthOptions = {
           console.log('[AUTH] Existing user found:', existingUser);
         }
 
+        const defaultRoleMap: Record<string, 'professor' | 'student'> = {
+          'tmastrangelo@elon.edu': 'professor',
+          'mastrangelo.tyler@gmail.com': 'student',
+        };
+        const defaultRole = user.email in defaultRoleMap ? defaultRoleMap[user.email] : undefined;
+
         if (!existingUser) {
           console.log('[AUTH] Creating new user:', user.email);
           const { data: newUser, error: insertError } = await supabase.from('users').insert({
             email: user.email,
             name: user.name || user.email,
-            role: 'student',
+            role: defaultRole,
+            avatar_url: getRandomAvatarUrl(),
           }).select();
           
           if (insertError) {
@@ -56,7 +64,21 @@ export const authOptions: NextAuthOptions = {
             console.log('[AUTH] User created successfully:', newUser);
           }
         } else {
-          console.log('[AUTH] User already exists, skipping creation');
+          // Backfill role if missing and we have a known default
+          const updates: Record<string, any> = {};
+          if (!existingUser.role && defaultRole) {
+            console.log('[AUTH] Backfilling role for existing user:', defaultRole);
+            updates.role = defaultRole;
+          }
+          // Assign random avatar if user doesn't have one
+          if (!existingUser.avatar_url) {
+            console.log('[AUTH] Assigning random avatar to existing user');
+            updates.avatar_url = getRandomAvatarUrl();
+          }
+          if (Object.keys(updates).length) {
+            await supabase.from('users').update(updates).eq('id', existingUser.id);
+          }
+          console.log('[AUTH] User already exists, updated metadata if needed');
         }
 
         console.log('[AUTH] Allowing signin');
@@ -65,6 +87,21 @@ export const authOptions: NextAuthOptions = {
         console.error('[AUTH] Unexpected error:', error);
         return true; // Still allow signin even if sync fails
       }
+    },
+    async session({ session }) {
+      // Fetch the user's avatar from the database and add it to the session
+      if (session.user?.email) {
+        const { data: user } = await supabase
+          .from('users')
+          .select('avatar_url')
+          .eq('email', session.user.email)
+          .maybeSingle();
+        
+        if (user?.avatar_url) {
+          session.user.image = user.avatar_url;
+        }
+      }
+      return session;
     },
   },
 };

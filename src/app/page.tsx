@@ -54,7 +54,7 @@ export default function Home() {
                   <span className="text-primary">without the chaos.</span>
                 </h1>
                 <p className="text-[#616f89] dark:text-gray-400 text-lg md:text-xl font-normal leading-relaxed">
-                  The accountability platform for college courses that ensures every student's contribution is seen, tracked, and graded fairly.
+                  The accountability platform for college courses that ensures every student&apos;s contribution is seen, tracked, and graded fairly.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   <Link
@@ -125,7 +125,7 @@ export default function Home() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <h3 className="text-xl font-bold text-[#111318] dark:text-white">Accountability</h3>
-                  <p className="text-[#616f89] dark:text-gray-400 leading-relaxed">Peer-driven check-ins that keep everyone on track and prevent the "lazy teammate" syndrome from day one.</p>
+                  <p className="text-[#616f89] dark:text-gray-400 leading-relaxed">Peer-driven check-ins that keep everyone on track and prevent the &quot;lazy teammate&quot; syndrome from day one.</p>
                 </div>
               </div>
 

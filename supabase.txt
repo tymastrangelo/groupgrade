@@ -1,0 +1,106 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.approved_professors (
+  email text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT approved_professors_pkey PRIMARY KEY (email)
+);
+CREATE TABLE public.class_members (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  class_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  role text NOT NULL CHECK (role = ANY (ARRAY['professor'::text, 'student'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT class_members_pkey PRIMARY KEY (id),
+  CONSTRAINT class_members_class_id_fkey FOREIGN KEY (class_id) REFERENCES public.classes(id),
+  CONSTRAINT class_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.class_notes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  class_id uuid NOT NULL,
+  author_id uuid NOT NULL,
+  content text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT class_notes_pkey PRIMARY KEY (id),
+  CONSTRAINT class_notes_class_id_fkey FOREIGN KEY (class_id) REFERENCES public.classes(id),
+  CONSTRAINT class_notes_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.classes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text,
+  code text UNIQUE,
+  professor_id uuid,
+  join_code_expires_at timestamp with time zone DEFAULT (now() + '14 days'::interval),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT classes_pkey PRIMARY KEY (id),
+  CONSTRAINT classes_professor_id_fkey FOREIGN KEY (professor_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.contributions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  task_id uuid,
+  user_id uuid,
+  text text,
+  file_url text,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT contributions_pkey PRIMARY KEY (id),
+  CONSTRAINT contributions_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id),
+  CONSTRAINT contributions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.group_members (
+  group_id uuid,
+  user_id uuid,
+  CONSTRAINT group_members_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
+  CONSTRAINT group_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.groups (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_id uuid,
+  name text,
+  CONSTRAINT groups_pkey PRIMARY KEY (id),
+  CONSTRAINT groups_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id)
+);
+CREATE TABLE public.projects (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  class_id uuid,
+  name text,
+  rubric text,
+  due_date date,
+  description text,
+  expectations text,
+  deliverables text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT projects_pkey PRIMARY KEY (id),
+  CONSTRAINT projects_class_id_fkey FOREIGN KEY (class_id) REFERENCES public.classes(id)
+);
+CREATE TABLE public.student_strengths (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  research_rating integer NOT NULL DEFAULT 0 CHECK (research_rating >= 0 AND research_rating <= 5),
+  writing_rating integer NOT NULL DEFAULT 0 CHECK (writing_rating >= 0 AND writing_rating <= 5),
+  design_rating integer NOT NULL DEFAULT 0 CHECK (design_rating >= 0 AND design_rating <= 5),
+  technical_rating integer NOT NULL DEFAULT 0 CHECK (technical_rating >= 0 AND technical_rating <= 5),
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT student_strengths_pkey PRIMARY KEY (id),
+  CONSTRAINT student_strengths_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.tasks (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_id uuid,
+  title text,
+  assigned_to uuid,
+  status text,
+  CONSTRAINT tasks_pkey PRIMARY KEY (id),
+  CONSTRAINT tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id),
+  CONSTRAINT tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text,
+  email text,
+  role text CHECK (role = ANY (ARRAY['professor'::text, 'student'::text])),
+  avatar_url text,
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);

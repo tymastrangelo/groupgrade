@@ -52,7 +52,7 @@ export default function StudentDashboard() {
               <div className="size-9 rounded-full bg-center bg-cover bg-no-repeat border border-gray-200" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDUGqezVimvcF7moM5CnrGWw-KMHrGSfQbIV-cHEgDhlHZRoK4xnWY6f4ff-BR7E2dZ8dTaH55ZOtG_6xae40_BKI1xoguID-lUJ-CMliNt4dE0ZvRnfStOMgmKNysIC-waGuT9SydPMrZLFBs-scQcWMzrSX71Oy1GsktPwXEK2u0BbCre-28diaIsx15d29GcZJoV0Ck_7EzZYAAPWaOfv1frkwlk_Ea2z7JtRN06T4DtPCtm9R8Ad7DlFrxktlpUNJZL0xe5oyg")' }}></div>
               <div className="flex flex-col overflow-hidden">
                 <p className="text-sm font-bold text-[#111318] dark:text-white truncate">Alex Johnson</p>
-                <p className="text-xs text-[#616f89] dark:text-gray-400 truncate">Senior Student</p>
+                <p className="text-xs text-[#616f89] dark:text-gray-400 truncate">Student</p>
               </div>
             </div>
             <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#616f89] dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors">
