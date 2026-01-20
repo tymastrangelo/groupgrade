@@ -32,6 +32,7 @@ export function StudentContent({ userName = 'Alex' }: { userName?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [joining, setJoining] = useState(false);
+  const [shake, setShake] = useState(false);
   const [activeTab, setActiveTab] = useState<'classes' | 'projects'>('classes');
   const [projects, setProjects] = useState<StudentProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
@@ -125,6 +126,8 @@ export function StudentContent({ userName = 'Alex' }: { userName?: string }) {
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
       setError(j.error || 'Failed to join class');
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
       setJoining(false);
       return;
     }
@@ -155,8 +158,23 @@ export function StudentContent({ userName = 'Alex' }: { userName?: string }) {
                 </div>
                 <span className="text-[11px] px-3 py-1 rounded-full bg-primary/10 text-primary font-bold">Students only</span>
               </div>
-              {error && <div className="text-red-600 text-sm">{error}</div>}
-              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              {error && (
+                <div className="flex items-center gap-2 text-red-600 text-sm font-semibold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
+                  <span className="material-symbols-outlined text-lg">error</span>
+                  <span>{error}</span>
+                </div>
+              )}
+              <style jsx>{`
+                @keyframes shake {
+                  0%, 100% { transform: translateX(0); }
+                  10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+                  20%, 40%, 60%, 80% { transform: translateX(10px); }
+                }
+                .shake {
+                  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+                }
+              `}</style>
+              <div className={`flex flex-col gap-3 md:flex-row md:items-center ${shake ? 'shake' : ''}`}>
                 <input
                   className="flex-1 bg-white dark:bg-gray-800 border border-[#e5e7eb] dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter join code"
@@ -218,7 +236,7 @@ export function StudentContent({ userName = 'Alex' }: { userName?: string }) {
             <section className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-[#f0f2f4] dark:border-gray-700">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-[#111318] dark:text-white text-xl font-bold tracking-tight">Your Classes</h2>
-                <div className="flex gap-2">
+                <div className={`flex gap-2 ${shake ? 'shake' : ''}`}>
                   <input
                     className="bg-white dark:bg-gray-800 border border-[#e5e7eb] dark:border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Enter join code"
@@ -234,7 +252,12 @@ export function StudentContent({ userName = 'Alex' }: { userName?: string }) {
                   </button>
                 </div>
               </div>
-              {error && <div className="text-red-600 text-sm mb-2">{error}</div>}
+              {error && (
+                <div className="flex items-center gap-2 text-red-600 text-sm font-semibold bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 mb-2">
+                  <span className="material-symbols-outlined text-lg">error</span>
+                  <span>{error}</span>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {loading ? (
                   Array.from({ length: 2 }).map((_, i) => (
