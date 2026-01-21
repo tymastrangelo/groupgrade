@@ -48,12 +48,12 @@ function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | 
       <img
         src={src}
         alt={name}
-        className={`${size} rounded-full object-cover border border-[#e5e7eb] dark:border-[#2d3748]`}
+        className={`${size} rounded-full object-cover border border-[#e5e7eb]`}
       />
     );
   }
   return (
-    <div className={`${size} rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center border border-[#e5e7eb] dark:border-[#2d3748]`}>
+    <div className={`${size} rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center border border-[#e5e7eb]`}>
       {letter}
     </div>
   );
@@ -61,8 +61,8 @@ function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | 
 
 function badgeColor(role: string) {
   return role === "professor"
-    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-200"
-    : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200";
+    ? "bg-purple-100 text-purple-700/30"
+    : "bg-blue-100 text-blue-700/30";
 }
 
 function parseRubric(rubric?: string | null) {
@@ -405,15 +405,15 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
     <div className="p-8 max-w-screen-2xl mx-auto w-full">
       <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] p-6 flex flex-col gap-4">
+        <div className="xl:col-span-2 bg-white rounded-xl border border-[#e5e7eb] p-6 flex flex-col gap-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
               <p className="text-sm text-[#616f89]">Class</p>
-              <h1 className="text-3xl font-black text-[#111318] dark:text-white tracking-tight">{classData.name}</h1>
+              <h1 className="text-3xl font-black text-[#111318] tracking-tight">{classData.name}</h1>
               <p className="text-xs text-[#616f89] mt-1">Created {formatDate(classData.created_at)}</p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="px-3 py-2 rounded-lg bg-[#f3f4f6] dark:bg-background-dark text-xs text-[#616f89]">
+              <div className="px-3 py-2 rounded-lg bg-[#f3f4f6] text-xs text-[#616f89]">
                 Expires {formatDate(classData.join_code_expires_at) || "soon"}
               </div>
               <button
@@ -435,21 +435,21 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-4 rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-[#f9fafb] dark:bg-[#111827]">
+            <div className="p-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
               <p className="text-xs text-[#616f89]">Total members</p>
-              <p className="text-2xl font-bold text-[#111318] dark:text-white">{stats.total}</p>
+              <p className="text-2xl font-bold text-[#111318]">{stats.total}</p>
             </div>
-            <div className="p-4 rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-[#f9fafb] dark:bg-[#111827]">
+            <div className="p-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
               <p className="text-xs text-[#616f89]">Students</p>
-              <p className="text-2xl font-bold text-[#111318] dark:text-white">{stats.students}</p>
+              <p className="text-2xl font-bold text-[#111318]">{stats.students}</p>
             </div>
-            <div className="p-4 rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-[#f9fafb] dark:bg-[#111827]">
+            <div className="p-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
               <p className="text-xs text-[#616f89]">Professors</p>
-              <p className="text-2xl font-bold text-[#111318] dark:text-white">{stats.professors}</p>
+              <p className="text-2xl font-bold text-[#111318]">{stats.professors}</p>
             </div>
           </div>
 
-          <div className="rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] p-4 flex flex-col gap-2 bg-[#fdfefe] dark:bg-[#0f172a]">
+          <div className="rounded-lg border border-[#e5e7eb] p-4 flex flex-col gap-2 bg-[#fdfefe]">
             <div className="flex items-center gap-2 text-primary">
               <span className="material-symbols-outlined text-base">tips_and_updates</span>
               <p className="text-sm font-semibold">Share this code with students to join.</p>
@@ -458,12 +458,12 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] p-6 flex flex-col gap-4">
-          <h3 className="text-lg font-bold text-[#111318] dark:text-white">Class content</h3>
+        <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 flex flex-col gap-4">
+          <h3 className="text-lg font-bold text-[#111318]">Class content</h3>
           <p className="text-sm text-[#616f89]">Share notes or announcements for students.</p>
           <div className="flex gap-2">
             <input
-              className="flex-1 bg-white dark:bg-[#111827] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="flex-1 bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Add a note"
               value={noteInput}
               onChange={(e) => setNoteInput(e.target.value)}
@@ -487,10 +487,10 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
               notes.map((note) => (
                 <div
                   key={note.id}
-                  className="p-3 rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-[#f9fafb] dark:bg-[#111827] text-sm text-[#111318] dark:text-white"
+                  className="p-3 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] text-sm text-[#111318]"
                 >
                   <div className="flex justify-between items-start gap-2">
-                    <p className="font-semibold text-xs text-[#4b5563] dark:text-gray-300">{note.author_name || "Professor"}</p>
+                    <p className="font-semibold text-xs text-[#4b5563]">{note.author_name || "Professor"}</p>
                     <p className="text-[10px] text-[#9ca3af]">{formatDate(note.created_at)}</p>
                   </div>
                   <p className="mt-1 leading-snug">{note.content}</p>
@@ -501,10 +501,10 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] p-6 flex flex-col gap-4">
+      <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 flex flex-col gap-4">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
           <div>
-            <h3 className="text-xl font-bold text-[#111318] dark:text-white">Projects</h3>
+            <h3 className="text-xl font-bold text-[#111318]">Projects</h3>
             <p className="text-sm text-[#616f89]">Create projects, choose grouping, and who assigns tasks.</p>
           </div>
           <button
@@ -534,11 +534,11 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
               return (
                 <div
                   key={p.id}
-                  className="p-4 rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] bg-white dark:bg-[#111827] flex flex-col gap-3"
+                  className="p-4 rounded-xl border border-[#e5e7eb] bg-white flex flex-col gap-3"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <a href={`/teacher/projects/${p.id}`} className="text-lg font-bold text-[#111318] dark:text-white hover:text-primary">
+                      <a href={`/teacher/projects/${p.id}`} className="text-lg font-bold text-[#111318] hover:text-primary">
                         {p.name}
                       </a>
                       {p.due_date && <p className="text-xs text-[#616f89]">Due {formatDate(p.due_date)}</p>}
@@ -546,7 +546,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                         <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary font-bold">
                           {parsed.assignment_mode === "students_self_assign" ? "Students assign" : "Teacher assigns"}
                         </span>
-                        <span className="text-[11px] px-2 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
+                        <span className="text-[11px] px-2 py-1 rounded-full bg-blue-100 text-blue-700/30">
                           {parsed.grouping_strategy === "random_from_survey" ? "Random (survey)" : "Manual groups"}
                         </span>
                       </div>
@@ -554,7 +554,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                     <div className="flex gap-2 flex-wrap justify-end items-center">
                       <button
                         onClick={() => setDeleteTarget(p)}
-                        className="p-2 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
+                        className="p-2 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50/30"
                         title="Delete project"
                       >
                         <span className="material-symbols-outlined text-lg">delete</span>
@@ -569,17 +569,17 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                   </div>
 
                   <div className="flex flex-col gap-3">
-                    {parsed.description && <p className="text-sm text-[#111318] dark:text-gray-200 leading-snug">{parsed.description}</p>}
+                    {parsed.description && <p className="text-sm text-[#111318] leading-snug">{parsed.description}</p>}
                     {parsed.expectations && (
-                      <div className="text-sm text-[#616f89] dark:text-gray-300">
-                        <span className="font-semibold text-[#111318] dark:text-white">Expectations: </span>
+                      <div className="text-sm text-[#616f89]">
+                        <span className="font-semibold text-[#111318]">Expectations: </span>
                         {parsed.expectations}
                       </div>
                     )}
                     {Array.isArray(parsed.deliverables) && parsed.deliverables.length > 0 && (
                       <div>
                         <p className="text-xs font-semibold text-[#616f89]">Deliverables</p>
-                        <ul className="list-disc list-inside text-sm text-[#111318] dark:text-gray-200 space-y-1">
+                        <ul className="list-disc list-inside text-sm text-[#111318] space-y-1">
                           {parsed.deliverables.map((d: string, idx: number) => (
                             <li key={`${p.id}-del-${idx}`}>{d}</li>
                           ))}
@@ -595,10 +595,10 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] p-6">
+      <div className="bg-white rounded-xl border border-[#e5e7eb] p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-xl font-bold text-[#111318] dark:text-white">Members</h3>
+            <h3 className="text-xl font-bold text-[#111318]">Members</h3>
             <p className="text-sm text-[#616f89]">Professor and student roster for this class.</p>
           </div>
           <div className="flex items-center gap-2">
@@ -616,13 +616,13 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
         {members.length === 0 ? (
           <div className="text-sm text-[#616f89]">No members yet.</div>
         ) : (
-          <div className="divide-y divide-[#e5e7eb] dark:divide-[#2d3748]">
+          <div className="divide-y divide-[#e5e7eb]">
             {members.map((m) => (
               <div key={`${m.id}-${m.classRole}`} className="py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar name={m.name} src={m.avatar_url} />
                   <div>
-                    <p className="text-sm font-semibold text-[#111318] dark:text-white">{m.name}</p>
+                    <p className="text-sm font-semibold text-[#111318]">{m.name}</p>
                     <p className="text-xs text-[#616f89]">{m.email}</p>
                   </div>
                 </div>
@@ -649,10 +649,10 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
 
       {showProjectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-          <div className="w-full max-w-3xl bg-white dark:bg-[#111827] rounded-xl shadow-2xl border border-[#e5e7eb] dark:border-[#2d3748] p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-3xl bg-white rounded-xl shadow-2xl border border-[#e5e7eb] p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between">
               <div>
-                <h4 className="text-lg font-bold text-[#111318] dark:text-white">Create project</h4>
+                <h4 className="text-lg font-bold text-[#111318]">Create project</h4>
                 <p className="text-sm text-[#616f89]">Set basics and grouping preferences.</p>
               </div>
               <button onClick={() => setShowProjectModal(false)} className="text-[#616f89] hover:text-[#111318]">
@@ -661,31 +661,31 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
             </div>
 
             <div className="flex flex-col gap-3">
-              <label className="text-sm font-semibold text-[#111318] dark:text-white">
+              <label className="text-sm font-semibold text-[#111318]">
                 Project name
                 <input
-                  className="mt-1 w-full bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="e.g. Final Report"
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                 />
               </label>
 
-              <label className="text-sm font-semibold text-[#111318] dark:text-white">
+              <label className="text-sm font-semibold text-[#111318]">
                 Due date (optional)
                 <input
                   type="date"
-                  className="mt-1 w-full bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   value={projectDue}
                   onChange={(e) => setProjectDue(e.target.value)}
                 />
               </label>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <label className="text-sm font-semibold text-[#111318] dark:text-white">
+                <label className="text-sm font-semibold text-[#111318]">
                   Assignment mode
                   <select
-                    className="mt-1 w-full bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     value={assignmentMode}
                     onChange={(e) => setAssignmentMode(e.target.value as any)}
                   >
@@ -694,10 +694,10 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                   </select>
                 </label>
 
-                <label className="text-sm font-semibold text-[#111318] dark:text-white">
+                <label className="text-sm font-semibold text-[#111318]">
                   Grouping strategy
                   <select
-                    className="mt-1 w-full bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     value={groupingStrategy}
                     onChange={(e) => setGroupingStrategy(e.target.value as any)}
                   >
@@ -707,10 +707,10 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                 </label>
               </div>
 
-              <label className="text-sm font-semibold text-[#111318] dark:text-white">
+              <label className="text-sm font-semibold text-[#111318]">
                 Description
                 <textarea
-                  className="mt-1 w-full bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   rows={3}
                   placeholder="Explain the project goals and expectations"
                   value={projectDescription}
@@ -718,10 +718,10 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                 />
               </label>
 
-              <label className="text-sm font-semibold text-[#111318] dark:text-white">
+              <label className="text-sm font-semibold text-[#111318]">
                 Grading rubric
                 <textarea
-                  className="mt-1 w-full bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
+                  className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
                   rows={3}
                   placeholder="Criteria 1: ..."
                   value={projectRubric}
@@ -729,10 +729,10 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                 />
               </label>
 
-              <label className="text-sm font-semibold text-[#111318] dark:text-white">
+              <label className="text-sm font-semibold text-[#111318]">
                 Expectations / notes
                 <textarea
-                  className="mt-1 w-full bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   rows={3}
                   placeholder="Anything else students should know"
                   value={projectExpectations}
@@ -741,10 +741,10 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
               </label>
 
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-semibold text-[#111318] dark:text-white">Deliverables</p>
+                <p className="text-sm font-semibold text-[#111318]">Deliverables</p>
                 <div className="flex flex-col gap-2 max-h-40 overflow-y-auto">
                   {deliverables.map((d, idx) => (
-                    <div key={`${d}-${idx}`} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-[#f9fafb] dark:bg-[#0f172a]">
+                    <div key={`${d}-${idx}`} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
                       <span>{d}</span>
                       <button
                         type="button"
@@ -759,7 +759,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                 </div>
                 <div className="flex gap-2">
                   <input
-                    className="flex-1 bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="flex-1 bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Add a deliverable"
                     value={deliverableInput}
                     onChange={(e) => setDeliverableInput(e.target.value)}
@@ -786,7 +786,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setShowProjectModal(false)}
-                className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] dark:border-[#2d3748] text-[#111318] dark:text-white"
+                className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] text-[#111318]"
               >
                 Cancel
               </button>
@@ -804,15 +804,15 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
 
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-md bg-white dark:bg-[#111827] rounded-xl shadow-2xl border border-[#e5e7eb] dark:border-[#2d3748] p-6 flex flex-col gap-4">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border border-[#e5e7eb] p-6 flex flex-col gap-4">
             <div>
-              <h4 className="text-lg font-bold text-[#111318] dark:text-white">Delete project?</h4>
+              <h4 className="text-lg font-bold text-[#111318]">Delete project?</h4>
               <p className="text-sm text-[#616f89]">This removes {deleteTarget.name} and any groups attached to it.</p>
             </div>
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] dark:border-[#2d3748] text-[#111318] dark:text-white"
+                className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] text-[#111318]"
                 disabled={deleteBusy}
               >
                 Cancel
@@ -831,10 +831,10 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
 
       {groupProjectId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-5xl bg-white dark:bg-[#111827] rounded-xl shadow-2xl border border-[#e5e7eb] dark:border-[#2d3748] p-6 flex flex-col gap-4">
+          <div className="w-full max-w-5xl bg-white rounded-xl shadow-2xl border border-[#e5e7eb] p-6 flex flex-col gap-4">
             <div className="flex items-start justify-between">
               <div>
-                <h4 className="text-lg font-bold text-[#111318] dark:text-white">Set groups</h4>
+                <h4 className="text-lg font-bold text-[#111318]">Set groups</h4>
                 <p className="text-sm text-[#616f89]">Build teams manually or auto-balance using strengths.</p>
               </div>
               <button onClick={() => setGroupProjectId(null)} className="text-[#616f89] hover:text-[#111318]">
@@ -847,7 +847,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                 className={`px-4 py-2 rounded-lg text-sm font-bold border ${
                   groupMode === "auto"
                     ? "bg-primary text-white border-primary"
-                    : "border-[#e5e7eb] dark:border-[#2d3748] text-[#111318] dark:text-white"
+                    : "border-[#e5e7eb] text-[#111318]"
                 }`}
                 onClick={() => setGroupMode("auto")}
               >
@@ -857,7 +857,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                 className={`px-4 py-2 rounded-lg text-sm font-bold border ${
                   groupMode === "manual"
                     ? "bg-primary text-white border-primary"
-                    : "border-[#e5e7eb] dark:border-[#2d3748] text-[#111318] dark:text-white"
+                    : "border-[#e5e7eb] text-[#111318]"
                 }`}
                 onClick={() => setGroupMode("manual")}
               >
@@ -867,7 +867,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
 
             {groupMode === "auto" ? (
               <div className="flex flex-col gap-3">
-                <label className="text-sm font-semibold text-[#111318] dark:text-white">
+                <label className="text-sm font-semibold text-[#111318]">
                   Preferred group size (2-6)
                   <input
                     type="number"
@@ -875,7 +875,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                     max={6}
                     value={groupSize}
                     onChange={(e) => setGroupSize(Number(e.target.value))}
-                    className="mt-1 w-24 bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="mt-1 w-24 bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </label>
                 <p className="text-sm text-[#616f89]">We’ll balance teams by total strengths and distribute round-robin.</p>
@@ -883,7 +883,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
             ) : (
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3">
-                  <label className="text-sm font-semibold text-[#111318] dark:text-white">
+                  <label className="text-sm font-semibold text-[#111318]">
                     Number of groups
                     <input
                       type="number"
@@ -891,7 +891,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                       max={12}
                       value={manualGroupCount}
                       onChange={(e) => adjustGroupCount(Number(e.target.value))}
-                      className="mt-1 w-24 bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="mt-1 w-24 bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </label>
                   <p className="text-sm text-[#616f89]">Drag students into groups; unassigned stay in the right column.</p>
@@ -902,13 +902,13 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                     {manualGroups.map((g, idx) => (
                       <div
                         key={g.id}
-                        className="border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg p-3 min-h-36"
+                        className="border border-[#e5e7eb] rounded-lg p-3 min-h-36"
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={() => handleDrop(g.id)}
                       >
                         <div className="flex items-center justify-between">
                           <input
-                            className="text-sm font-semibold bg-transparent border-b border-dashed border-[#e5e7eb] dark:border-[#2d3748] focus:outline-none"
+                            className="text-sm font-semibold bg-transparent border-b border-dashed border-[#e5e7eb] focus:outline-none"
                             value={g.name}
                             onChange={(e) =>
                               setManualGroups((prev) =>
@@ -926,7 +926,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                                 key={id}
                                 draggable
                                 onDragStart={() => setDraggingId(id)}
-                                className="flex items-center gap-2 px-2 py-1 rounded-full bg-[#f3f4f6] dark:bg-[#0f172a] text-xs text-[#111318] dark:text-white border border-[#e5e7eb] dark:border-[#2d3748] cursor-move"
+                                className="flex items-center gap-2 px-2 py-1 rounded-full bg-[#f3f4f6] text-xs text-[#111318] border border-[#e5e7eb] cursor-move"
                               >
                                 <Avatar name={stu?.name || "Student"} src={stu?.avatar_url} size="h-6 w-6" />
                                 {stu?.name || "Student"}
@@ -939,11 +939,11 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                   </div>
 
                   <div
-                    className="border border-dashed border-[#e5e7eb] dark:border-[#2d3748] rounded-lg p-3 bg-[#f9fafb] dark:bg-[#0f172a]"
+                    className="border border-dashed border-[#e5e7eb] rounded-lg p-3 bg-[#f9fafb]"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => handleDrop(null)}
                   >
-                    <p className="text-sm font-semibold text-[#111318] dark:text-white mb-2">Unassigned</p>
+                    <p className="text-sm font-semibold text-[#111318] mb-2">Unassigned</p>
                     <div className="flex flex-col gap-2 max-h-72 overflow-y-auto">
                       {unassignedStudents.length === 0 ? (
                         <p className="text-sm text-[#616f89]">Everyone is assigned.</p>
@@ -953,7 +953,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
                             key={s.id}
                             draggable
                             onDragStart={() => setDraggingId(s.id)}
-                            className="flex items-center gap-2 px-2 py-2 rounded-lg bg-white dark:bg-[#111827] text-sm text-[#111318] dark:text-white border border-[#e5e7eb] dark:border-[#2d3748] cursor-move"
+                            className="flex items-center gap-2 px-2 py-2 rounded-lg bg-white text-sm text-[#111318] border border-[#e5e7eb] cursor-move"
                           >
                             <Avatar name={s.name} src={s.avatar_url} />
                             <div className="flex flex-col">
@@ -974,7 +974,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
             <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setGroupProjectId(null)}
-                className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] dark:border-[#2d3748] text-[#111318] dark:text-white"
+                className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] text-[#111318]"
               >
                 Cancel
               </button>

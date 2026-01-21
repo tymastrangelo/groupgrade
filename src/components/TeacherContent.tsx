@@ -70,12 +70,12 @@ export function TeacherContent() {
       <div className="col-span-12 xl:col-span-9 flex flex-col gap-6">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-black text-[#111318] dark:text-white tracking-tight">Your Classes</h2>
+            <h2 className="text-3xl font-black text-[#111318] tracking-tight">Your Classes</h2>
             <p className="text-[#616f89] mt-1 font-medium">Create a class and share the join code with students.</p>
           </div>
           <div className="flex gap-2">
             <input
-              className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Class name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
@@ -96,10 +96,10 @@ export function TeacherContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {loading ? (
             Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} className="bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] p-6 animate-pulse h-48" />
+              <div key={i} className="bg-white rounded-xl border border-[#e5e7eb] p-6 animate-pulse h-48" />
             ))
           ) : classes.length === 0 ? (
-            <div className="col-span-2 border-2 border-dashed border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-6 text-center text-[#616f89]">
+            <div className="col-span-2 border-2 border-dashed border-[#e5e7eb] rounded-xl p-6 text-center text-[#616f89]">
               No classes yet. Create one to get a join code.
             </div>
           ) : (
@@ -107,11 +107,11 @@ export function TeacherContent() {
               <Link
                 key={cls.id}
                 href={`/teacher/classes/${cls.id}`}
-                className="bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] p-6 hover:shadow-md transition-shadow block"
+                className="bg-white rounded-xl border border-[#e5e7eb] p-6 hover:shadow-md transition-shadow block"
               >
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="text-xl font-bold text-[#111318] dark:text-white mb-1">{cls.name}</h3>
+                    <h3 className="text-xl font-bold text-[#111318] mb-1">{cls.name}</h3>
                     <p className="text-xs text-[#616f89]">Created {cls.created_at ? new Date(cls.created_at).toLocaleDateString() : ''}</p>
                   </div>
                   <button
@@ -137,8 +137,8 @@ export function TeacherContent() {
       </div>
 
       <div className="col-span-12 xl:col-span-3 flex flex-col gap-6">
-        <div className="bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] p-6">
-          <h3 className="text-sm font-bold mb-3 text-[#111318] dark:text-white">How join codes work</h3>
+        <div className="bg-white rounded-xl border border-[#e5e7eb] p-6">
+          <h3 className="text-sm font-bold mb-3 text-[#111318]">How join codes work</h3>
           <ul className="text-sm text-[#616f89] space-y-2">
             <li className="flex gap-2"><span className="material-symbols-outlined text-base text-primary">edit</span><span>Create a class to generate a code.</span></li>
             <li className="flex gap-2"><span className="material-symbols-outlined text-base text-primary">send</span><span>Share the code with students.</span></li>

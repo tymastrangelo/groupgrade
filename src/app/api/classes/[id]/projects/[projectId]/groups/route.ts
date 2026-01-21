@@ -9,7 +9,7 @@ const supabase = createClient(
 );
 
 function isUuid(id: string) {
-  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(id);
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5]{3}-[89abAB]{3}-[0-9a-fA-F]{12}$/.test(id);
 }
 
 function groupName(idx: number) {
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         }))
         .sort((a, b) => b.score - a.score);
       const groupCount = Math.max(1, Math.ceil(ranked.length / size));
-      const buckets: string[][] = Array.from({ length: groupCount }, () => []);
+      const buckets: string[] = Array.from({ length: groupCount }, () => []);
       ranked.forEach((s, idx) => {
         buckets[idx % groupCount].push(s.id);
       });

@@ -17,7 +17,7 @@ export default function SignInPage() {
         }
       `}} />
       
-      <div className="min-h-screen bg-[#f6f6f8] dark:bg-[#101622] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#f6f6f8] flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           {/* Branding Card */}
           <div className="text-center mb-8">
@@ -26,16 +26,16 @@ export default function SignInPage() {
                 <span className="material-symbols-outlined text-2xl">account_balance</span>
               </div>
               <div className="flex flex-col text-left">
-                <h1 className="text-[#111318] dark:text-white text-2xl font-bold leading-tight">GroupGrade</h1>
+                <h1 className="text-[#111318] text-2xl font-bold leading-tight">GroupGrade</h1>
                 <p className="text-[#616f89] text-sm font-normal">Academic Portal</p>
               </div>
             </div>
           </div>
 
           {/* Sign In Card */}
-          <div className="bg-white dark:bg-[#1a202c] rounded-xl shadow-lg border border-[#e5e7eb] dark:border-[#2d3748] p-8 space-y-6">
+          <div className="bg-white rounded-xl shadow-lg border border-[#e5e7eb] p-8 space-y-6">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-bold text-[#111318] dark:text-white">Welcome Back</h2>
+              <h2 className="text-2xl font-bold text-[#111318]">Welcome Back</h2>
               <p className="text-[#616f89] text-sm">
                 Sign in with your Google account to continue
               </p>
@@ -44,7 +44,7 @@ export default function SignInPage() {
             <div className="space-y-4 pt-4">
               <button
                 onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
-                className="w-full flex items-center justify-center gap-3 bg-white dark:bg-[#1a202c] border-2 border-[#e5e7eb] dark:border-[#2d3748] hover:border-primary dark:hover:border-primary text-[#111318] dark:text-white font-semibold py-3.5 px-4 rounded-lg transition-all duration-200 hover:shadow-md active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-3 bg-white border-2 border-[#e5e7eb] hover:border-primary text-[#111318] font-semibold py-3.5 px-4 rounded-lg transition-all duration-200 hover:shadow-md active:scale-[0.98]"
               >
                 <FcGoogle className="text-2xl" />
                 <span className="text-sm">Continue with Google</span>
@@ -52,17 +52,17 @@ export default function SignInPage() {
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[#e5e7eb] dark:border-[#2d3748]"></div>
+                  <div className="w-full border-t border-[#e5e7eb]"></div>
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="px-2 bg-white dark:bg-[#1a202c] text-[#616f89]">
+                  <span className="px-2 bg-white text-[#616f89]">
                     Secure authentication via Google
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[#e5e7eb] dark:border-[#2d3748]">
+            <div className="pt-4 border-t border-[#e5e7eb]">
               <p className="text-xs text-center text-[#616f89]">
                 By signing in, you agree to our{' '}
                 <a href="#" className="text-primary hover:underline font-medium">Terms of Service</a>

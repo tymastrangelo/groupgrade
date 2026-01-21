@@ -68,9 +68,9 @@ export default function Dashboard({
         }
       `}} />
 
-      <div className="bg-background-light dark:bg-background-dark text-[#111318] dark:text-white min-h-screen flex">
+      <div className="bg-background-light text-[#111318] min-h-screen flex">
         {/* Sidebar - consistent teacher styling */}
-        <aside className="w-64 border-r border-[#e5e7eb] dark:border-[#2d3748] bg-white dark:bg-[#1a202c] hidden lg:flex flex-col fixed h-full z-20 overflow-y-auto">
+        <aside className="w-64 border-r border-[#e5e7eb] bg-white hidden lg:flex flex-col fixed h-full z-20 overflow-y-auto">
           <div className="p-6 flex flex-col h-full">
             {/* Branding */}
             <div className="flex items-center gap-3 mb-8">
@@ -78,7 +78,7 @@ export default function Dashboard({
                 <span className="material-symbols-outlined text-xl">account_balance</span>
               </div>
               <div className="flex flex-col">
-                <h1 className="text-[#111318] dark:text-white text-base font-bold leading-tight">GroupGrade</h1>
+                <h1 className="text-[#111318] text-base font-bold leading-tight">GroupGrade</h1>
                 <p className="text-[#616f89] text-xs font-normal">Academic Portal</p>
               </div>
             </div>
@@ -88,35 +88,35 @@ export default function Dashboard({
               {isTeacher ? (
                 <>
                   <Link
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname === teacherDashboardHref ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light dark:hover:bg-background-dark'}`}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname === teacherDashboardHref ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
                     href={teacherDashboardHref}
                   >
                     <span className="material-symbols-outlined">dashboard</span>
                     <span className="text-sm font-medium">Dashboard</span>
                   </Link>
                   <Link
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(teacherCoursesHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light dark:hover:bg-background-dark'}`}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(teacherCoursesHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
                     href={teacherCoursesHref}
                   >
                     <span className="material-symbols-outlined text-sm">book</span>
                     <span className="text-sm font-medium">Courses</span>
                   </Link>
                   <Link
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(teacherProjectsHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light dark:hover:bg-background-dark'}`}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(teacherProjectsHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
                     href={teacherProjectsHref}
                   >
                     <span className="material-symbols-outlined text-sm">assignment</span>
                     <span className="text-sm font-medium">Projects</span>
                   </Link>
                   <Link
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(teacherStudentsHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light dark:hover:bg-background-dark'}`}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(teacherStudentsHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
                     href={teacherStudentsHref}
                   >
                     <span className="material-symbols-outlined text-sm">groups</span>
                     <span className="text-sm font-medium">Students</span>
                   </Link>
                   <Link
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(teacherAnalyticsHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light dark:hover:bg-background-dark'}`}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(teacherAnalyticsHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
                     href={teacherAnalyticsHref}
                   >
                     <span className="material-symbols-outlined text-sm">bar_chart</span>
@@ -126,28 +126,28 @@ export default function Dashboard({
               ) : (
                 <>
                   <Link
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(studentDashboardHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light dark:hover:bg-background-dark'}`}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(studentDashboardHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
                     href={studentDashboardHref}
                   >
                     <span className="material-symbols-outlined">home</span>
                     <span className="text-sm font-medium">Home</span>
                   </Link>
                   <Link
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(studentCalendarHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light dark:hover:bg-background-dark'}`}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(studentCalendarHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
                     href={studentCalendarHref}
                   >
                     <span className="material-symbols-outlined text-sm">calendar_today</span>
                     <span className="text-sm font-medium">Calendar</span>
                   </Link>
                   <Link
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(studentGradesHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light dark:hover:bg-background-dark'}`}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(studentGradesHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
                     href={studentGradesHref}
                   >
                     <span className="material-symbols-outlined text-sm">school</span>
                     <span className="text-sm font-medium">Grades</span>
                   </Link>
                   <Link
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(studentChatHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light dark:hover:bg-background-dark'}`}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(studentChatHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
                     href={studentChatHref}
                   >
                     <span className="material-symbols-outlined text-sm">group</span>
@@ -158,14 +158,14 @@ export default function Dashboard({
             </nav>
 
             {/* Sidebar Footer */}
-            <div className="mt-auto pt-6 border-t border-[#e5e7eb] dark:border-[#2d3748] flex flex-col gap-1">
-              <a className="flex items-center gap-3 px-3 py-2 rounded-lg text-[#616f89] hover:bg-background-light dark:hover:bg-background-dark transition-colors" href="#">
+            <div className="mt-auto pt-6 border-t border-[#e5e7eb] flex flex-col gap-1">
+              <a className="flex items-center gap-3 px-3 py-2 rounded-lg text-[#616f89] hover:bg-background-light transition-colors" href="#">
                 <span className="material-symbols-outlined text-sm">settings</span>
                 <span className="text-sm font-medium">Settings</span>
               </a>
               <button
                 onClick={handleSignOut}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#616f89] hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#616f89] hover:bg-red-50 hover:text-red-600 transition-colors"
               >
                 <span className="material-symbols-outlined text-sm">logout</span>
                 <span className="text-sm font-medium">Logout</span>
@@ -189,7 +189,7 @@ export default function Dashboard({
         {/* Main Content */}
         <main className="flex-1 lg:ml-64 flex flex-col overflow-y-auto">
           {/* Header - consistent teacher styling */}
-          <header className="h-16 border-b border-[#e5e7eb] dark:border-[#2d3748] bg-white dark:bg-[#1a202c] px-8 flex items-center justify-between sticky top-0 z-10">
+          <header className="h-16 border-b border-[#e5e7eb] bg-white px-8 flex items-center justify-between sticky top-0 z-10">
             <div className="flex items-center gap-2">
               <Link
                 href={isTeacher ? teacherDashboardHref : studentDashboardHref}
@@ -198,24 +198,24 @@ export default function Dashboard({
                 Dashboard
               </Link>
               <span className="text-[#616f89] text-sm">/</span>
-              <span className="text-[#111318] dark:text-white text-sm font-medium">
+              <span className="text-[#111318] text-sm font-medium">
                 {overrideHeaderLabel ?? (isTeacher ? 'Your Classes' : 'Student Dashboard')}
               </span>
             </div>
             <div className="flex items-center gap-6">
               <div className="relative hidden md:block">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#616f89] text-lg">search</span>
-                <input className="bg-[#f3f4f6] dark:bg-background-dark border-none rounded-lg pl-10 pr-4 py-1.5 text-sm w-72 focus:ring-1 focus:ring-primary text-[#111318] dark:text-white" placeholder={isTeacher ? 'Search courses...' : 'Search tasks...'} type="text"/>
+                <input className="bg-[#f3f4f6] border-none rounded-lg pl-10 pr-4 py-1.5 text-sm w-72 focus:ring-1 focus:ring-primary text-[#111318]" placeholder={isTeacher ? 'Search courses...' : 'Search tasks...'} type="text"/>
               </div>
               <div className="flex items-center gap-4">
-                <button className="p-2 text-[#616f89] hover:bg-background-light dark:hover:bg-background-dark rounded-full relative">
+                <button className="p-2 text-[#616f89] hover:bg-background-light rounded-full relative">
                   <span className="material-symbols-outlined">notifications</span>
-                  {isTeacher && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#1a202c]"></span>}
+                  {isTeacher && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>}
                 </button>
                 {isTeacher ? (
-                  <div className="flex items-center gap-3 pl-4 border-l border-[#e5e7eb] dark:border-[#2d3748] relative" ref={menuRef}>
+                  <div className="flex items-center gap-3 pl-4 border-l border-[#e5e7eb] relative" ref={menuRef}>
                     <div className="flex flex-col text-right">
-                      <span className="text-xs font-bold text-[#111318] dark:text-white">{displayName}</span>
+                      <span className="text-xs font-bold text-[#111318]">{displayName}</span>
                       <span className="text-[10px] text-[#616f89]">{userTitle}</span>
                     </div>
                     <button
@@ -235,7 +235,7 @@ export default function Dashboard({
 
                     {/* Dropdown */}
                     <div
-                      className={`absolute right-0 top-12 w-56 origin-top-right rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-white dark:bg-[#1a202c] shadow-xl transition-all ${menuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
+                      className={`absolute right-0 top-12 w-56 origin-top-right rounded-lg border border-[#e5e7eb] bg-white shadow-xl transition-all ${menuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
                       role="menu"
                     >
                       <div className="py-2">
@@ -244,13 +244,13 @@ export default function Dashboard({
                             setShowAvatarSelector(true);
                             setMenuOpen(false);
                           }}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-background-light dark:hover:bg-[#2d3748] transition-colors"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] hover:bg-background-light[#2d3748] transition-colors"
                           role="menuitem"
                         >
                           <span className="material-symbols-outlined text-primary">face</span>
                           Edit Avatar
                         </button>
-                        <button onClick={handleSignOut} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-background-light dark:hover:bg-[#2d3748] transition-colors" role="menuitem">
+                        <button onClick={handleSignOut} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] hover:bg-background-light[#2d3748] transition-colors" role="menuitem">
                           <span className="material-symbols-outlined text-[#e11d48]">logout</span>
                           Logout
                         </button>
@@ -258,9 +258,9 @@ export default function Dashboard({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 pl-4 border-l border-[#e5e7eb] dark:border-[#2d3748] relative" ref={menuRef}>
+                  <div className="flex items-center gap-3 pl-4 border-l border-[#e5e7eb] relative" ref={menuRef}>
                     <div className="flex flex-col text-right">
-                      <span className="text-xs font-bold text-[#111318] dark:text-white">{displayName}</span>
+                      <span className="text-xs font-bold text-[#111318]">{displayName}</span>
                       <span className="text-[10px] text-[#616f89]">{userTitle}</span>
                     </div>
                     <button
@@ -280,11 +280,11 @@ export default function Dashboard({
 
                     {/* Dropdown */}
                     <div
-                      className={`absolute right-0 top-12 w-56 origin-top-right rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-white dark:bg-[#1a202c] shadow-xl transition-all ${menuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
+                      className={`absolute right-0 top-12 w-56 origin-top-right rounded-lg border border-[#e5e7eb] bg-white shadow-xl transition-all ${menuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
                       role="menu"
                     >
                       <div className="py-2">
-                        <a href="/survey" className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-background-light dark:hover:bg-[#2d3748] transition-colors" role="menuitem">
+                        <a href="/survey" className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] hover:bg-background-light transition-colors" role="menuitem">
                           <span className="material-symbols-outlined text-primary">refresh</span>
                           Retake Survey
                         </a>
@@ -293,13 +293,13 @@ export default function Dashboard({
                             setShowAvatarSelector(true);
                             setMenuOpen(false);
                           }}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-background-light dark:hover:bg-[#2d3748] transition-colors"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] hover:bg-background-light[#2d3748] transition-colors"
                           role="menuitem"
                         >
                           <span className="material-symbols-outlined text-primary">face</span>
                           Edit Avatar
                         </button>
-                        <button onClick={handleSignOut} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-background-light dark:hover:bg-[#2d3748] transition-colors" role="menuitem">
+                        <button onClick={handleSignOut} className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] hover:bg-background-light[#2d3748] transition-colors" role="menuitem">
                           <span className="material-symbols-outlined text-[#e11d48]">logout</span>
                           Logout
                         </button>
@@ -318,14 +318,14 @@ export default function Dashboard({
 
       {/* Demo Role Switcher - Bottom Right */}
       {initialRole == null && (
-        <div className="fixed bottom-4 right-4 z-50 bg-white dark:bg-[#1a202c] rounded-lg shadow-lg p-3 border border-[#e5e7eb] dark:border-[#2d3748]">
+        <div className="fixed bottom-4 right-4 z-50 bg-white rounded-lg shadow-lg p-3 border border-[#e5e7eb]">
           <div className="flex gap-2">
             <button
               onClick={() => setUserRole('teacher')}
               className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
                 userRole === 'teacher'
                   ? 'bg-primary text-white'
-                  : 'bg-[#f3f4f6] dark:bg-background-dark text-[#616f89]'
+                  : 'bg-[#f3f4f6] text-[#616f89]'
               }`}
             >
               Teacher
@@ -335,7 +335,7 @@ export default function Dashboard({
               className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
                 userRole === 'student'
                   ? 'bg-primary text-white'
-                  : 'bg-[#f3f4f6] dark:bg-background-dark text-[#616f89]'
+                  : 'bg-[#f3f4f6] text-[#616f89]'
               }`}
             >
               Student

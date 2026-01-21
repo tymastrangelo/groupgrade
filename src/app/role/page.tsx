@@ -13,10 +13,10 @@ export default function RolePage() {
 
   if (status === 'loading') {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
+      <div className="flex items-center justify-center min-h-screen bg-background-light">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-[#616f89] dark:text-gray-400">Loading...</p>
+          <p className="text-[#616f89]">Loading...</p>
         </div>
       </div>
     );
@@ -41,9 +41,9 @@ export default function RolePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
-      <header className="flex items-center justify-between border-b border-[#dbdfe6] dark:border-[#2d3748] px-6 md:px-10 py-3 bg-white dark:bg-background-dark">
-        <div className="flex items-center gap-3 text-[#111318] dark:text-white">
+    <div className="min-h-screen bg-background-light flex flex-col">
+      <header className="flex items-center justify-between border-b border-[#dbdfe6] px-6 md:px-10 py-3 bg-white">
+        <div className="flex items-center gap-3 text-[#111318]">
           <div className="size-6 text-primary">
             <span className="material-symbols-outlined">account_balance</span>
           </div>
@@ -52,25 +52,25 @@ export default function RolePage() {
       </header>
 
       <main className="flex-1 flex items-center justify-center p-6">
-        <div className="bg-white dark:bg-[#1c2433] rounded-xl shadow-sm border border-[#dbdfe6] dark:border-[#2d3748] p-8 w-full max-w-md">
+        <div className="bg-white rounded-xl shadow-sm border border-[#dbdfe6] p-8 w-full max-w-md">
           <h1 className="text-xl font-bold mb-4">Select Your Role</h1>
-          <p className="text-sm text-[#616f89] dark:text-gray-400 mb-6">Choose how you’ll use GroupGrade.</p>
+          <p className="text-sm text-[#616f89] mb-6">Choose how you’ll use GroupGrade.</p>
 
           <div className="space-y-3">
-            <label className={`flex items-center gap-3 p-3 rounded-lg border ${role==='teacher' ? 'border-primary bg-primary/5' : 'border-[#dbdfe6] dark:border-[#2d3748]'} cursor-pointer hover:bg-primary/10 transition`}>
+            <label className={`flex items-center gap-3 p-3 rounded-lg border ${role==='teacher' ? 'border-primary bg-primary/5' : 'border-[#dbdfe6]'} cursor-pointer hover:bg-primary/10 transition`}>
               <input type="radio" name="role" className="sr-only" checked={role==='teacher'} onChange={() => setRole('teacher')} />
               <span className="material-symbols-outlined text-primary">school</span>
               <div>
                 <p className="font-semibold">Teacher</p>
-                <p className="text-xs text-[#616f89] dark:text-gray-400">Create classes, projects, groups and tasks.</p>
+                <p className="text-xs text-[#616f89]">Create classes, projects, groups and tasks.</p>
               </div>
             </label>
-            <label className={`flex items-center gap-3 p-3 rounded-lg border ${role==='student' ? 'border-primary bg-primary/5' : 'border-[#dbdfe6] dark:border-[#2d3748]'} cursor-pointer hover:bg-primary/10 transition`}>
+            <label className={`flex items-center gap-3 p-3 rounded-lg border ${role==='student' ? 'border-primary bg-primary/5' : 'border-[#dbdfe6]'} cursor-pointer hover:bg-primary/10 transition`}>
               <input type="radio" name="role" className="sr-only" checked={role==='student'} onChange={() => setRole('student')} />
               <span className="material-symbols-outlined text-primary">person</span>
               <div>
                 <p className="font-semibold">Student</p>
-                <p className="text-xs text-[#616f89] dark:text-gray-400">Join classes, view tasks, submit work.</p>
+                <p className="text-xs text-[#616f89]">Join classes, view tasks, submit work.</p>
               </div>
             </label>
           </div>
@@ -89,7 +89,7 @@ export default function RolePage() {
         </div>
       </main>
 
-      <footer className="py-6 text-center text-[#616f89] dark:text-gray-500 text-xs">
+      <footer className="py-6 text-center text-[#616f89] text-xs">
         © 2026 GroupGrade Accountability Platform. All rights reserved.
       </footer>
     </div>

@@ -186,10 +186,10 @@ export function TeacherProjectCreate() {
 
   return (
     <div className="p-8 max-w-5xl mx-auto w-full">
-      <div className="bg-white dark:bg-background-dark rounded-xl shadow-2xl border border-[#e5e7eb] dark:border-[#2d3748] overflow-hidden">
+      <div className="bg-white rounded-xl shadow-2xl border border-[#e5e7eb] overflow-hidden">
         <div className="px-8 pt-8 pb-4">
-          <h2 className="text-[#111318] dark:text-white text-2xl font-bold leading-tight tracking-tight">Create New Project</h2>
-          <p className="text-[#616f89] dark:text-gray-400 text-sm mt-1">Set the foundations for transparent group collaboration and fair grading.</p>
+          <h2 className="text-[#111318] text-2xl font-bold leading-tight tracking-tight">Create New Project</h2>
+          <p className="text-[#616f89] text-sm mt-1">Set the foundations for transparent group collaboration and fair grading.</p>
         </div>
 
         <div className="px-8 pb-6">
@@ -201,9 +201,9 @@ export function TeacherProjectCreate() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col">
-                <label className="text-sm font-semibold text-[#111318] dark:text-white mb-2">Class</label>
+                <label className="text-sm font-semibold text-[#111318] mb-2">Class</label>
                 <select
-                  className="h-12 rounded-lg border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-[#111318] dark:text-white px-4 focus:ring-2 focus:ring-primary focus:border-primary"
+                  className="h-12 rounded-lg border-[#dbdfe6] bg-white text-sm text-[#111318] px-4 focus:ring-2 focus:ring-primary focus:border-primary"
                   value={form.classId}
                   onChange={(e) => onChange('classId', e.target.value)}
                   disabled={loading}
@@ -216,9 +216,9 @@ export function TeacherProjectCreate() {
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-semibold text-[#111318] dark:text-white mb-2">Project Name</label>
+                <label className="text-sm font-semibold text-[#111318] mb-2">Project Name</label>
                 <input
-                  className="h-12 rounded-lg border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-[#111318] dark:text-white px-4 focus:ring-2 focus:ring-primary focus:border-primary"
+                  className="h-12 rounded-lg border-[#dbdfe6] bg-white text-sm text-[#111318] px-4 focus:ring-2 focus:ring-primary focus:border-primary"
                   placeholder="e.g., Senior Capstone Phase 1"
                   value={form.name}
                   onChange={(e) => onChange('name', e.target.value)}
@@ -228,10 +228,10 @@ export function TeacherProjectCreate() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col">
-                <label className="text-sm font-semibold text-[#111318] dark:text-white mb-2">Due Date</label>
+                <label className="text-sm font-semibold text-[#111318] mb-2">Due Date</label>
                 <input
                   type="date"
-                  className="h-12 rounded-lg border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-[#111318] dark:text-white px-4 focus:ring-2 focus:ring-primary focus:border-primary"
+                  className="h-12 rounded-lg border-[#dbdfe6] bg-white text-sm text-[#111318] px-4 focus:ring-2 focus:ring-primary focus:border-primary"
                   value={form.dueDate}
                   onChange={(e) => onChange('dueDate', e.target.value)}
                 />
@@ -239,9 +239,9 @@ export function TeacherProjectCreate() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="flex flex-col">
-                  <label className="text-sm font-semibold text-[#111318] dark:text-white mb-2">Assignment Mode</label>
+                  <label className="text-sm font-semibold text-[#111318] mb-2">Assignment Mode</label>
                   <select
-                    className="h-12 rounded-lg border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-[#111318] dark:text-white px-4 focus:ring-2 focus:ring-primary focus:border-primary"
+                    className="h-12 rounded-lg border-[#dbdfe6] bg-white text-sm text-[#111318] px-4 focus:ring-2 focus:ring-primary focus:border-primary"
                     value={form.assignmentMode}
                     onChange={(e) => onChange('assignmentMode', e.target.value as FormState['assignmentMode'])}
                   >
@@ -251,9 +251,9 @@ export function TeacherProjectCreate() {
                 </div>
 
                 <div className="flex flex-col">
-                  <label className="text-sm font-semibold text-[#111318] dark:text-white mb-2">Grouping Strategy</label>
+                  <label className="text-sm font-semibold text-[#111318] mb-2">Grouping Strategy</label>
                   <select
-                    className="h-12 rounded-lg border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-[#111318] dark:text-white px-4 focus:ring-2 focus:ring-primary focus:border-primary"
+                    className="h-12 rounded-lg border-[#dbdfe6] bg-white text-sm text-[#111318] px-4 focus:ring-2 focus:ring-primary focus:border-primary"
                     value={form.groupingStrategy}
                     onChange={(e) => onChange('groupingStrategy', e.target.value as FormState['groupingStrategy'])}
                   >
@@ -265,9 +265,9 @@ export function TeacherProjectCreate() {
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-semibold text-[#111318] dark:text-white mb-2">Description</label>
+              <label className="text-sm font-semibold text-[#111318] mb-2">Description</label>
               <textarea
-                className="rounded-lg border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-[#111318] dark:text-white px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary resize-none"
+                className="rounded-lg border-[#dbdfe6] bg-white text-sm text-[#111318] px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary resize-none"
                 rows={3}
                 placeholder="Explain the project goals and expectations..."
                 value={form.description}
@@ -277,14 +277,14 @@ export function TeacherProjectCreate() {
 
             <div className="flex flex-col">
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-[#111318] dark:text-white">Grading Rubric</label>
+                <label className="text-sm font-semibold text-[#111318]">Grading Rubric</label>
                 <span className="text-xs text-[#616f89] flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm">info</span>
                   Students will see this criteria
                 </span>
               </div>
               <textarea
-                className="rounded-lg border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-[#111318] dark:text-white px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary font-mono leading-relaxed"
+                className="rounded-lg border-[#dbdfe6] bg-white text-sm text-[#111318] px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary font-mono leading-relaxed"
                 rows={4}
                 placeholder="Criteria 1: ..."
                 value={form.rubricText}
@@ -293,9 +293,9 @@ export function TeacherProjectCreate() {
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-semibold text-[#111318] dark:text-white mb-2">Expectations / Notes</label>
+              <label className="text-sm font-semibold text-[#111318] mb-2">Expectations / Notes</label>
               <textarea
-                className="rounded-lg border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-[#111318] dark:text-white px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary resize-none"
+                className="rounded-lg border-[#dbdfe6] bg-white text-sm text-[#111318] px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary resize-none"
                 rows={3}
                 placeholder="Anything else students should know"
                 value={form.expectations}
@@ -304,10 +304,10 @@ export function TeacherProjectCreate() {
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-semibold text-[#111318] dark:text-white mb-2">Deliverables</label>
+              <label className="text-sm font-semibold text-[#111318] mb-2">Deliverables</label>
               <div className="space-y-3 mb-3">
                 {deliverables.map((d, idx) => (
-                  <div key={`${d}-${idx}`} className="flex items-center justify-between p-3 bg-background-light dark:bg-gray-800/50 rounded-lg border border-[#dbdfe6] dark:border-gray-700">
+                  <div key={`${d}-${idx}`} className="flex items-center justify-between p-3 bg-background-light/50 rounded-lg border border-[#dbdfe6]">
                     <span className="text-sm">{d}</span>
                     <button type="button" className="text-red-500 hover:text-red-600" onClick={() => removeDeliverable(idx)}>
                       <span className="material-symbols-outlined text-xl">delete</span>
@@ -318,7 +318,7 @@ export function TeacherProjectCreate() {
               </div>
               <div className="flex gap-2">
                 <input
-                  className="flex-1 h-11 rounded-lg border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-[#111318] dark:text-white px-4 focus:ring-primary focus:border-primary"
+                  className="flex-1 h-11 rounded-lg border-[#dbdfe6] bg-white text-sm text-[#111318] px-4 focus:ring-primary focus:border-primary"
                   placeholder="Add a deliverable..."
                   value={form.deliverableInput}
                   onChange={(e) => onChange('deliverableInput', e.target.value)}
@@ -337,9 +337,9 @@ export function TeacherProjectCreate() {
           </div>
         </div>
 
-        <div className="px-8 py-6 border-t border-[#dbdfe6] dark:border-gray-700 flex justify-end gap-4 bg-gray-50 dark:bg-gray-900/50">
+        <div className="px-8 py-6 border-t border-[#dbdfe6] flex justify-end gap-4 bg-gray-50/50">
           <button
-            className="px-6 py-2.5 rounded-lg text-sm font-semibold text-[#616f89] hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+            className="px-6 py-2.5 rounded-lg text-sm font-semibold text-[#616f89] hover:bg-gray-200 transition-colors"
             type="button"
             onClick={() => {
               setForm((prev) => ({ ...prev, name: '', dueDate: '', description: '', rubricText: '', expectations: '', deliverableInput: '' }));
@@ -364,7 +364,7 @@ export function TeacherProjectCreate() {
         <div className="px-8 pb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-lg font-bold text-[#111318] dark:text-white">Projects for this class</h3>
+              <h3 className="text-lg font-bold text-[#111318]">Projects for this class</h3>
               <p className="text-sm text-[#616f89]">Review existing projects and manage them here.</p>
             </div>
             <button
@@ -385,10 +385,10 @@ export function TeacherProjectCreate() {
               {projects.map((p) => {
                 const parsed = parseRubric(p.rubric);
                 return (
-                  <div key={p.id} className="rounded-xl border border-[#dbdfe6] dark:border-gray-700 bg-white dark:bg-gray-900 p-4 flex flex-col gap-3">
+                  <div key={p.id} className="rounded-xl border border-[#dbdfe6] bg-white p-4 flex flex-col gap-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <a href={`/teacher/projects/${p.id}`} className="text-base font-semibold text-[#111318] dark:text-white hover:text-primary">
+                        <a href={`/teacher/projects/${p.id}`} className="text-base font-semibold text-[#111318] hover:text-primary">
                           {p.name}
                         </a>
                         {p.due_date && <p className="text-xs text-[#616f89]">Due {p.due_date}</p>}
@@ -396,13 +396,13 @@ export function TeacherProjectCreate() {
                           <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary font-bold">
                             {parsed.assignment_mode === 'students_self_assign' ? 'Students assign' : 'Teacher assigns'}
                           </span>
-                          <span className="text-[11px] px-2 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
+                          <span className="text-[11px] px-2 py-1 rounded-full bg-blue-100 text-blue-700/30">
                             {parsed.grouping_strategy === 'random_from_survey' ? 'Random (survey)' : 'Manual groups'}
                           </span>
                         </div>
                       </div>
                       <button
-                        className="p-2 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30"
+                        className="p-2 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50/30"
                         onClick={() => setDeleteTarget(p)}
                         title="Delete project"
                       >
@@ -410,11 +410,11 @@ export function TeacherProjectCreate() {
                       </button>
                     </div>
 
-                    {parsed.description && <p className="text-sm text-[#111318] dark:text-gray-200 leading-snug">{parsed.description}</p>}
+                    {parsed.description && <p className="text-sm text-[#111318] leading-snug">{parsed.description}</p>}
                     {Array.isArray(parsed.deliverables) && parsed.deliverables.length > 0 && (
                       <div className="flex flex-col gap-1">
                         <p className="text-xs font-semibold text-[#616f89]">Deliverables</p>
-                        <ul className="list-disc list-inside text-sm text-[#111318] dark:text-gray-200 space-y-1">
+                        <ul className="list-disc list-inside text-sm text-[#111318] space-y-1">
                           {parsed.deliverables.map((d: string, idx: number) => (
                             <li key={`${p.id}-deliv-${idx}`}>{d}</li>
                           ))}
@@ -434,14 +434,14 @@ export function TeacherProjectCreate() {
 
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-[#dbdfe6] dark:border-gray-700 p-6 flex flex-col gap-4">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border border-[#dbdfe6] p-6 flex flex-col gap-4">
             <div>
-              <h4 className="text-lg font-bold text-[#111318] dark:text-white">Delete project?</h4>
+              <h4 className="text-lg font-bold text-[#111318]">Delete project?</h4>
               <p className="text-sm text-[#616f89]">This will remove {deleteTarget.name} and any groups under it.</p>
             </div>
             <div className="flex items-center justify-end gap-2">
               <button
-                className="px-4 py-2 rounded-lg text-sm font-bold border border-[#dbdfe6] dark:border-gray-700 text-[#111318] dark:text-white"
+                className="px-4 py-2 rounded-lg text-sm font-bold border border-[#dbdfe6] text-[#111318]"
                 onClick={() => setDeleteTarget(null)}
                 disabled={deleteBusy}
               >

@@ -44,10 +44,10 @@ function formatDate(value?: string | null) {
 function Avatar({ name, src }: { name: string; src?: string | null }) {
   const letter = (name || '?').charAt(0).toUpperCase();
   if (src) {
-    return <img src={src} alt={name} className="h-10 w-10 rounded-full object-cover border border-[#e5e7eb] dark:border-[#2d3748]" />;
+    return <img src={src} alt={name} className="h-10 w-10 rounded-full object-cover border border-[#e5e7eb]" />;
   }
   return (
-    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center border border-[#e5e7eb] dark:border-[#2d3748]">
+    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center border border-[#e5e7eb]">
       {letter}
     </div>
   );
@@ -96,8 +96,8 @@ export function StudentClassDetail({ classId }: { classId: string }) {
   if (loading) {
     return (
       <div className="p-8 max-w-[1200px] mx-auto w-full flex flex-col gap-6">
-        <div className="h-48 bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] animate-pulse" />
-        <div className="h-64 bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] animate-pulse" />
+        <div className="h-48 bg-white rounded-xl border border-[#e5e7eb] animate-pulse" />
+        <div className="h-64 bg-white rounded-xl border border-[#e5e7eb] animate-pulse" />
       </div>
     );
   }
@@ -105,7 +105,7 @@ export function StudentClassDetail({ classId }: { classId: string }) {
   if (error || !classData) {
     return (
       <div className="p-8 max-w-[1200px] mx-auto w-full">
-        <div className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-6 text-[#e11d48]">
+        <div className="bg-white border border-[#e5e7eb] rounded-xl p-6 text-[#e11d48]">
           {error || 'Class not found'}
         </div>
       </div>
@@ -114,36 +114,36 @@ export function StudentClassDetail({ classId }: { classId: string }) {
 
   return (
     <div className="p-8 max-w-[1200px] mx-auto w-full flex flex-col gap-6">
-      <div className="bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] p-6 flex flex-col gap-3">
+      <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 flex flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-sm text-[#616f89]">Class</p>
-            <h1 className="text-3xl font-black text-[#111318] dark:text-white tracking-tight">{classData.name}</h1>
+            <h1 className="text-3xl font-black text-[#111318] tracking-tight">{classData.name}</h1>
             <p className="text-xs text-[#616f89] mt-1">Joined {formatDate(classData.created_at)}</p>
           </div>
           <span className="text-[11px] px-3 py-1 rounded-full bg-primary/10 text-primary font-bold">Active</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="p-4 rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-[#f9fafb] dark:bg-[#111827]">
+          <div className="p-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
             <p className="text-xs text-[#616f89]">Total members</p>
-            <p className="text-2xl font-bold text-[#111318] dark:text-white">{stats.total}</p>
+            <p className="text-2xl font-bold text-[#111318]">{stats.total}</p>
           </div>
-          <div className="p-4 rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-[#f9fafb] dark:bg-[#111827]">
+          <div className="p-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
             <p className="text-xs text-[#616f89]">Students</p>
-            <p className="text-2xl font-bold text-[#111318] dark:text-white">{stats.students}</p>
+            <p className="text-2xl font-bold text-[#111318]">{stats.students}</p>
           </div>
-          <div className="p-4 rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-[#f9fafb] dark:bg-[#111827]">
+          <div className="p-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
             <p className="text-xs text-[#616f89]">Professors</p>
-            <p className="text-2xl font-bold text-[#111318] dark:text-white">{stats.professors}</p>
+            <p className="text-2xl font-bold text-[#111318]">{stats.professors}</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] p-6 flex flex-col gap-3">
+      <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-bold text-[#111318] dark:text-white">Announcements</h3>
+            <h3 className="text-xl font-bold text-[#111318]">Announcements</h3>
             <p className="text-sm text-[#616f89]">Posted by your professor.</p>
           </div>
           <span className="text-xs text-[#616f89]">{notes.length} items</span>
@@ -153,9 +153,9 @@ export function StudentClassDetail({ classId }: { classId: string }) {
             <p className="text-sm text-[#616f89]">No announcements yet.</p>
           ) : (
             notes.map((note) => (
-              <div key={note.id} className="p-3 rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] bg-[#f9fafb] dark:bg-[#111827] text-sm text-[#111318] dark:text-white">
+              <div key={note.id} className="p-3 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] text-sm text-[#111318]">
                 <div className="flex justify-between items-start gap-2">
-                  <p className="font-semibold text-xs text-[#4b5563] dark:text-gray-300">{note.author_name || 'Professor'}</p>
+                  <p className="font-semibold text-xs text-[#4b5563]">{note.author_name || 'Professor'}</p>
                   <p className="text-[10px] text-[#9ca3af]">{formatDate(note.created_at)}</p>
                 </div>
                 <p className="mt-1 leading-snug">{note.content}</p>
@@ -165,10 +165,10 @@ export function StudentClassDetail({ classId }: { classId: string }) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] p-6 flex flex-col gap-3">
+      <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-bold text-[#111318] dark:text-white">Projects</h3>
+            <h3 className="text-xl font-bold text-[#111318]">Projects</h3>
             <p className="text-sm text-[#616f89]">See your teams once your professor groups the class.</p>
           </div>
         </div>
@@ -186,18 +186,18 @@ export function StudentClassDetail({ classId }: { classId: string }) {
                 <Link
                   key={p.id}
                   href={`/student/projects/${p.id}`}
-                  className="p-4 rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] bg-[#f9fafb] dark:bg-[#111827] flex flex-col gap-2 hover:shadow-md transition-shadow"
+                  className="p-4 rounded-xl border border-[#e5e7eb] bg-[#f9fafb] flex flex-col gap-2 hover:shadow-md transition-shadow"
                   aria-label={`View project ${p.name}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-lg font-bold text-[#111318] dark:text-white">{p.name}</p>
+                      <p className="text-lg font-bold text-[#111318]">{p.name}</p>
                       {p.due_date && <p className="text-xs text-[#616f89]">Due {formatDate(p.due_date)}</p>}
                       <div className="flex gap-2 mt-2 flex-wrap">
                         <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary font-bold">
                           {parsed.assignment_mode === 'students_self_assign' ? 'Students assign' : 'Teacher assigns'}
                         </span>
-                        <span className="text-[11px] px-2 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
+                        <span className="text-[11px] px-2 py-1 rounded-full bg-blue-100 text-blue-700/30">
                           {parsed.grouping_strategy === 'random_from_survey' ? 'Random (survey)' : 'Manual groups'}
                         </span>
                       </div>
@@ -207,11 +207,11 @@ export function StudentClassDetail({ classId }: { classId: string }) {
 
                   {p.groups && p.groups.length > 0 ? (
                     myGroup ? (
-                      <div className="border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg p-3 bg-white dark:bg-[#0f172a]">
-                        <p className="text-sm font-semibold text-[#111318] dark:text-white">Your group: {myGroup.name}</p>
+                      <div className="border border-[#e5e7eb] rounded-lg p-3 bg-white">
+                        <p className="text-sm font-semibold text-[#111318]">Your group: {myGroup.name}</p>
                         <div className="flex flex-wrap gap-2 mt-2">
                           {myGroup.members.map((m) => (
-                            <span key={m.id} className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border ${m.id === viewerId ? 'bg-primary text-white border-primary' : 'bg-[#f3f4f6] dark:bg-[#111827] text-[#111318] dark:text-white border-[#e5e7eb] dark:border-[#2d3748]'}`}>
+                            <span key={m.id} className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border ${m.id === viewerId ? 'bg-primary text-white border-primary' : 'bg-[#f3f4f6] text-[#111318] border-[#e5e7eb]'}`}>
                               <Avatar name={m.name} src={(m as any).avatar_url} />
                               {m.name}
                             </span>
@@ -235,10 +235,10 @@ export function StudentClassDetail({ classId }: { classId: string }) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-[#1a202c] rounded-xl border border-[#e5e7eb] dark:border-[#2d3748] p-6">
+      <div className="bg-white rounded-xl border border-[#e5e7eb] p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-bold text-[#111318] dark:text-white">Members</h3>
+            <h3 className="text-lg font-bold text-[#111318]">Members</h3>
             <p className="text-sm text-[#616f89]">Professor and student roster.</p>
           </div>
           <span className="text-xs px-3 py-1 rounded-full bg-primary/10 text-primary font-bold">{stats.total} total</span>
@@ -246,13 +246,13 @@ export function StudentClassDetail({ classId }: { classId: string }) {
         {members.length === 0 ? (
           <div className="text-sm text-[#616f89]">No members yet.</div>
         ) : (
-          <div className="divide-y divide-[#e5e7eb] dark:divide-[#2d3748]">
+          <div className="divide-y divide-[#e5e7eb]">
             {members.map((m) => (
               <div key={`${m.id}-${m.classRole}`} className="py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar name={m.name} src={m.avatar_url} />
                   <div>
-                    <p className="text-sm font-semibold text-[#111318] dark:text-white">
+                    <p className="text-sm font-semibold text-[#111318]">
                       {m.classRole === 'professor' ? `Professor ${m.name.split(' ').pop()}` : m.name}
                     </p>
                     <p className="text-xs text-[#616f89]">{m.email}</p>
@@ -260,8 +260,8 @@ export function StudentClassDetail({ classId }: { classId: string }) {
                 </div>
                 <span className={`text-[11px] font-bold px-3 py-1.5 rounded-full ${
                   m.classRole === 'professor'
-                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-200'
-                    : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200'
+                    ? 'bg-purple-100 text-purple-700/30'
+                    : 'bg-blue-100 text-blue-700/30'
                 }`}>
                   {m.classRole === 'professor' ? 'Instructor' : 'Student'}
                 </span>

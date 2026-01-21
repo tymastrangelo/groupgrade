@@ -47,12 +47,12 @@ function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | 
       <img
         src={src}
         alt={name}
-        className={`${size} rounded-full object-cover border border-[#e5e7eb] dark:border-[#2d3748]`}
+        className={`${size} rounded-full object-cover border border-[#e5e7eb]`}
       />
     );
   }
   return (
-    <div className={`${size} rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center border border-[#e5e7eb] dark:border-[#2d3748]`}>
+    <div className={`${size} rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center border border-[#e5e7eb]`}>
       {letter}
     </div>
   );
@@ -148,12 +148,12 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
     <DashboardLayout initialRole="teacher" overrideHeaderLabel="Project">
       <div className="p-8 max-w-screen-2xl mx-auto w-full">
         <div className="flex flex-col gap-6">
-        <div className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-6 flex flex-col gap-4 shadow-sm">
+        <div className="bg-white border border-[#e5e7eb] rounded-xl p-6 flex flex-col gap-4 shadow-sm">
           {!editMode ? (
             <>
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="flex flex-col gap-1">
-                  <h1 className="text-2xl font-bold text-[#111318] dark:text-white">{project.name}</h1>
+                  <h1 className="text-2xl font-bold text-[#111318]">{project.name}</h1>
                   <div className="flex items-center gap-2 text-sm text-[#616f89]">
                     <a href={`/teacher/classes/${project.class_id}`} className="text-primary font-semibold hover:underline">
                       {project.class_name}
@@ -168,7 +168,7 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
                     <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary font-bold">
                       {parsed.assignment_mode === "students_self_assign" ? "Students assign" : "Teacher assigns"}
                     </span>
-                    <span className="text-[11px] px-2 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
+                    <span className="text-[11px] px-2 py-1 rounded-full bg-blue-100 text-blue-700/30">
                       {parsed.grouping_strategy === "random_from_survey" ? "Random (survey)" : "Manual groups"}
                     </span>
                   </div>
@@ -192,59 +192,59 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
               </div>
               {project.description && (
                 <div className="mt-2">
-                  <h3 className="text-sm font-semibold text-[#111318] dark:text-white mb-1">Description</h3>
-                  <p className="text-sm text-[#616f89] dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{project.description}</p>
+                  <h3 className="text-sm font-semibold text-[#111318] mb-1">Description</h3>
+                  <p className="text-sm text-[#616f89] leading-relaxed whitespace-pre-wrap">{project.description}</p>
                 </div>
               )}
             </>
           ) : (
             <>
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-[#111318] dark:text-white">Edit project</h2>
+                <h2 className="text-lg font-bold text-[#111318]">Edit project</h2>
                 <button onClick={() => setEditMode(false)} className="text-[#616f89] hover:text-[#111318]">
                   <span className="material-symbols-outlined">close</span>
                 </button>
               </div>
               <div className="flex flex-col gap-3">
-                <label className="text-sm font-semibold text-[#111318] dark:text-white">
+                <label className="text-sm font-semibold text-[#111318]">
                   Project name
                   <input
-                    className="mt-1 w-full bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                   />
                 </label>
-                <label className="text-sm font-semibold text-[#111318] dark:text-white">
+                <label className="text-sm font-semibold text-[#111318]">
                   Due date
                   <input
                     type="date"
-                    className="mt-1 w-full bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     value={editDueDate}
                     onChange={(e) => setEditDueDate(e.target.value)}
                   />
                 </label>
-                <label className="text-sm font-semibold text-[#111318] dark:text-white">
+                <label className="text-sm font-semibold text-[#111318]">
                   Description
                   <textarea
-                    className="mt-1 w-full bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]"
+                    className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[100px]"
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     placeholder="Describe the project goals and overview"
                   />
                 </label>
-                <label className="text-sm font-semibold text-[#111318] dark:text-white">
+                <label className="text-sm font-semibold text-[#111318]">
                   Expectations
                   <textarea
-                    className="mt-1 w-full bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[80px]"
+                    className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[80px]"
                     value={editExpectations}
                     onChange={(e) => setEditExpectations(e.target.value)}
                     placeholder="What do you expect from students?"
                   />
                 </label>
-                <label className="text-sm font-semibold text-[#111318] dark:text-white">
+                <label className="text-sm font-semibold text-[#111318]">
                   Deliverables (one per line)
                   <textarea
-                    className="mt-1 w-full bg-white dark:bg-[#0f172a] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[80px]"
+                    className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[80px]"
                     value={editDeliverables}
                     onChange={(e) => setEditDeliverables(e.target.value)}
                     placeholder="Final report&#10;Presentation slides&#10;Source code"
@@ -255,7 +255,7 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
               <div className="flex items-center justify-end gap-2">
                 <button
                   onClick={() => setEditMode(false)}
-                  className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] dark:border-[#2d3748] text-[#111318] dark:text-white"
+                  className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] text-[#111318]"
                 >
                   Cancel
                 </button>
@@ -274,14 +274,14 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
         {!editMode && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-5 flex flex-col gap-3">
-                <h3 className="text-sm font-semibold text-[#111318] dark:text-white">Expectations</h3>
-                <p className="text-sm text-[#616f89] dark:text-gray-300 whitespace-pre-wrap">{project.expectations || "Not provided."}</p>
+              <div className="bg-white border border-[#e5e7eb] rounded-xl p-5 flex flex-col gap-3">
+                <h3 className="text-sm font-semibold text-[#111318]">Expectations</h3>
+                <p className="text-sm text-[#616f89] whitespace-pre-wrap">{project.expectations || "Not provided."}</p>
               </div>
-              <div className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-5 flex flex-col gap-3">
-                <h3 className="text-sm font-semibold text-[#111318] dark:text-white">Deliverables</h3>
+              <div className="bg-white border border-[#e5e7eb] rounded-xl p-5 flex flex-col gap-3">
+                <h3 className="text-sm font-semibold text-[#111318]">Deliverables</h3>
                 {project.deliverables ? (
-                  <ul className="list-disc list-inside text-sm text-[#111318] dark:text-gray-200 space-y-1">
+                  <ul className="list-disc list-inside text-sm text-[#111318] space-y-1">
                     {project.deliverables.split("\n").filter(Boolean).map((d: string, idx: number) => (
                       <li key={`del-${idx}`}>{d.trim()}</li>
                     ))}
@@ -293,14 +293,14 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
             </div>
 
             {parsed.rubric_text && (
-              <div className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-5 flex flex-col gap-3">
-                <h3 className="text-sm font-semibold text-[#111318] dark:text-white">Rubric</h3>
-                <p className="text-sm text-[#111318] dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{parsed.rubric_text}</p>
+              <div className="bg-white border border-[#e5e7eb] rounded-xl p-5 flex flex-col gap-3">
+                <h3 className="text-sm font-semibold text-[#111318]">Rubric</h3>
+                <p className="text-sm text-[#111318] leading-relaxed whitespace-pre-wrap">{parsed.rubric_text}</p>
               </div>
             )}
 
-            <div className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-5 flex flex-col gap-4">
-              <h3 className="text-lg font-bold text-[#111318] dark:text-white">Groups ({project.groups.length})</h3>
+            <div className="bg-white border border-[#e5e7eb] rounded-xl p-5 flex flex-col gap-4">
+              <h3 className="text-lg font-bold text-[#111318]">Groups ({project.groups.length})</h3>
               {project.groups.length === 0 ? (
                 <p className="text-sm text-[#616f89]">
                   No groups set yet.{" "}
@@ -312,9 +312,9 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {project.groups.map((g) => (
-                    <div key={g.id} className="rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] p-4 bg-[#fdfefe] dark:bg-[#0f172a]">
+                    <div key={g.id} className="rounded-lg border border-[#e5e7eb] p-4 bg-[#fdfefe]">
                       <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm font-semibold text-[#111318] dark:text-white">{g.name}</p>
+                        <p className="text-sm font-semibold text-[#111318]">{g.name}</p>
                         <span className="text-xs text-[#616f89]">{g.members.length} members</span>
                       </div>
                       <div className="flex flex-col gap-2">
@@ -322,7 +322,7 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
                           <div key={m.id} className="flex items-center gap-2">
                             <Avatar name={m.name} src={m.avatar_url} />
                             <div className="flex flex-col">
-                              <span className="text-sm font-semibold text-[#111318] dark:text-white leading-tight">{m.name}</span>
+                              <span className="text-sm font-semibold text-[#111318] leading-tight">{m.name}</span>
                               <span className="text-xs text-[#616f89]">{m.email}</span>
                             </div>
                           </div>

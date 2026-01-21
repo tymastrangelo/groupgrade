@@ -50,7 +50,7 @@ export default function TeacherProjectsList() {
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-black text-[#111318] dark:text-white tracking-tight">Projects</h1>
+              <h1 className="text-3xl font-black text-[#111318] tracking-tight">Projects</h1>
               <p className="text-sm text-[#616f89] mt-1">View and manage all your projects across classes</p>
             </div>
           </div>
@@ -60,7 +60,7 @@ export default function TeacherProjectsList() {
           ) : error ? (
             <div className="text-sm text-red-600">{error}</div>
           ) : projects.length === 0 ? (
-            <div className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-8 text-center">
+            <div className="bg-white border border-[#e5e7eb] rounded-xl p-8 text-center">
               <p className="text-sm text-[#616f89]">No projects yet. Create a project from a class page.</p>
             </div>
           ) : (
@@ -75,10 +75,10 @@ export default function TeacherProjectsList() {
                   <Link
                     key={project.id}
                     href={`/teacher/projects/${project.id}`}
-                    className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-5 hover:border-primary transition-colors flex flex-col gap-3"
+                    className="bg-white border border-[#e5e7eb] rounded-xl p-5 hover:border-primary transition-colors flex flex-col gap-3"
                   >
                     <div className="flex flex-col gap-2">
-                      <h3 className="text-lg font-bold text-[#111318] dark:text-white">{project.name}</h3>
+                      <h3 className="text-lg font-bold text-[#111318]">{project.name}</h3>
                       <div className="flex items-center gap-2 text-xs text-[#616f89]">
                         <span className="material-symbols-outlined text-sm">school</span>
                         <span>{project.class_name}</span>
@@ -94,7 +94,7 @@ export default function TeacherProjectsList() {
                       <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary font-bold">
                         {parsed.assignment_mode === "students_self_assign" ? "Students assign" : "Teacher assigns"}
                       </span>
-                      <span className="text-[11px] px-2 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
+                      <span className="text-[11px] px-2 py-1 rounded-full bg-blue-100 text-blue-700/30">
                         {parsed.grouping_strategy === "random_from_survey" ? "Auto groups" : "Manual groups"}
                       </span>
                     </div>

@@ -100,10 +100,10 @@ export default function SurveyPage() {
 
   if (status === 'loading') {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
+      <div className="flex items-center justify-center min-h-screen bg-background-light">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-[#616f89] dark:text-gray-400">Loading survey...</p>
+          <p className="text-[#616f89]">Loading survey...</p>
         </div>
       </div>
     );
@@ -151,10 +151,10 @@ export default function SurveyPage() {
   // Removed Skip/Back actions per retake context
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark">
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light">
       {/* Navigation Bar */}
-      <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#dbdfe6] dark:border-[#2d3748] px-6 md:px-10 py-3 bg-white dark:bg-background-dark sticky top-0 z-50">
-        <div className="flex items-center gap-4 text-[#111318] dark:text-white">
+      <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#dbdfe6] px-6 md:px-10 py-3 bg-white sticky top-0 z-50">
+        <div className="flex items-center gap-4 text-[#111318]">
           <div className="size-6 text-primary">
             <svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
               <path d="M13.8261 17.4264C16.7203 18.1174 20.2244 18.5217 24 18.5217C27.7756 18.5217 31.2797 18.1174 34.1739 17.4264C36.9144 16.7722 39.9967 15.2331 41.3563 14.1648L24.8486 40.6391C24.4571 41.267 23.5429 41.267 23.1514 40.6391L6.64374 14.1648C8.00331 15.2331 11.0856 16.7722 13.8261 17.4264Z" fill="currentColor"></path>
@@ -168,7 +168,7 @@ export default function SurveyPage() {
             onClick={() => setMenuOpen(o => !o)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            className="flex items-center gap-3 rounded-lg h-10 px-3 bg-[#f0f2f4] dark:bg-[#2d3748] text-[#111318] dark:text-white hover:bg-primary/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="flex items-center gap-3 rounded-lg h-10 px-3 bg-[#f0f2f4] text-[#111318] hover:bg-primary/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
             <span className="material-symbols-outlined text-xl">account_circle</span>
             {session?.user?.image && (
@@ -181,13 +181,13 @@ export default function SurveyPage() {
 
           {/* Dropdown */}
           <div
-            className={`absolute right-0 mt-2 w-56 origin-top-right rounded-lg border border-[#dbdfe6] dark:border-[#2d3748] bg-white dark:bg-[#1c2433] shadow-xl transition-all ${menuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'} `}
+            className={`absolute right-0 mt-2 w-56 origin-top-right rounded-lg border border-[#dbdfe6] bg-white shadow-xl transition-all ${menuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'} `}
             role="menu"
           >
             <div className="py-2">
               <button
                 onClick={() => { setMenuOpen(false); router.push('/survey'); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-[#f6f6f8] dark:hover:bg-[#2d3748] transition-colors"
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] hover:bg-[#f6f6f8] transition-colors"
                 role="menuitem"
               >
                 <span className="material-symbols-outlined text-primary">refresh</span>
@@ -195,7 +195,7 @@ export default function SurveyPage() {
               </button>
               <button
                 onClick={async () => { setMenuOpen(false); await signOut({ callbackUrl: '/' }); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] dark:text-white hover:bg-[#f6f6f8] dark:hover:bg-[#2d3748] transition-colors"
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] hover:bg-[#f6f6f8] transition-colors"
                 role="menuitem"
               >
                 <span className="material-symbols-outlined text-[#e11d48]">logout</span>
@@ -210,32 +210,32 @@ export default function SurveyPage() {
       <main className="flex-1 flex flex-col items-center py-8 px-4 sm:px-10">
         <div className="w-full max-w-[800px] flex flex-col gap-6">
           {/* Progress Header */}
-          <div className="bg-white dark:bg-[#1c2433] rounded-xl p-6 shadow-sm border border-[#dbdfe6] dark:border-[#2d3748]">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-[#dbdfe6]">
             <div className="flex flex-col gap-3">
               <div className="flex gap-6 justify-between items-end">
                 <div>
                   <h1 className="text-2xl font-bold tracking-tight">Tell us your strengths</h1>
-                  <p className="text-[#616f89] dark:text-gray-400 text-sm mt-1">Rate your skills to help your team distribute tasks fairly.</p>
+                  <p className="text-[#616f89] text-sm mt-1">Rate your skills to help your team distribute tasks fairly.</p>
                 </div>
                 <p className="text-primary text-lg font-bold">{skills ? `${progressPercent}%` : '...'}</p>
               </div>
-              <div className="rounded-full bg-[#dbdfe6] dark:bg-[#2d3748] h-3 overflow-hidden">
+              <div className="rounded-full bg-[#dbdfe6] h-3 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-primary transition-all duration-500"
                   style={{ width: `${skills ? progressPercent : 0}%` }}
                 ></div>
               </div>
-              <p className="text-[#616f89] dark:text-gray-400 text-xs font-medium">
+              <p className="text-[#616f89] text-xs font-medium">
                 {!skills ? 'Loading previous ratings…' : (progressPercent === 100 ? 'All skills rated!' : 'Almost there! Just a few more skills.')}
               </p>
             </div>
           </div>
 
           {/* Survey Card */}
-          <div className="bg-white dark:bg-[#1c2433] rounded-xl shadow-sm border border-[#dbdfe6] dark:border-[#2d3748] overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border border-[#dbdfe6] overflow-hidden">
             <div className="p-6 flex flex-col gap-8">
               {error && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-200">
+                <div className="bg-red-50/20 border border-red-200 rounded-lg p-4 text-red-700">
                   {error}
                 </div>
               )}
@@ -246,13 +246,13 @@ export default function SurveyPage() {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-primary">{skill.icon}</span>
-                      <p className="text-[#111318] dark:text-white text-base font-semibold">{skill.name}</p>
+                      <p className="text-[#111318] text-base font-semibold">{skill.name}</p>
                     </div>
                     <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded">{skill.category}</span>
                   </div>
                   <div className="flex flex-col gap-2">
                     <div className="relative flex w-full items-center gap-4">
-                      <div className="flex h-1.5 flex-1 rounded-full bg-[#dbdfe6] dark:bg-[#2d3748] relative cursor-pointer"
+                      <div className="flex h-1.5 flex-1 rounded-full bg-[#dbdfe6] relative cursor-pointer"
                         onClick={(e) => {
                           const rect = e.currentTarget.getBoundingClientRect();
                           const percent = (e.clientX - rect.left) / rect.width;
@@ -270,13 +270,13 @@ export default function SurveyPage() {
                           className="absolute inset-0 w-full h-full cursor-pointer opacity-0 z-10"
                         />
                         <div
-                          className="absolute -top-2 size-5 rounded-full bg-primary border-4 border-white dark:border-[#1c2433] shadow-md pointer-events-none"
+                          className="absolute -top-2 size-5 rounded-full bg-primary border-4 border-white shadow-md pointer-events-none"
                           style={{ left: `${(skill.value / 5) * 100}%`, transform: 'translateX(-50%)' }}
                         ></div>
                       </div>
                       <span className="text-primary font-bold w-6 text-center text-sm">{skill.value}</span>
                     </div>
-                    <div className="flex justify-between text-[10px] text-[#616f89] dark:text-gray-500 font-medium px-1">
+                    <div className="flex justify-between text-[10px] text-[#616f89] font-medium px-1">
                       <span>Novice</span>
                       <span>Intermediate</span>
                       <span>Expert</span>
@@ -284,12 +284,12 @@ export default function SurveyPage() {
                   </div>
                 </div>
               )) : (
-                <div className="text-[#616f89] dark:text-gray-400 text-sm">Loading survey…</div>
+                <div className="text-[#616f89] text-sm">Loading survey…</div>
               )}
             </div>
 
             {/* Footer */}
-            <div className="border-t border-[#dbdfe6] dark:border-[#2d3748] bg-gray-50 dark:bg-[#1a202c] p-6 flex justify-end items-center">
+            <div className="border-t border-[#dbdfe6] bg-gray-50[#1a202c] p-6 flex justify-end items-center">
               <button
                 onClick={handleSave}
                 disabled={isLoading || !skills}
@@ -301,9 +301,9 @@ export default function SurveyPage() {
           </div>
 
           {/* Help Tip */}
-          <div className="flex items-center gap-3 px-2 py-4 border-t border-dashed border-[#dbdfe6] dark:border-[#2d3748]">
+          <div className="flex items-center gap-3 px-2 py-4 border-t border-dashed border-[#dbdfe6]">
             <span className="material-symbols-outlined text-primary">info</span>
-            <p className="text-sm text-[#616f89] dark:text-gray-400">
+            <p className="text-sm text-[#616f89]">
               This data is only visible to your project teammates to help organize group roles.
             </p>
           </div>
@@ -311,7 +311,7 @@ export default function SurveyPage() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto py-6 text-center text-[#616f89] dark:text-gray-500 text-xs">
+      <footer className="mt-auto py-6 text-center text-[#616f89] text-xs">
         © 2024 GroupGrade Accountability Platform. All rights reserved.
       </footer>
     </div>

@@ -45,15 +45,15 @@ export function AvatarSelector({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="w-full max-w-md bg-white dark:bg-[#111827] rounded-xl shadow-2xl border border-[#e5e7eb] dark:border-[#2d3748] p-6 flex flex-col gap-4">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border border-[#e5e7eb] p-6 flex flex-col gap-4">
         <div className="flex items-start justify-between">
           <div>
-            <h4 className="text-lg font-bold text-[#111318] dark:text-white">Choose Your Avatar</h4>
+            <h4 className="text-lg font-bold text-[#111318]">Choose Your Avatar</h4>
             <p className="text-sm text-[#616f89]">Click randomize to shuffle through avatars.</p>
           </div>
           <button 
             onClick={onClose} 
-            className="text-[#616f89] hover:text-[#111318] dark:hover:text-white transition-colors"
+            className="text-[#616f89] hover:text-[#111318] transition-colors"
           >
             <span className="material-symbols-outlined">close</span>
           </button>
@@ -70,7 +70,7 @@ export function AvatarSelector({
 
           <button
             onClick={randomize}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#f3f4f6] dark:bg-[#2d3748] text-[#111318] dark:text-white font-bold text-sm hover:bg-[#e5e7eb] dark:hover:bg-[#374151] transition-colors"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#f3f4f6] text-[#111318] font-bold text-sm hover:bg-[#e5e7eb] transition-colors"
           >
             <span className="material-symbols-outlined text-base">shuffle</span>
             Randomize
@@ -78,15 +78,15 @@ export function AvatarSelector({
         </div>
 
         {error && (
-          <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+          <div className="text-sm text-red-600 bg-red-50/20 p-3 rounded-lg">
             {error}
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#e5e7eb] dark:border-[#2d3748]">
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#e5e7eb]">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-bold text-[#616f89] hover:text-[#111318] dark:hover:text-white transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-bold text-[#616f89] hover:text-[#111318] transition-colors"
           >
             Cancel
           </button>

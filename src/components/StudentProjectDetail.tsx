@@ -41,12 +41,12 @@ function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | 
       <img
         src={src}
         alt={name}
-        className={`${size} rounded-full object-cover border border-[#e5e7eb] dark:border-[#2d3748]`}
+        className={`${size} rounded-full object-cover border border-[#e5e7eb]`}
       />
     );
   }
   return (
-    <div className={`${size} rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center border border-[#e5e7eb] dark:border-[#2d3748]`}>
+    <div className={`${size} rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center border border-[#e5e7eb]`}>
       {letter}
     </div>
   );
@@ -113,10 +113,10 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
     <DashboardLayout initialRole="student" overrideHeaderLabel="Project">
       <div className="p-8 max-w-screen-2xl mx-auto w-full">
         <div className="flex flex-col gap-6">
-        <div className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-6 flex flex-col gap-4 shadow-sm">
+        <div className="bg-white border border-[#e5e7eb] rounded-xl p-6 flex flex-col gap-4 shadow-sm">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="flex flex-col gap-1">
-              <h1 className="text-2xl font-bold text-[#111318] dark:text-white">{project.name}</h1>
+              <h1 className="text-2xl font-bold text-[#111318]">{project.name}</h1>
               <div className="flex items-center gap-2 text-sm text-[#616f89]">
                 <span className="font-semibold">{project.class_name}</span>
                 <span className="text-[#d1d5db]">•</span>
@@ -131,21 +131,21 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
           </div>
           {project.description && (
             <div className="mt-2">
-              <h3 className="text-sm font-semibold text-[#111318] dark:text-white mb-1">Description</h3>
-              <p className="text-sm text-[#616f89] dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{project.description}</p>
+              <h3 className="text-sm font-semibold text-[#111318] mb-1">Description</h3>
+              <p className="text-sm text-[#616f89] leading-relaxed whitespace-pre-wrap">{project.description}</p>
             </div>
           )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-5 flex flex-col gap-3">
-            <h3 className="text-sm font-semibold text-[#111318] dark:text-white">Expectations</h3>
-            <p className="text-sm text-[#616f89] dark:text-gray-300 whitespace-pre-wrap">{project.expectations || "Not provided."}</p>
+          <div className="bg-white border border-[#e5e7eb] rounded-xl p-5 flex flex-col gap-3">
+            <h3 className="text-sm font-semibold text-[#111318]">Expectations</h3>
+            <p className="text-sm text-[#616f89] whitespace-pre-wrap">{project.expectations || "Not provided."}</p>
           </div>
-          <div className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-5 flex flex-col gap-3">
-            <h3 className="text-sm font-semibold text-[#111318] dark:text-white">Deliverables</h3>
+          <div className="bg-white border border-[#e5e7eb] rounded-xl p-5 flex flex-col gap-3">
+            <h3 className="text-sm font-semibold text-[#111318]">Deliverables</h3>
             {project.deliverables ? (
-              <ul className="list-disc list-inside text-sm text-[#111318] dark:text-gray-200 space-y-1">
+              <ul className="list-disc list-inside text-sm text-[#111318] space-y-1">
                 {project.deliverables.split("\n").filter(Boolean).map((d: string, idx: number) => (
                   <li key={`del-${idx}`}>{d.trim()}</li>
                 ))}
@@ -157,27 +157,27 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
         </div>
 
         {parsed.rubric_text && (
-          <div className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-5 flex flex-col gap-3">
-            <h3 className="text-sm font-semibold text-[#111318] dark:text-white">Rubric</h3>
-            <p className="text-sm text-[#111318] dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{parsed.rubric_text}</p>
+          <div className="bg-white border border-[#e5e7eb] rounded-xl p-5 flex flex-col gap-3">
+            <h3 className="text-sm font-semibold text-[#111318]">Rubric</h3>
+            <p className="text-sm text-[#111318] leading-relaxed whitespace-pre-wrap">{parsed.rubric_text}</p>
           </div>
         )}
 
-        <div className="bg-white dark:bg-[#1a202c] border border-[#e5e7eb] dark:border-[#2d3748] rounded-xl p-5 flex flex-col gap-4">
+        <div className="bg-white border border-[#e5e7eb] rounded-xl p-5 flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">group</span>
-            <h3 className="text-lg font-bold text-[#111318] dark:text-white">Your Team</h3>
+            <h3 className="text-lg font-bold text-[#111318]">Your Team</h3>
           </div>
           
           {project.groups.length === 0 ? (
-            <div className="rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] p-6 bg-[#fdfefe] dark:bg-[#0f172a] text-center">
+            <div className="rounded-lg border border-[#e5e7eb] p-6 bg-[#fdfefe] text-center">
               <span className="material-symbols-outlined text-4xl text-[#616f89] mb-2">schedule</span>
               <p className="text-sm text-[#616f89]">Groups have not been assigned yet.</p>
               <p className="text-xs text-[#9ca3af] mt-1">Your teacher will assign teams soon. Check back later!</p>
             </div>
           ) : myGroup ? (
             <>
-              <div className="rounded-lg border-2 border-primary bg-primary/5 dark:bg-primary/10 p-5">
+              <div className="rounded-lg border-2 border-primary bg-primary/5/10 p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary">badge</span>
@@ -197,14 +197,14 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                         key={m.id} 
                         className={`flex items-center gap-3 p-3 rounded-lg ${
                           isMe 
-                            ? "bg-white dark:bg-[#1a202c] border-2 border-primary" 
-                            : "bg-white/60 dark:bg-[#111827]/60 border border-[#e5e7eb] dark:border-[#2d3748]"
+                            ? "bg-white border-2 border-primary" 
+                            : "bg-white/60[#111827]/60 border border-[#e5e7eb]"
                         }`}
                       >
                         <Avatar name={m.name} src={m.avatar_url} size="h-10 w-10" />
                         <div className="flex flex-col flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-[#111318] dark:text-white leading-tight">
+                            <span className="text-sm font-semibold text-[#111318] leading-tight">
                               {m.name}
                             </span>
                             {isMe && (
@@ -229,16 +229,16 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {otherGroups.map((g) => (
-                      <div key={g.id} className="rounded-lg border border-[#e5e7eb] dark:border-[#2d3748] p-4 bg-[#fdfefe] dark:bg-[#0f172a]">
+                      <div key={g.id} className="rounded-lg border border-[#e5e7eb] p-4 bg-[#fdfefe]">
                         <div className="flex items-center justify-between mb-3">
-                          <p className="text-sm font-semibold text-[#111318] dark:text-white">{g.name}</p>
+                          <p className="text-sm font-semibold text-[#111318]">{g.name}</p>
                           <span className="text-xs text-[#616f89]">{g.members.length} members</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {g.members.map((m) => (
-                            <div key={m.id} className="flex items-center gap-1.5 px-2 py-1.5 rounded-full bg-white dark:bg-[#111827] border border-[#e5e7eb] dark:border-[#2d3748]">
+                            <div key={m.id} className="flex items-center gap-1.5 px-2 py-1.5 rounded-full bg-white border border-[#e5e7eb]">
                               <Avatar name={m.name} src={m.avatar_url} size="h-5 w-5" />
-                              <span className="text-xs font-medium text-[#111318] dark:text-white">{m.name}</span>
+                              <span className="text-xs font-medium text-[#111318]">{m.name}</span>
                             </div>
                           ))}
                         </div>
@@ -249,10 +249,10 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
               )}
             </>
           ) : (
-            <div className="rounded-lg border border-amber-200 dark:border-amber-800 p-6 bg-amber-50 dark:bg-amber-900/20 text-center">
-              <span className="material-symbols-outlined text-4xl text-amber-600 dark:text-amber-400 mb-2">info</span>
-              <p className="text-sm text-amber-800 dark:text-amber-200 font-semibold">You haven&apos;t been assigned to a group yet.</p>
-              <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">Please contact your teacher if you think this is an error.</p>
+            <div className="rounded-lg border border-amber-200 p-6 bg-amber-50/20 text-center">
+              <span className="material-symbols-outlined text-4xl text-amber-600 mb-2">info</span>
+              <p className="text-sm text-amber-800 font-semibold">You haven&apos;t been assigned to a group yet.</p>
+              <p className="text-xs text-amber-700 mt-1">Please contact your teacher if you think this is an error.</p>
             </div>
           )}
         </div>
