@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { TeacherContent } from './TeacherContent';
 import { StudentContent } from './StudentContent';
+import StudentDashboard from './StudentDashboard';
 import { AvatarSelector } from './AvatarSelector';
 
 export default function Dashboard({
@@ -22,10 +23,40 @@ export default function Dashboard({
   const [userRole, setUserRole] = useState<'teacher' | 'student'>(initialRole ?? 'teacher');
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/' });
+  };
+
+  const handleJoinGroup = async () => {
+    if (!joinCode.trim()) return;
+    setJoining(true);
+    setJoinError(null);
+    
+    try {
+      const res = await fetch('/api/classes/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: joinCode.trim() }),
+      });
+      
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || 'Failed to join class');
+      }
+      
+      setJoinCode('');
+      setShowJoinGroupModal(false);
+    } catch (err: any) {
+      setJoinError(err.message || 'Failed to join class');
+    } finally {
+      setJoining(false);
+    }
   };
 
   const isTeacher = userRole === 'teacher';
@@ -52,7 +83,6 @@ export default function Dashboard({
   const teacherAnalyticsHref = '/teacher/analytics';
   const studentDashboardHref = '/student';
   const studentCalendarHref = '/student/calendar';
-  const studentGradesHref = '/student/grades';
   const studentChatHref = '/student/chat';
 
   return (
@@ -69,6 +99,51 @@ export default function Dashboard({
       `}} />
 
       <div className="bg-background-light text-[#111318] min-h-screen flex">
+        {/* Join Group Modal */}
+        {showJoinGroupModal && !isTeacher && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-sm w-full mx-4">
+              <div className="p-6 border-b border-[#e5e7eb]">
+                <h2 className="text-xl font-bold text-[#111318]">Join a Class</h2>
+              </div>
+              <div className="p-6 flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-[#111318]">Enter Class Code</label>
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                    placeholder="e.g., ABC123"
+                    className="px-4 py-2 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-[#111318]"
+                    maxLength={6}
+                  />
+                </div>
+                {joinError && <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{joinError}</div>}
+                <p className="text-xs text-[#616f89]">Ask your professor for the class code.</p>
+              </div>
+              <div className="p-6 border-t border-[#e5e7eb] flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowJoinGroupModal(false);
+                    setJoinCode('');
+                    setJoinError(null);
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg border border-[#e5e7eb] text-[#111318] font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleJoinGroup}
+                  disabled={joining || !joinCode.trim()}
+                  className="flex-1 px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {joining ? 'Joining...' : 'Join'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Sidebar - consistent teacher styling */}
         <aside className="w-64 border-r border-[#e5e7eb] bg-white hidden lg:flex flex-col fixed h-full z-20 overflow-y-auto">
           <div className="p-6 flex flex-col h-full">
@@ -126,11 +201,25 @@ export default function Dashboard({
               ) : (
                 <>
                   <Link
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(studentDashboardHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname === studentDashboardHref || pathname === studentDashboardHref + '/' ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
                     href={studentDashboardHref}
                   >
                     <span className="material-symbols-outlined">home</span>
                     <span className="text-sm font-medium">Home</span>
+                  </Link>
+                  <Link
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith('/student/projects') ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
+                    href="/student/projects"
+                  >
+                    <span className="material-symbols-outlined text-sm">assignment</span>
+                    <span className="text-sm font-medium">Projects</span>
+                  </Link>
+                  <Link
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith('/student/classes') ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
+                    href="/student/classes"
+                  >
+                    <span className="material-symbols-outlined text-sm">book</span>
+                    <span className="text-sm font-medium">Classes</span>
                   </Link>
                   <Link
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(studentCalendarHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
@@ -138,13 +227,6 @@ export default function Dashboard({
                   >
                     <span className="material-symbols-outlined text-sm">calendar_today</span>
                     <span className="text-sm font-medium">Calendar</span>
-                  </Link>
-                  <Link
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(studentGradesHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
-                    href={studentGradesHref}
-                  >
-                    <span className="material-symbols-outlined text-sm">school</span>
-                    <span className="text-sm font-medium">Grades</span>
                   </Link>
                   <Link
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${pathname?.startsWith(studentChatHref) ? 'bg-primary/10 text-primary' : 'text-[#616f89] hover:bg-background-light'}`}
@@ -177,9 +259,12 @@ export default function Dashboard({
                 </button>
               )}
               {!isTeacher && (
-                <button className="w-full bg-primary hover:bg-blue-700 text-white rounded-lg py-2.5 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all mt-4">
-                  <span className="material-symbols-outlined text-sm">upload_file</span>
-                  <span>Submit Work</span>
+                <button 
+                  onClick={() => setShowJoinGroupModal(true)}
+                  className="w-full bg-primary hover:bg-blue-700 text-white rounded-lg py-2.5 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all mt-4"
+                >
+                  <span className="material-symbols-outlined text-sm">group_add</span>
+                  <span>Join a Class</span>
                 </button>
               )}
             </div>
@@ -312,7 +397,7 @@ export default function Dashboard({
           </header>
 
           {/* Content */}
-          {children ?? (isTeacher ? <TeacherContent /> : <StudentContent userName={userName.split(' ')[0]} />)}
+          {children ?? (isTeacher ? <TeacherContent /> : <StudentDashboard />)}
         </main>
       </div>
 
