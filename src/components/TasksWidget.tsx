@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AddTaskModal, type Project } from './AddTaskModal';
+import { tasksCache } from '@/lib/tasksCache';
 
 type TaskStatus = 'todo' | 'in_progress' | 'submitted' | 'done';
 
@@ -35,25 +36,29 @@ export function TasksWidget({ projectId, title = 'Your Tasks', showAddNewButton 
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const url = projectId ? `/api/projects/${projectId}/tasks` : '/api/tasks';
-        const res = await fetch(url);
-        if (!res.ok) {
-          const j = await res.json().catch(() => ({}));
-          throw new Error(j.error || 'Failed to load tasks');
-        }
-        const j = await res.json();
-        setTasks(j.tasks || []);
-      } catch (e: any) {
-        setError(e.message || 'Failed to load tasks');
-      } finally {
-        setLoading(false);
-      }
+    const url = projectId ? `/api/projects/${projectId}/tasks` : '/api/tasks';
+    let unsub: (() => void) | undefined;
+    setError(null);
+    setLoading(true);
+
+    // Subscribe to cache updates
+    unsub = tasksCache.subscribe<typeof tasks>(url, (data) => {
+      setTasks(data || []);
+      setLoading(false);
+    });
+
+    // Fetch with cache (SWr-like: stale-while-revalidate)
+    tasksCache
+      .fetch<typeof tasks>(url)
+      .then((data) => {
+        if (data) setTasks(data as any);
+      })
+      .catch((e) => setError((e as Error).message || 'Failed to load tasks'))
+      .finally(() => setLoading(false));
+
+    return () => {
+      unsub?.();
     };
-    load();
   }, [projectId, refreshSignal, taskRefreshKey]);
 
   const handleTaskToggle = async (task: Task) => {
@@ -65,9 +70,11 @@ export function TasksWidget({ projectId, title = 'Your Tasks', showAddNewButton 
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {
-        setTasks((prev) =>
-          prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t))
-        );
+        const url = projectId ? `/api/projects/${projectId}/tasks` : '/api/tasks';
+        tasksCache.mutate(url, (prev: Task[] | undefined): Task[] => {
+          const cur: Task[] = prev || tasks;
+          return cur.map<Task>((t) => (t.id === task.id ? { ...t, status: newStatus as TaskStatus } : t));
+        });
       } else {
         console.error('Failed to update task');
       }
@@ -87,7 +94,11 @@ export function TasksWidget({ projectId, title = 'Your Tasks', showAddNewButton 
         method: 'DELETE',
       });
       if (res.ok) {
-        setTasks((prev) => prev.filter((t) => t.id !== deleteTaskId));
+        const url = projectId ? `/api/projects/${projectId}/tasks` : '/api/tasks';
+        tasksCache.mutate(url, (prev: Task[] | undefined): Task[] => {
+          const cur: Task[] = prev || tasks;
+          return cur.filter((t) => t.id !== deleteTaskId);
+        });
         setDeleteTaskId(null);
       } else {
         console.error('Failed to delete task');
@@ -239,7 +250,27 @@ export function TasksWidget({ projectId, title = 'Your Tasks', showAddNewButton 
           <AddTaskModal
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
-            onTaskCreated={() => setTaskRefreshKey((k) => k + 1)}
+            onTaskCreated={(newTask) => {
+              const currentUrl = projectId ? `/api/projects/${projectId}/tasks` : '/api/tasks';
+              // Update current list cache immediately
+              tasksCache.mutate(currentUrl, (prev: Task[] | undefined) => {
+                const cur = prev || tasks;
+                return newTask ? [...cur, newTask as Task] : cur;
+              });
+              // Also update the per-project cache for the task's project
+              const pid = (newTask && (newTask.projectId || newTask.project_id)) as string | undefined;
+              if (pid) {
+                const projUrl = `/api/projects/${pid}/tasks`;
+                tasksCache.mutate(projUrl, (prev: Task[] | undefined) => {
+                  const cur = prev || [];
+                  // Avoid duplicate if already in list
+                  if (newTask && !cur.find((t) => t.id === newTask.id)) {
+                    return [...cur, newTask as Task];
+                  }
+                  return cur;
+                });
+              }
+            }}
             projectId={projectId}
             projects={projects}
           />

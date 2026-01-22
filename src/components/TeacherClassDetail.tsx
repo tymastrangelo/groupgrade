@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { tasksCache } from "@/lib/tasksCache";
 
 type ClassData = {
   id: string;
@@ -135,44 +136,59 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
     return studentMembers.filter((s) => !assigned.has(s.id));
   }, [studentMembers, manualGroups]);
 
+  const url = `/api/classes/${classId}`;
   const fetchData = async () => {
     setError(null);
     setLoading(true);
-    const res = await fetch(`/api/classes/${classId}`);
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j.error || "Failed to load class");
+    try {
+      const j = await tasksCache.fetch<{ class: ClassData; members: any[]; notes: any[]; projects: any[] }>(url);
+      if (j) {
+        setClassData((j as any).class);
+        setMembers((j as any).members || []);
+        setNotes((j as any).notes || []);
+        setProjects((j as any).projects || []);
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to load class");
+    } finally {
       setLoading(false);
-      return;
     }
-    const j = await res.json();
-    setClassData(j.class);
-    setMembers(j.members || []);
-    setNotes(j.notes || []);
-    setProjects(j.projects || []);
-    setLoading(false);
   };
 
+  const notesUrl = `/api/classes/${classId}/notes`;
   const fetchNotes = async () => {
     setNotesLoading(true);
     setNotesError(null);
-    const res = await fetch(`/api/classes/${classId}/notes`);
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setNotesError(j.error || "Failed to load notes");
+    try {
+      const j = await tasksCache.fetch<{ notes: Note[] }>(notesUrl);
+      if (j && (j as any).notes) setNotes((j as any).notes || []);
+    } catch (e: any) {
+      setNotesError(e.message || "Failed to load notes");
+    } finally {
       setNotesLoading(false);
-      return;
     }
-    const j = await res.json();
-    setNotes(j.notes || []);
-    setNotesLoading(false);
   };
 
   useEffect(() => {
     if (!classId) return;
+    const unsubClass = tasksCache.subscribe(url, (data: any) => {
+      if (data) {
+        setClassData(data.class);
+        setMembers(data.members || []);
+        setNotes(data.notes || []);
+        setProjects(data.projects || []);
+      }
+    });
+    const unsubNotes = tasksCache.subscribe<{ notes: Note[] }>(notesUrl, (data) => {
+      if (data && (data as any).notes) setNotes((data as any).notes || []);
+    });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
     fetchNotes();
+    return () => {
+      unsubClass();
+      unsubNotes();
+    };
   }, [classId]);
 
   const copyCode = async (code: string) => {
@@ -199,7 +215,8 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
       return;
     }
     setNoteInput("");
-    fetchNotes();
+    // Revalidate notes via cache fetch
+    await fetchNotes();
   };
 
   const removeStudent = async (userId: string) => {
@@ -235,6 +252,8 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
     }
     const j = await res.json();
     setClassData(j.class);
+    // Update class cache with new code
+    tasksCache.mutate(url, (prev: any) => ({ ...(prev || {}), class: j.class }));
     setCodeBusy(false);
   };
 
@@ -270,7 +289,8 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
     setDeliverables(["Final project report (PDF)", "Peer review form"]);
     setDeliverableInput("");
     setShowProjectModal(false);
-    fetchData();
+    // Refresh class data via cache-backed fetch
+    await fetchData();
     setProjectBusy(false);
   };
 
@@ -311,7 +331,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
     }
     setDeleteTarget(null);
     setDeleteBusy(false);
-    fetchData();
+    await fetchData();
   };
 
   const openGrouping = (projectId: string) => {

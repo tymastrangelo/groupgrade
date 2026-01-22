@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { tasksCache } from '@/lib/tasksCache';
 
 type ClassData = {
   id: string;
@@ -68,29 +69,40 @@ export function StudentClassDetail({ classId }: { classId: string }) {
     return { total: members.length, professors, students };
   }, [members]);
 
+  const url = `/api/classes/${classId}`;
   const fetchData = async () => {
     setError(null);
     setLoading(true);
-    const res = await fetch(`/api/classes/${classId}`);
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j.error || 'Failed to load class');
+    try {
+      const j = await tasksCache.fetch<{ class: ClassData; members: any[]; notes: any[]; projects: any[]; viewer_id?: string }>(url);
+      if (j) {
+        setClassData((j as any).class);
+        setMembers((j as any).members || []);
+        setNotes((j as any).notes || []);
+        setProjects((j as any).projects || []);
+        setViewerId((j as any).viewer_id || null);
+      }
+    } catch (e: any) {
+      setError(e.message || 'Failed to load class');
+    } finally {
       setLoading(false);
-      return;
     }
-    const j = await res.json();
-    setClassData(j.class);
-    setMembers(j.members || []);
-    setNotes(j.notes || []);
-    setProjects(j.projects || []);
-    setViewerId(j.viewer_id || null);
-    setLoading(false);
   };
 
   useEffect(() => {
     if (!classId) return;
+    const unsubscribe = tasksCache.subscribe(url, (data: any) => {
+      if (data) {
+        setClassData(data.class);
+        setMembers(data.members || []);
+        setNotes(data.notes || []);
+        setProjects(data.projects || []);
+        setViewerId(data.viewer_id || null);
+      }
+    });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
+    return () => unsubscribe();
   }, [classId]);
 
   if (loading) {

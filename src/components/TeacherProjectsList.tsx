@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { tasksCache } from "@/lib/tasksCache";
 import DashboardLayout from "@/components/DashboardLayout";
 import Link from "next/link";
 
@@ -24,24 +25,27 @@ export default function TeacherProjectsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const url = "/api/teacher/projects";
   const fetchProjects = async () => {
     setLoading(true);
     setError(null);
-    const res = await fetch("/api/teacher/projects");
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j.error || "Failed to load projects");
+    try {
+      const data = await tasksCache.fetch<{ projects: ProjectWithClass[] }>(url);
+      if (data && (data as any).projects) setProjects((data as any).projects || []);
+    } catch (e: any) {
+      setError(e.message || "Failed to load projects");
+    } finally {
       setLoading(false);
-      return;
     }
-    const data = await res.json();
-    setProjects(data.projects || []);
-    setLoading(false);
   };
 
   useEffect(() => {
+    const unsubscribe = tasksCache.subscribe<{ projects: ProjectWithClass[] }>(url, (data) => {
+      if (data && (data as any).projects) setProjects((data as any).projects || []);
+    });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProjects();
+    return () => unsubscribe();
   }, []);
 
   return (

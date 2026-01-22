@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import Link from 'next/link';
+import { tasksCache } from '@/lib/tasksCache';
 
 type StudentProject = {
   id: string;
@@ -30,18 +31,13 @@ export default function StudentProjects() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch('/api/classes');
-      if (!res.ok) throw new Error('Failed to load classes');
-      const j = await res.json();
-      const classesData = j.classes || [];
-      
+      const classesResp = await tasksCache.fetch<{ classes: any[] }>("/api/classes");
+      const classesData = (classesResp && (classesResp as any).classes) || [];
       const results = await Promise.all(
         classesData.map(async (cls: any) => {
-          const res = await fetch(`/api/classes/${cls.id}`);
-          if (!res.ok) throw new Error('Failed to load class projects');
-          const j = await res.json();
-          const viewerId = j.viewer_id;
-          return (j.projects || []).map((p: any) => {
+          const j = await tasksCache.fetch<{ viewer_id: string; projects: any[] }>(`/api/classes/${cls.id}`);
+          const viewerId = (j as any)?.viewer_id;
+          return (((j as any)?.projects) || []).map((p: any) => {
             const myGroup = (p.groups || []).find((g: any) => g.members.some((m: any) => m.id === viewerId));
             return {
               id: p.id,
@@ -65,7 +61,14 @@ export default function StudentProjects() {
   };
 
   useEffect(() => {
+    const unsubscribe = tasksCache.subscribe<{ classes: any[] }>("/api/classes", (data) => {
+      if (data && (data as any).classes) {
+        // Trigger refresh when classes cache updates
+        fetchProjects();
+      }
+    });
     fetchProjects();
+    return () => unsubscribe();
   }, []);
 
   return (

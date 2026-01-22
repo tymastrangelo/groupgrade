@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { tasksCache } from '@/lib/tasksCache';
 
 type ClassRow = {
   id: string;
@@ -18,23 +19,27 @@ export function TeacherContent() {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
 
+  const url = '/api/classes';
   const fetchClasses = async () => {
     setError(null);
-    const res = await fetch('/api/classes');
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j.error || 'Failed to load classes');
+    setLoading(true);
+    try {
+      const data = await tasksCache.fetch<{ classes: ClassRow[] }>(url);
+      if (data && (data as any).classes) setClasses((data as any).classes || []);
+    } catch (e: any) {
+      setError(e.message || 'Failed to load classes');
+    } finally {
       setLoading(false);
-      return;
     }
-    const j = await res.json();
-    setClasses(j.classes || []);
-    setLoading(false);
   };
 
   useEffect(() => {
+    const unsubscribe = tasksCache.subscribe<{ classes: ClassRow[] }>(url, (data) => {
+      if (data && (data as any).classes) setClasses((data as any).classes || []);
+    });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchClasses();
+    return () => unsubscribe();
   }, []);
 
   const handleCreate = async () => {
@@ -53,7 +58,21 @@ export function TeacherContent() {
       return;
     }
     setNewName('');
-    await fetchClasses();
+    // Optionally optimistic update cache if API returns created class
+    try {
+      const j = await res.json();
+      const created = (j && (j.class || j.created || j.newClass)) as ClassRow | undefined;
+      if (created) {
+        tasksCache.mutate<{ classes: ClassRow[] }>(url, (prev) => {
+          const cur = (prev && (prev as any).classes) || [];
+          return { classes: [...cur, created] } as any;
+        });
+      } else {
+        await fetchClasses();
+      }
+    } catch {
+      await fetchClasses();
+    }
     setCreating(false);
   };
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { tasksCache } from '@/lib/tasksCache';
 
 type ClassRow = {
   id: string;
@@ -31,25 +32,20 @@ export default function StudentClasses() {
 
   const fetchClasses = async () => {
     try {
-      const res = await fetch('/api/classes');
-      if (!res.ok) throw new Error('Failed to load classes');
-      const j = await res.json();
-      setClasses(j.classes || []);
-      
-      // Fetch details for each class
+      const j = await tasksCache.fetch<{ classes: ClassRow[] }>("/api/classes");
+      const classesResp = (j && (j as any).classes) || [];
+      setClasses(classesResp);
+
       const details: { [key: string]: { memberCount: number; professorName: string } } = {};
-      for (const cls of j.classes || []) {
+      for (const cls of classesResp) {
         try {
-          const detailRes = await fetch(`/api/classes/${cls.id}`);
-          if (detailRes.ok) {
-            const detailData = await detailRes.json();
-            const members = detailData.members || [];
-            const professor = members.find((m: any) => m.classRole === 'professor');
-            details[cls.id] = {
-              memberCount: members.length,
-              professorName: professor?.name || 'Unknown Professor',
-            };
-          }
+          const detailData = await tasksCache.fetch<{ members: any[] }>(`/api/classes/${cls.id}`);
+          const members = (detailData && (detailData as any).members) || [];
+          const professor = members.find((m: any) => m.classRole === 'professor');
+          details[cls.id] = {
+            memberCount: members.length,
+            professorName: professor?.name || 'Unknown Professor',
+          };
         } catch (err) {
           details[cls.id] = { memberCount: 0, professorName: 'Unknown Professor' };
         }
@@ -63,7 +59,11 @@ export default function StudentClasses() {
   };
 
   useEffect(() => {
+    const unsubscribe = tasksCache.subscribe<{ classes: ClassRow[] }>("/api/classes", (data) => {
+      if (data && (data as any).classes) setClasses((data as any).classes || []);
+    });
     fetchClasses();
+    return () => unsubscribe();
   }, []);
 
   const handleSearchClass = async () => {

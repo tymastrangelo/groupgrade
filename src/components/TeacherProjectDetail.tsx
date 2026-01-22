@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { tasksCache } from "@/lib/tasksCache";
 
 type ProjectData = {
   id: string;
@@ -71,29 +72,43 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
   const [editDeliverables, setEditDeliverables] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
 
+  const url = `/api/projects/${projectId}`;
   const fetchProject = async () => {
     setLoading(true);
     setError(null);
-    const res = await fetch(`/api/projects/${projectId}`);
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j.error || "Failed to load project");
+    try {
+      const data = await tasksCache.fetch<{ project: ProjectData }>(url);
+      if (data && (data as any).project) {
+        const p = (data as any).project as ProjectData;
+        setProject(p);
+        setEditName(p.name || "");
+        setEditDescription(p.description || "");
+        setEditExpectations(p.expectations || "");
+        setEditDeliverables(p.deliverables || "");
+        setEditDueDate(p.due_date || "");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to load project");
+    } finally {
       setLoading(false);
-      return;
     }
-    const data = await res.json();
-    setProject(data.project);
-    setEditName(data.project.name || "");
-    setEditDescription(data.project.description || "");
-    setEditExpectations(data.project.expectations || "");
-    setEditDeliverables(data.project.deliverables || "");
-    setEditDueDate(data.project.due_date || "");
-    setLoading(false);
   };
 
   useEffect(() => {
+    const unsubscribe = tasksCache.subscribe<{ project: ProjectData }>(url, (data) => {
+      if (data && (data as any).project) {
+        const p = (data as any).project as ProjectData;
+        setProject(p);
+        setEditName(p.name || "");
+        setEditDescription(p.description || "");
+        setEditExpectations(p.expectations || "");
+        setEditDeliverables(p.deliverables || "");
+        setEditDueDate(p.due_date || "");
+      }
+    });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProject();
+    return () => unsubscribe();
   }, [projectId]);
 
   const handleSave = async () => {

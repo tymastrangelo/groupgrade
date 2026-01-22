@@ -5,6 +5,7 @@ import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useSession } from "next-auth/react";
 import { TasksWidget } from "./TasksWidget";
+import { tasksCache } from "@/lib/tasksCache";
 
 type ProjectData = {
   id: string;
@@ -86,25 +87,35 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, isOverdue: false });
 
+  const url = `/api/projects/${projectId}`;
   const fetchProject = async () => {
     setLoading(true);
     setError(null);
-    const res = await fetch(`/api/projects/${projectId}`);
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j.error || "Failed to load project");
+    try {
+      const data = await tasksCache.fetch<{ project: ProjectData }>(url);
+      if (data && (data as any).project) {
+        const p = (data as any).project as ProjectData;
+        setProject(p);
+        setCountdown(getCountdown(p.due_date));
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to load project");
+    } finally {
       setLoading(false);
-      return;
     }
-    const data = await res.json();
-    setProject(data.project);
-    setCountdown(getCountdown(data.project.due_date));
-    setLoading(false);
   };
 
   useEffect(() => {
+    const unsubscribe = tasksCache.subscribe<{ project: ProjectData }>(url, (data) => {
+      if (data && (data as any).project) {
+        const p = (data as any).project as ProjectData;
+        setProject(p);
+        setCountdown(getCountdown(p.due_date));
+      }
+    });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProject();
+    return () => unsubscribe();
   }, [projectId]);
 
   // Update countdown every minute
@@ -148,15 +159,6 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
     <DashboardLayout initialRole="student" overrideHeaderLabel="Project">
       <div className="w-full bg-[#f6f6f8] min-h-screen">
         <div className="max-w-7xl mx-auto px-6 py-8">
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm mb-8">
-            <Link href="/student" className="text-primary hover:underline">Dashboard</Link>
-            <span className="text-[#d1d5db]">/</span>
-            <Link href="/student/projects" className="text-primary hover:underline">Projects</Link>
-            <span className="text-[#d1d5db]">/</span>
-            <span className="text-[#616f89]">{project.name}</span>
-          </div>
-
           {/* Header Section */}
           <div className="bg-white rounded-xl border border-[#e5e7eb] p-8 mb-8 shadow-sm">
             <div className="flex items-start justify-between gap-4 mb-3">

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { TasksWidget } from './TasksWidget';
 import { TeamActivityWidget } from './TeamActivityWidget';
 import { SubmissionCompletionCard } from './SubmissionCompletionCard';
+import { tasksCache } from '@/lib/tasksCache';
 
 type ClassRow = {
   id: string;
@@ -39,13 +40,12 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
 
   const userName = session?.user?.name || 'User';
+  const firstName = userName.split(' ')[0] || userName;
 
   const fetchClasses = async () => {
     try {
-      const res = await fetch('/api/classes');
-      if (!res.ok) throw new Error('Failed to load classes');
-      const j = await res.json();
-      setClasses(j.classes || []);
+      const data = await tasksCache.fetch<{ classes: ClassRow[] }>("/api/classes");
+      if (data && (data as any).classes) setClasses((data as any).classes || []);
     } catch (err) {
       console.error('Error fetching classes:', err);
     }
@@ -53,18 +53,13 @@ export default function StudentDashboard() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch('/api/classes');
-      if (!res.ok) throw new Error('Failed to load classes');
-      const j = await res.json();
-      const classesData = j.classes || [];
-      
+      const classesResp = await tasksCache.fetch<{ classes: ClassRow[] }>("/api/classes");
+      const classesData = (classesResp && (classesResp as any).classes) || [];
       const results = await Promise.all(
         classesData.map(async (cls: ClassRow) => {
-          const res = await fetch(`/api/classes/${cls.id}`);
-          if (!res.ok) throw new Error('Failed to load class projects');
-          const j = await res.json();
-          const viewerId = j.viewer_id;
-          return (j.projects || []).map((p: any) => {
+          const j = await tasksCache.fetch<{ viewer_id: string; projects: any[] }>(`/api/classes/${cls.id}`);
+          const viewerId = (j as any)?.viewer_id;
+          return (((j as any)?.projects) || []).map((p: any) => {
             const myGroup = (p.groups || []).find((g: any) => g.members.some((m: any) => m.id === viewerId));
             return {
               id: p.id,
@@ -131,7 +126,7 @@ export default function StudentDashboard() {
         {/* Page Heading with Submit Work Button */}
         <div className="flex items-end justify-between">
           <div>
-            <h1 className="text-[#111318] text-4xl font-black tracking-tight mb-1">Welcome back, {userName}</h1>
+            <h1 className="text-[#111318] text-4xl font-black tracking-tight mb-1">Welcome back, {firstName}</h1>
             <p className="text-[#657386]">
               You have <span className="text-primary font-bold">{Math.max(0, projects.filter(p => p.due_date).length)}</span> {projects.filter(p => p.due_date).length === 1 ? 'deadline' : 'deadlines'} approaching. Stay focused!
             </p>

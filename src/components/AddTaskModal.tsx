@@ -11,7 +11,7 @@ export interface Project {
 interface AddTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onTaskCreated?: () => void;
+  onTaskCreated?: (task: any) => void;
   projectId?: string;
   projects?: Project[];
 }
@@ -74,12 +74,16 @@ export function AddTaskModal({ isOpen, onClose, onTaskCreated, projectId, projec
         const j = await res.json().catch(() => ({}));
         throw new Error(j.error || 'Failed to create task');
       }
-
+      const data = await res.json().catch(() => null);
       setTitle('');
       setDescription('');
       setPriority('medium');
       setDueDate('');
-      onTaskCreated?.();
+      if (data && (data.task || data.created || data.newTask)) {
+        onTaskCreated?.(data.task || data.created || data.newTask);
+      } else {
+        onTaskCreated?.(null);
+      }
       onClose();
     } catch (e: any) {
       setError(e.message || 'Failed to create task');
