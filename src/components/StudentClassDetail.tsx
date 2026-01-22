@@ -95,25 +95,30 @@ export function StudentClassDetail({ classId }: { classId: string }) {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-[1200px] mx-auto w-full flex flex-col gap-6">
-        <div className="h-48 bg-white rounded-xl border border-[#e5e7eb] animate-pulse" />
-        <div className="h-64 bg-white rounded-xl border border-[#e5e7eb] animate-pulse" />
+      <div className="w-full bg-[#f6f6f8] min-h-screen">
+        <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col gap-6">
+          <div className="h-48 bg-white rounded-xl border border-[#e5e7eb] animate-pulse" />
+          <div className="h-64 bg-white rounded-xl border border-[#e5e7eb] animate-pulse" />
+        </div>
       </div>
     );
   }
 
   if (error || !classData) {
     return (
-      <div className="p-8 max-w-[1200px] mx-auto w-full">
-        <div className="bg-white border border-[#e5e7eb] rounded-xl p-6 text-[#e11d48]">
-          {error || 'Class not found'}
+      <div className="w-full bg-[#f6f6f8] min-h-screen">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="bg-white border border-[#e5e7eb] rounded-xl p-6 text-[#e11d48]">
+            {error || 'Class not found'}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-[1200px] mx-auto w-full flex flex-col gap-6">
+    <div className="w-full bg-[#f6f6f8] min-h-screen">
+      <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col gap-6">
       <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 flex flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -269,6 +274,7 @@ export function StudentClassDetail({ classId }: { classId: string }) {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

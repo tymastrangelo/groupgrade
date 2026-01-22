@@ -60,6 +60,29 @@ CREATE TABLE public.groups (
   CONSTRAINT groups_pkey PRIMARY KEY (id),
   CONSTRAINT groups_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id)
 );
+CREATE TABLE public.project_task_assignees (
+  task_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  assigned_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT project_task_assignees_pkey PRIMARY KEY (task_id, user_id),
+  CONSTRAINT project_task_assignees_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.project_tasks(id),
+  CONSTRAINT project_task_assignees_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.project_tasks (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL,
+  title text NOT NULL,
+  description text,
+  status text NOT NULL DEFAULT 'todo'::text CHECK (status = ANY (ARRAY['todo'::text, 'in_progress'::text, 'submitted'::text, 'done'::text])),
+  priority text DEFAULT 'medium'::text CHECK (priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])),
+  due_date timestamp with time zone,
+  created_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT project_tasks_pkey PRIMARY KEY (id),
+  CONSTRAINT project_tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id),
+  CONSTRAINT project_tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
 CREATE TABLE public.projects (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   class_id uuid,
@@ -92,6 +115,7 @@ CREATE TABLE public.tasks (
   title text,
   assigned_to uuid,
   status text,
+  due_date timestamp with time zone,
   CONSTRAINT tasks_pkey PRIMARY KEY (id),
   CONSTRAINT tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id),
   CONSTRAINT tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id)

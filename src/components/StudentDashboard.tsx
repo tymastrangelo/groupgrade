@@ -126,7 +126,8 @@ export default function StudentDashboard() {
       <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
       
       {/* Content only - no sidebar or header, those come from DashboardLayout */}
-      <div className="p-8 w-full flex flex-col gap-8">
+      <div className="w-full bg-[#f6f6f8] min-h-screen">
+        <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col gap-8">
         {/* Page Heading with Submit Work Button */}
         <div className="flex items-end justify-between">
           <div>
@@ -187,7 +188,9 @@ export default function StudentDashboard() {
             )}
 
             {/* Tasks Section */}
-            <TasksWidget />
+            <TasksWidget 
+              projects={projects.map(p => ({ id: p.id, name: p.name }))}
+            />
           </div>
 
           {/* Right Column: Team Activity and Stats */}
@@ -195,6 +198,7 @@ export default function StudentDashboard() {
             <TeamActivityWidget />
             <SubmissionCompletionCard />
           </div>
+        </div>
         </div>
       </div>
     </>

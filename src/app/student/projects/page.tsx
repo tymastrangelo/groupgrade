@@ -70,8 +70,9 @@ export default function StudentProjects() {
 
   return (
     <DashboardLayout initialRole="student" overrideHeaderLabel="Projects">
-      <div className="p-8 max-w-screen-2xl mx-auto w-full">
-        <div className="flex flex-col gap-6">
+      <div className="w-full bg-[#f6f6f8] min-h-screen">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex flex-col gap-6">
           <div>
             <h1 className="text-3xl font-black text-[#111318] tracking-tight">Projects</h1>
             <p className="text-sm text-[#616f89] mt-1">View all your projects across classes</p>
@@ -86,7 +87,7 @@ export default function StudentProjects() {
               <p className="text-sm text-[#616f89]">No projects yet. Ask your professor for a class code to get started.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {projects.map((project) => (
                 <Link
                   key={project.id}
@@ -120,6 +121,7 @@ export default function StudentProjects() {
               ))}
             </div>
           )}
+          </div>
         </div>
       </div>
     </DashboardLayout>
