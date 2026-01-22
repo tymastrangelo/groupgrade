@@ -60,6 +60,18 @@ CREATE TABLE public.groups (
   CONSTRAINT groups_pkey PRIMARY KEY (id),
   CONSTRAINT groups_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id)
 );
+CREATE TABLE public.project_milestones (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL,
+  name text NOT NULL,
+  due_date date,
+  order_index integer NOT NULL DEFAULT 0,
+  requirements text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT project_milestones_pkey PRIMARY KEY (id),
+  CONSTRAINT project_milestones_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id)
+);
 CREATE TABLE public.project_task_assignees (
   task_id uuid NOT NULL,
   user_id uuid NOT NULL,

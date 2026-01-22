@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { tasksCache } from "@/lib/tasksCache";
+import { ProjectTimeline, type Milestone } from "@/components/ProjectTimeline";
 
 type ProjectData = {
   id: string;
@@ -41,6 +42,23 @@ function formatDateTime(value?: string | null) {
   return d.toLocaleString();
 }
 
+function pad(n: number): string { return n.toString().padStart(2, "0"); }
+function toLocalInput(value?: string | null): string {
+  if (!value) return "";
+  const d = new Date(value);
+  const y = d.getFullYear();
+  const m = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const h = pad(d.getHours());
+  const min = pad(d.getMinutes());
+  return `${y}-${m}-${day}T${h}:${min}`;
+}
+function fromLocalInput(value?: string | null): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return d.toISOString();
+}
+
 function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | null; size?: string }) {
   const letter = (name || "?").charAt(0).toUpperCase();
   if (src) {
@@ -61,10 +79,12 @@ function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | 
 
 export default function TeacherProjectDetail({ projectId }: { projectId: string }) {
   const [project, setProject] = useState<ProjectData | null>(null);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [timelineCollapsed, setTimelineCollapsed] = useState(true);
 
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -73,6 +93,19 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
   const [editDueDate, setEditDueDate] = useState("");
 
   const url = `/api/projects/${projectId}`;
+  const milestonesUrl = `/api/projects/${projectId}/milestones`;
+
+  const fetchMilestones = async () => {
+    try {
+      const data = await tasksCache.fetch<{ milestones: Milestone[] }>(milestonesUrl);
+      if (data && (data as any).milestones) {
+        setMilestones((data as any).milestones || []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch milestones:', e);
+    }
+  };
+
   const fetchProject = async () => {
     setLoading(true);
     setError(null);
@@ -85,7 +118,7 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
         setEditDescription(p.description || "");
         setEditExpectations(p.expectations || "");
         setEditDeliverables(p.deliverables || "");
-        setEditDueDate(p.due_date || "");
+        setEditDueDate(toLocalInput(p.due_date));
       }
     } catch (e: any) {
       setError(e.message || "Failed to load project");
@@ -103,12 +136,23 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
         setEditDescription(p.description || "");
         setEditExpectations(p.expectations || "");
         setEditDeliverables(p.deliverables || "");
-        setEditDueDate(p.due_date || "");
+        setEditDueDate(toLocalInput(p.due_date));
       }
     });
+
+    const unsubMilestones = tasksCache.subscribe<{ milestones: Milestone[] }>(milestonesUrl, (data) => {
+      if (data && (data as any).milestones) {
+        setMilestones((data as any).milestones || []);
+      }
+    });
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProject();
-    return () => unsubscribe();
+    fetchMilestones();
+    return () => {
+      unsubscribe();
+      unsubMilestones();
+    };
   }, [projectId]);
 
   const handleSave = async () => {
@@ -123,7 +167,7 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
         description: editDescription.trim(),
         expectations: editExpectations.trim(),
         deliverables: editDeliverables.trim(),
-        due_date: editDueDate || null,
+        due_date: fromLocalInput(editDueDate),
       }),
     });
     if (!res.ok) {
@@ -174,7 +218,7 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
                       {project.class_name}
                     </a>
                     <span className="text-[#d1d5db]">•</span>
-                    <span>{project.due_date ? `Due ${formatDate(project.due_date)}` : "No due date set"}</span>
+                    <span>{project.due_date ? `Due ${formatDateTime(project.due_date)}` : "No due date set"}</span>
                   </div>
                   {project.updated_at && (
                     <p className="text-xs text-[#9ca3af] mt-1">Last edited {formatDateTime(project.updated_at)}</p>
@@ -230,9 +274,9 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
                   />
                 </label>
                 <label className="text-sm font-semibold text-[#111318]">
-                  Due date
+                  Due date & time
                   <input
-                    type="date"
+                    type="datetime-local"
                     className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     value={editDueDate}
                     onChange={(e) => setEditDueDate(e.target.value)}
@@ -288,6 +332,38 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
 
         {!editMode && (
           <>
+            <div className="bg-white rounded-xl border border-[#e5e7eb] shadow-sm mb-6 overflow-hidden">
+              {/* Accordion Header - Always Visible */}
+              <div className="flex items-center justify-between p-6 cursor-pointer" onClick={() => setTimelineCollapsed(!timelineCollapsed)}>
+                <div>
+                  <h3 className="text-lg font-bold text-[#111318]">Project Timeline</h3>
+                  <p className="text-sm text-[#616f89] mt-1">Key deadlines and deliverables for this project.</p>
+                </div>
+                <button
+                  className="text-[#616f89] hover:text-[#111318] transition flex-shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTimelineCollapsed(!timelineCollapsed);
+                  }}
+                >
+                  <span className="material-symbols-outlined">
+                    {timelineCollapsed ? 'expand_more' : 'expand_less'}
+                  </span>
+                </button>
+              </div>
+              {/* Accordion Content - Collapsible */}
+              {!timelineCollapsed && (
+                <div className="border-t border-[#e5e7eb] px-6 py-6">
+                  <ProjectTimeline
+                    projectId={projectId}
+                    milestones={milestones}
+                    onUpdate={fetchMilestones}
+                    editable={project.is_professor}
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-white border border-[#e5e7eb] rounded-xl p-5 flex flex-col gap-3">
                 <h3 className="text-sm font-semibold text-[#111318]">Expectations</h3>

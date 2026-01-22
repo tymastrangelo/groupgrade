@@ -100,6 +100,13 @@ class TasksCache {
     e.inflight = inflight as Promise<T>;
     return inflight as Promise<T>;
   }
+
+  invalidate(key: string): void {
+    const e = this.entry(key);
+    e.ts = 0; // Expire the cache
+    // Trigger a refetch for all subscribers
+    this.fetch(key).catch(() => {});
+  }
 }
 
 export const tasksCache = new TasksCache();

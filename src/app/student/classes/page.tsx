@@ -131,7 +131,7 @@ export default function StudentClasses() {
             <div className="text-sm text-[#616f89]">Loading classes...</div>
           ) : classes.length === 0 ? (
             <div className="bg-white border border-[#e5e7eb] rounded-xl p-8 text-center">
-              <p className="text-sm text-[#616f89]">You're not enrolled in any classes yet.</p>
+              <p className="text-sm text-[#616f89]">You&apos;re not enrolled in any classes yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

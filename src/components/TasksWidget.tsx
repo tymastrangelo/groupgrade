@@ -37,15 +37,15 @@ export function TasksWidget({ projectId, title = 'Your Tasks', showAddNewButton 
 
   useEffect(() => {
     const url = projectId ? `/api/projects/${projectId}/tasks` : '/api/tasks';
-    let unsub: (() => void) | undefined;
-    setError(null);
-    setLoading(true);
-
+    
     // Subscribe to cache updates
-    unsub = tasksCache.subscribe<typeof tasks>(url, (data) => {
+    const unsub = tasksCache.subscribe<typeof tasks>(url, (data) => {
       setTasks(data || []);
       setLoading(false);
+      setError(null);
     });
+
+    setLoading(true);
 
     // Fetch with cache (SWr-like: stale-while-revalidate)
     tasksCache

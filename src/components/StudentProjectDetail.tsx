@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useSession } from "next-auth/react";
 import { TasksWidget } from "./TasksWidget";
 import { tasksCache } from "@/lib/tasksCache";
+import { ProjectTimeline, type Milestone } from "@/components/ProjectTimeline";
 
 type ProjectData = {
   id: string;
@@ -83,11 +84,26 @@ function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | 
 export default function StudentProjectDetail({ projectId }: { projectId: string }) {
   const { data: session } = useSession();
   const [project, setProject] = useState<ProjectData | null>(null);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, isOverdue: false });
+  const [timelineCollapsed, setTimelineCollapsed] = useState(true);
 
   const url = `/api/projects/${projectId}`;
+  const milestonesUrl = `/api/projects/${projectId}/milestones`;
+
+  const fetchMilestones = async () => {
+    try {
+      const data = await tasksCache.fetch<{ milestones: Milestone[] }>(milestonesUrl);
+      if (data && (data as any).milestones) {
+        setMilestones((data as any).milestones || []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch milestones:', e);
+    }
+  };
+
   const fetchProject = async () => {
     setLoading(true);
     setError(null);
@@ -113,9 +129,14 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
         setCountdown(getCountdown(p.due_date));
       }
     });
+    const unsubscribeMilestones = tasksCache.subscribe(milestonesUrl, fetchMilestones);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProject();
-    return () => unsubscribe();
+    fetchMilestones();
+    return () => {
+      unsubscribe();
+      unsubscribeMilestones();
+    };
   }, [projectId]);
 
   // Update countdown every minute
@@ -219,6 +240,40 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
               </button>
             </div>
           </div>
+
+          {/* Project Timeline - Collapsible */}
+          {milestones.length > 0 && (
+            <div className="bg-white rounded-xl border border-[#e5e7eb] shadow-sm mb-6 overflow-hidden">
+              {/* Accordion Header - Always Visible */}
+              <div className="flex items-center justify-between p-6 cursor-pointer" onClick={() => setTimelineCollapsed(!timelineCollapsed)}>
+                <div>
+                  <h3 className="text-lg font-bold text-[#111318]">Project Timeline</h3>
+                  <p className="text-sm text-[#616f89] mt-1">Key deadlines and deliverables for this project.</p>
+                </div>
+                <button
+                  className="text-[#616f89] hover:text-[#111318] transition flex-shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTimelineCollapsed(!timelineCollapsed);
+                  }}
+                >
+                  <span className="material-symbols-outlined">
+                    {timelineCollapsed ? 'expand_more' : 'expand_less'}
+                  </span>
+                </button>
+              </div>
+              {/* Accordion Content - Collapsible */}
+              {!timelineCollapsed && (
+                <div className="border-t border-[#e5e7eb] px-6 py-6">
+                  <ProjectTimeline 
+                    projectId={projectId} 
+                    milestones={milestones} 
+                    editable={false}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Two Column Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
