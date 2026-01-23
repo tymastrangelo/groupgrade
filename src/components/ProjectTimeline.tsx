@@ -153,19 +153,103 @@ export function ProjectTimeline({ projectId, milestones, onUpdate, editable = fa
 
   return (
     <div>
-      {editable && !adding && (
-        <div className="flex items-center justify-end mb-4">
-          <button
-            onClick={startAdd}
-            className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
-          >
-            <span className="material-symbols-outlined text-base">add_circle</span>
-            Add Milestone
-          </button>
+      {/* Modal for adding first milestone */}
+      {adding && milestones.length === 0 && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={cancelAdd}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-[#111318]">Create First Milestone</h3>
+              <button onClick={cancelAdd} className="text-[#616f89] hover:text-[#111318]">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold text-[#111318] block mb-1">
+                  Milestone Name
+                </label>
+                <input
+                  className="w-full bg-[#f0f2f4] border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="e.g., Project Proposal"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-[#111318] block mb-1">
+                  Due Date & Time
+                </label>
+                <input
+                  type="datetime-local"
+                  className="w-full bg-[#f0f2f4] border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={editForm.due_date}
+                  onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-[#111318] block mb-1">
+                  Requirements
+                </label>
+                <textarea
+                  className="w-full bg-[#f0f2f4] border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  placeholder="What should be delivered for this milestone?"
+                  rows={4}
+                  value={editForm.requirements}
+                  onChange={(e) => setEditForm({ ...editForm, requirements: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={cancelAdd}
+                disabled={saving}
+                className="flex-1 px-4 py-2 rounded-lg border border-[#e5e7eb] text-[#111318] font-medium hover:bg-[#f9fafb] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveAdd}
+                disabled={saving || !editForm.name.trim()}
+                className="flex-1 px-4 py-2 rounded-lg bg-primary text-white font-bold hover:bg-blue-700 disabled:opacity-50"
+              >
+                {saving ? 'Creating...' : 'Create Milestone'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="relative flex gap-6 overflow-x-auto pb-6 pt-6">
+      {/* Header with Add Milestone button when milestones exist */}
+      {milestones.length > 0 && (
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-[#111318]">Project Timeline</h3>
+          {editable && !adding && (
+            <button
+              onClick={startAdd}
+              data-add-milestone
+              className="text-sm font-bold text-primary hover:underline flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-base">add_circle</span>
+              Add Milestone
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Hidden trigger button for when there are no milestones */}
+      {editable && !adding && milestones.length === 0 && (
+        <button
+          onClick={startAdd}
+          data-add-milestone
+          className="hidden"
+        >
+          Hidden trigger
+        </button>
+      )}
+
+      {/* Only render the timeline container when there are milestones or adding */}
+      {(milestones.length > 0 || adding) && (
+        <div className="relative flex gap-6 overflow-x-auto pb-6 pt-6">
         {milestones.map((milestone, idx) => {
           const isEditing = editingId === milestone.id;
           const past = isPast(milestone.due_date);
@@ -333,6 +417,7 @@ export function ProjectTimeline({ projectId, milestones, onUpdate, editable = fa
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

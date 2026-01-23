@@ -241,37 +241,15 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
             </div>
           </div>
 
-          {/* Project Timeline - Collapsible */}
+          {/* Timeline cards floating on background */}
           {milestones.length > 0 && (
-            <div className="bg-white rounded-xl border border-[#e5e7eb] shadow-sm mb-6 overflow-hidden">
-              {/* Accordion Header - Always Visible */}
-              <div className="flex items-center justify-between p-6 cursor-pointer" onClick={() => setTimelineCollapsed(!timelineCollapsed)}>
-                <div>
-                  <h3 className="text-lg font-bold text-[#111318]">Project Timeline</h3>
-                  <p className="text-sm text-[#616f89] mt-1">Key deadlines and deliverables for this project.</p>
-                </div>
-                <button
-                  className="text-[#616f89] hover:text-[#111318] transition flex-shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setTimelineCollapsed(!timelineCollapsed);
-                  }}
-                >
-                  <span className="material-symbols-outlined">
-                    {timelineCollapsed ? 'expand_more' : 'expand_less'}
-                  </span>
-                </button>
-              </div>
-              {/* Accordion Content - Collapsible */}
-              {!timelineCollapsed && (
-                <div className="border-t border-[#e5e7eb] px-6 py-6">
-                  <ProjectTimeline 
-                    projectId={projectId} 
-                    milestones={milestones} 
-                    editable={false}
-                  />
-                </div>
-              )}
+            <div className="mb-6">
+              <h3 className="text-lg font-bold text-[#111318] mb-4">Project Timeline</h3>
+              <ProjectTimeline 
+                projectId={projectId} 
+                milestones={milestones} 
+                editable={false}
+              />
             </div>
           )}
 

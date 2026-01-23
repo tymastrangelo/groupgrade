@@ -250,9 +250,39 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
                 </div>
               </div>
               {project.description && (
-                <div className="mt-2">
-                  <h3 className="text-sm font-semibold text-[#111318] mb-1">Description</h3>
-                  <p className="text-sm text-[#616f89] leading-relaxed whitespace-pre-wrap">{project.description}</p>
+                <div className="mt-2 flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-[#111318] mb-1">Description</h3>
+                    <p className="text-sm text-[#616f89] leading-relaxed whitespace-pre-wrap">{project.description}</p>
+                  </div>
+                  {project.is_professor && milestones.length === 0 && (
+                    <button
+                      onClick={async () => {
+                        // Trigger add milestone in ProjectTimeline
+                        const addBtn = document.querySelector('[data-add-milestone]') as HTMLButtonElement;
+                        addBtn?.click();
+                      }}
+                      className="text-sm font-bold px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 flex items-center gap-1 flex-shrink-0"
+                    >
+                      <span className="material-symbols-outlined text-base">add_circle</span>
+                      Add Milestone
+                    </button>
+                  )}
+                </div>
+              )}
+              {!project.description && project.is_professor && milestones.length === 0 && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={async () => {
+                      // Trigger add milestone in ProjectTimeline
+                      const addBtn = document.querySelector('[data-add-milestone]') as HTMLButtonElement;
+                      addBtn?.click();
+                    }}
+                    className="text-sm font-bold px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-base">add_circle</span>
+                    Add Milestone
+                  </button>
                 </div>
               )}
             </>
@@ -332,37 +362,13 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
 
         {!editMode && (
           <>
-            <div className="bg-white rounded-xl border border-[#e5e7eb] shadow-sm mb-6 overflow-hidden">
-              {/* Accordion Header - Always Visible */}
-              <div className="flex items-center justify-between p-6 cursor-pointer" onClick={() => setTimelineCollapsed(!timelineCollapsed)}>
-                <div>
-                  <h3 className="text-lg font-bold text-[#111318]">Project Timeline</h3>
-                  <p className="text-sm text-[#616f89] mt-1">Key deadlines and deliverables for this project.</p>
-                </div>
-                <button
-                  className="text-[#616f89] hover:text-[#111318] transition flex-shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setTimelineCollapsed(!timelineCollapsed);
-                  }}
-                >
-                  <span className="material-symbols-outlined">
-                    {timelineCollapsed ? 'expand_more' : 'expand_less'}
-                  </span>
-                </button>
-              </div>
-              {/* Accordion Content - Collapsible */}
-              {!timelineCollapsed && (
-                <div className="border-t border-[#e5e7eb] px-6 py-6">
-                  <ProjectTimeline
-                    projectId={projectId}
-                    milestones={milestones}
-                    onUpdate={fetchMilestones}
-                    editable={project.is_professor}
-                  />
-                </div>
-              )}
-            </div>
+            {/* Always render ProjectTimeline (modal needs to be visible) */}
+            <ProjectTimeline
+              projectId={projectId}
+              milestones={milestones}
+              onUpdate={fetchMilestones}
+              editable={project.is_professor}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-white border border-[#e5e7eb] rounded-xl p-5 flex flex-col gap-3">
