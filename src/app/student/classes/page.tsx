@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { tasksCache } from '@/lib/tasksCache';
+import { JoinClassModal } from '@/components/JoinClassModal';
 
 type ClassRow = {
   id: string;
@@ -22,13 +22,12 @@ function formatDate(value?: string | null) {
 }
 
 export default function StudentClasses() {
-  const router = useRouter();
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [classDetails, setClassDetails] = useState<{ [key: string]: { memberCount: number; professorName: string } }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchCode, setSearchCode] = useState('');
-  const [searching, setSearching] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinSuccess, setJoinSuccess] = useState<string | null>(null);
 
   const fetchClasses = async () => {
     try {
@@ -66,29 +65,10 @@ export default function StudentClasses() {
     return () => unsubscribe();
   }, []);
 
-  const handleSearchClass = async () => {
-    if (!searchCode.trim()) return;
-    setSearching(true);
-    
-    try {
-      const res = await fetch('/api/classes/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: searchCode.trim() }),
-      });
-      
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error || 'Failed to join class');
-      }
-      
-      setSearchCode('');
-      await fetchClasses();
-    } catch (err: any) {
-      setError(err.message || 'Failed to join class');
-    } finally {
-      setSearching(false);
-    }
+  const handleJoined = async () => {
+    setJoinSuccess('Successfully joined the class');
+    setError(null);
+    await fetchClasses();
   };
 
   return (
@@ -102,28 +82,29 @@ export default function StudentClasses() {
           </div>
 
           {/* Search/Join Class Section */}
-          <div className="bg-white border border-[#e5e7eb] rounded-xl p-6">
-            <h2 className="text-lg font-bold text-[#111318] mb-4">Join a New Class</h2>
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={searchCode}
-                onChange={(e) => setSearchCode(e.target.value.toUpperCase())}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearchClass()}
-                placeholder="Enter class code (e.g., ABC123)"
-                maxLength={6}
-                className="flex-1 px-4 py-2 border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-[#111318]"
-              />
+          <div className="bg-white border border-[#e5e7eb] rounded-xl p-6 flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-lg font-bold text-[#111318]">Join a New Class</h2>
+                <p className="text-sm text-[#616f89]">Enter your 6-character join code.</p>
+              </div>
+              <span className="text-[11px] px-3 py-1 rounded-full bg-primary/10 text-primary font-bold">Students only</span>
+            </div>
+            {joinSuccess && (
+              <div className="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-100">{joinSuccess}</div>
+            )}
+            {error && (
+              <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg border border-red-100">{error}</div>
+            )}
+            <div>
               <button
-                onClick={handleSearchClass}
-                disabled={searching || !searchCode.trim()}
-                className="px-6 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={() => setShowJoinModal(true)}
+                className="flex w-full sm:w-auto items-center justify-center gap-2 px-6 py-3 rounded-lg bg-[#2563eb] text-white font-semibold hover:bg-[#1d4ed8] transition-colors"
               >
-                {searching ? 'Joining...' : 'Join'}
+                <span className="material-symbols-outlined text-base">add</span>
+                Enter Join Code
               </button>
             </div>
-            {error && <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-3">{error}</div>}
-            <p className="text-xs text-[#616f89] mt-3">Ask your professor for the class code to enroll.</p>
           </div>
 
           {/* Classes List */}
@@ -167,6 +148,13 @@ export default function StudentClasses() {
           </div>
         </div>
       </div>
+      {showJoinModal && (
+        <JoinClassModal
+          open={showJoinModal}
+          onClose={() => setShowJoinModal(false)}
+          onJoined={handleJoined}
+        />
+      )}
     </DashboardLayout>
   );
 }
