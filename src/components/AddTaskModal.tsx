@@ -14,9 +14,10 @@ interface AddTaskModalProps {
   onTaskCreated?: (task: any) => void;
   projectId?: string;
   projects?: Project[];
+  isPersonal?: boolean; // If true, creates a personal task without requiring a project
 }
 
-export function AddTaskModal({ isOpen, onClose, onTaskCreated, projectId, projects = [] }: AddTaskModalProps) {
+export function AddTaskModal({ isOpen, onClose, onTaskCreated, projectId, projects = [], isPersonal = false }: AddTaskModalProps) {
   const { data: session } = useSession();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -49,7 +50,9 @@ export function AddTaskModal({ isOpen, onClose, onTaskCreated, projectId, projec
       setError('Title is required');
       return;
     }
-    if (!selectedProjectId) {
+    
+    // For non-personal tasks, project is required
+    if (!isPersonal && !selectedProjectId) {
       setError('Project is required');
       return;
     }
@@ -58,16 +61,29 @@ export function AddTaskModal({ isOpen, onClose, onTaskCreated, projectId, projec
     setError(null);
 
     try {
-      const res = await fetch(`/api/projects/${selectedProjectId}/tasks`, {
+      let endpoint = '';
+      const body: any = {
+        title: title.trim(),
+        dueDate: dueDate || null,
+      };
+
+      if (isPersonal) {
+        // Personal tasks go to /api/user/tasks
+        endpoint = '/api/user/tasks';
+        body.status = 'todo';
+      } else {
+        // Project tasks go to /api/projects/{projectId}/tasks
+        endpoint = `/api/projects/${selectedProjectId}/tasks`;
+        body.description = description.trim() || null;
+        body.priority = priority;
+        body.due_date = dueDate || null;
+        body.assigneeId = session?.user?.id || null;
+      }
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || null,
-          priority,
-          due_date: dueDate || null,
-          assigneeId: session?.user?.id || null,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -79,8 +95,11 @@ export function AddTaskModal({ isOpen, onClose, onTaskCreated, projectId, projec
       setDescription('');
       setPriority('medium');
       setDueDate('');
-      if (data && (data.task || data.created || data.newTask)) {
-        onTaskCreated?.(data.task || data.created || data.newTask);
+      
+      // Handle different response formats
+      const task = data?.task || data?.created || data?.newTask || data;
+      if (task) {
+        onTaskCreated?.(task);
       } else {
         onTaskCreated?.(null);
       }
@@ -130,8 +149,8 @@ export function AddTaskModal({ isOpen, onClose, onTaskCreated, projectId, projec
             />
           </div>
 
-          {/* Project Selection (only if no projectId provided) */}
-          {!projectId && projects.length > 0 && (
+          {/* Project Selection (only if not personal and no projectId provided) */}
+          {!isPersonal && !projectId && projects.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-[#111318] mb-2">
                 Project <span className="text-red-600">*</span>
@@ -152,37 +171,41 @@ export function AddTaskModal({ isOpen, onClose, onTaskCreated, projectId, projec
             </div>
           )}
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-[#111318] mb-2">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add task details (optional)"
-              rows={3}
-              className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-              disabled={loading}
-            />
-          </div>
+          {/* Description (only for project tasks) */}
+          {!isPersonal && (
+            <div>
+              <label className="block text-sm font-medium text-[#111318] mb-2">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Add task details (optional)"
+                rows={3}
+                className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                disabled={loading}
+              />
+            </div>
+          )}
 
-          {/* Priority */}
-          <div>
-            <label className="block text-sm font-medium text-[#111318] mb-2">
-              Priority
-            </label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
-              className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              disabled={loading}
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
+          {/* Priority (only for project tasks) */}
+          {!isPersonal && (
+            <div>
+              <label className="block text-sm font-medium text-[#111318] mb-2">
+                Priority
+              </label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
+                className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                disabled={loading}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          )}
 
           {/* Due Date */}
           <div>

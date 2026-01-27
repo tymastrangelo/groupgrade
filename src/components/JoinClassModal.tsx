@@ -204,7 +204,7 @@ export function JoinClassModal({ open, onClose, onJoined }: JoinClassModalProps)
             </button>
           </div>
           <p className="text-center text-[#8d5e5e] text-xs mt-4">
-            By joining, you agree to the course's peer accountability policies.
+            By joining, you agree to the course&apos;s peer accountability policies.
           </p>
         </div>
       </div>

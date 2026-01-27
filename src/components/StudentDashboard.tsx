@@ -184,6 +184,7 @@ export default function StudentDashboard() {
 
             {/* Tasks Section */}
             <TasksWidget 
+              usePersonalTasks={true}
               projects={projects.map(p => ({ id: p.id, name: p.name }))}
             />
           </div>
