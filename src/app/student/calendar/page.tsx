@@ -28,10 +28,13 @@ type CalendarEvent = {
   id: string;
   date: string; // ISO
   title: string;
-  kind: 'project' | 'deliverable' | 'task';
+  kind: 'project' | 'deliverable' | 'task' | 'meeting';
   course: string;
   projectId: string;
-  tone: 'primary' | 'yellow' | 'green' | 'purple' | 'cyan';
+  tone: 'primary' | 'yellow' | 'green' | 'purple' | 'cyan' | 'orange';
+  time?: string; // For meetings
+  type?: string; // virtual or in-person for meetings
+  location?: string; // For meetings
 };
 
 type ViewMode = 'month' | 'week';
@@ -66,6 +69,8 @@ function toneStyles(tone: string) {
       return 'bg-purple-500/10 text-purple-600';
     case 'cyan':
       return 'bg-cyan-500/10 text-cyan-600';
+    case 'orange':
+      return 'bg-orange-500/10 text-orange-600';
     default:
       return 'bg-primary/10 text-primary';
   }
@@ -179,6 +184,39 @@ export default function StudentCalendarPage() {
                   } catch (err) {
                     console.error(`Failed to fetch deliverables for project ${p.id}:`, err);
                   }
+
+                  // Fetch group meetings for this project
+                  try {
+                    const groupsData = await tasksCache.fetch<any>(`/api/projects/${p.id}`);
+                    const groups = (groupsData as any)?.project?.groups || [];
+                    // Find user's group
+                    const userGroup = groups.find((g: any) => 
+                      g.members?.some((m: any) => m.email === userEmail)
+                    );
+                    
+                    if (userGroup) {
+                      const meetingsRes = await tasksCache.fetch<any>(`/api/meetings?groupId=${userGroup.id}`);
+                      const meetings = Array.isArray(meetingsRes) ? meetingsRes : [];
+                      meetings.forEach((m: any) => {
+                        if (m.date) {
+                          eventsAccumulator.push({
+                            id: `meeting-${m.id}`,
+                            date: m.date,
+                            title: m.title,
+                            kind: 'meeting',
+                            course: cls.name,
+                            projectId: p.id,
+                            tone: 'orange',
+                            time: m.time,
+                            type: m.type,
+                            location: m.location || m.meeting_url
+                          });
+                        }
+                      });
+                    }
+                  } catch (err) {
+                    console.error(`Failed to fetch meetings for project ${p.id}:`, err);
+                  }
                 })
               );
             } catch {
@@ -244,7 +282,18 @@ export default function StudentCalendarPage() {
   }, [events, days]);
 
   const upcomingSections = useMemo(() => {
-    const formatDue = (date: string) => format(new Date(date), 'MMM d, h:mm a');
+    const formatDue = (date: string, kind: string, time?: string) => {
+      if (kind === 'meeting' && time) {
+        // Convert military time to 12-hour format
+        const timeParts = time.split(':');
+        const hours = parseInt(timeParts[0]);
+        const minutes = timeParts[1];
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        return `${format(new Date(date), 'MMM d')} at ${displayHours}:${minutes} ${ampm}`;
+      }
+      return format(new Date(date), 'MMM d');
+    };
 
     if (viewMode === 'month') {
       const monthStart = startOfMonth(viewDate);
@@ -258,7 +307,7 @@ export default function StudentCalendarPage() {
           title: 'This Month',
           items: inMonth.map((ev) => ({
             ...ev,
-            due: formatDue(ev.date),
+            due: formatDue(ev.date, ev.kind, ev.time),
           })),
         },
       ];
@@ -284,14 +333,14 @@ export default function StudentCalendarPage() {
         title: 'This Week',
         items: thisWeek.map((ev) => ({
           ...ev,
-          due: formatDue(ev.date),
+          due: formatDue(ev.date, ev.kind, ev.time),
         })),
       },
       {
         title: 'Next Week',
         items: nextWeek.map((ev) => ({
           ...ev,
-          due: formatDue(ev.date),
+          due: formatDue(ev.date, ev.kind, ev.time),
         })),
       },
     ];
@@ -343,6 +392,9 @@ export default function StudentCalendarPage() {
       } catch (err) {
         console.error('Failed to fetch task:', err);
       }
+    } else if (event.kind === 'meeting') {
+      // Navigate to project page for meetings
+      router.push(`/student/projects/${event.projectId}`);
     }
   };
 
@@ -444,7 +496,7 @@ export default function StudentCalendarPage() {
                           key={ev.id}
                           onClick={() => handleEventClick(ev)}
                           className={`flex items-center gap-1.5 px-1.5 py-0.5 text-[10px] rounded font-bold cursor-pointer hover:opacity-80 transition-opacity text-left ${toneStyles(ev.tone)}`}
-                          title={`${ev.title} • ${ev.course}`}
+                          title={`${ev.title} • ${ev.course}${ev.kind === 'meeting' && ev.time ? ` • ${ev.time}` : ''}`}
                         >
                           <span className="size-1.5 rounded-full bg-current" />
                           <span className="truncate">{ev.title}</span>
@@ -488,17 +540,44 @@ export default function StudentCalendarPage() {
                                 ? 'border-green-500'
                                 : item.tone === 'purple'
                                   ? 'border-purple-500'
-                                  : 'border-primary'
+                                  : item.tone === 'orange'
+                                    ? 'border-orange-500'
+                                    : item.tone === 'cyan'
+                                      ? 'border-cyan-500'
+                                      : 'border-primary'
                           }`}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
+                              {item.kind === 'meeting' && (
+                                <span className="material-symbols-outlined text-orange-600 text-lg">
+                                  {item.type === 'virtual' ? 'videocam' : 'groups'}
+                                </span>
+                              )}
                               <h5 className="font-bold text-[#111318] truncate">{item.title}</h5>
                               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${toneStyles(item.tone)}`}>
-                                {item.kind === 'project' ? 'PROJECT' : 'DELIVERABLE'}
+                                {item.kind === 'project' 
+                                  ? 'PROJECT' 
+                                  : item.kind === 'deliverable' 
+                                    ? 'DELIVERABLE'
+                                    : item.kind === 'meeting'
+                                      ? 'MEETING'
+                                      : 'TASK'}
                               </span>
                             </div>
                             <p className="text-sm text-[#8d5e5e] truncate">{item.course}</p>
+                            {item.kind === 'meeting' && item.time && (
+                              <p className="text-xs text-orange-600 font-medium mt-1">
+                                {(() => {
+                                  const timeParts = item.time.split(':');
+                                  const hours = parseInt(timeParts[0]);
+                                  const minutes = timeParts[1];
+                                  const ampm = hours >= 12 ? 'PM' : 'AM';
+                                  const displayHours = hours % 12 || 12;
+                                  return `${displayHours}:${minutes} ${ampm}`;
+                                })()} • {item.type === 'virtual' ? 'Virtual' : 'In-person'}
+                              </p>
+                            )}
                           </div>
                           <div className="text-right min-w-[140px]">
                             <p className="text-sm font-bold text-primary">{item.due}</p>
