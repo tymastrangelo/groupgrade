@@ -9,6 +9,7 @@ import { StudentContent } from './StudentContent';
 import StudentDashboard from './StudentDashboard';
 import { AvatarSelector } from './AvatarSelector';
 import { JoinClassModal } from './JoinClassModal';
+import { NotificationDropdown } from './NotificationDropdown';
 
 export default function Dashboard({
   initialRole,
@@ -229,10 +230,7 @@ export default function Dashboard({
                 <input className="bg-[#f3f4f6] border-none rounded-lg pl-10 pr-4 py-1.5 text-sm w-72 focus:ring-1 focus:ring-primary text-[#111318]" placeholder={isTeacher ? 'Search courses...' : 'Search tasks...'} type="text"/>
               </div>
               <div className="flex items-center gap-4">
-                <button className="p-2 text-[#616f89] hover:bg-background-light rounded-full relative">
-                  <span className="material-symbols-outlined">notifications</span>
-                  {isTeacher && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>}
-                </button>
+                <NotificationDropdown />
                 {isTeacher ? (
                   <div className="flex items-center gap-3 pl-4 border-l border-[#e5e7eb] relative" ref={menuRef}>
                     <div className="flex flex-col text-right">

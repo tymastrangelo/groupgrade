@@ -56,6 +56,28 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // For pending deliverables, fetch pending assignment notifications
+    const pendingDeliverableIds = (data || [])
+      .filter((d: any) => d.status === "pending")
+      .map((d: any) => d.id);
+
+    let pendingAssigneesMap: Record<string, any> = {};
+    if (pendingDeliverableIds.length > 0) {
+      const { data: pendingNotifications } = await supabase
+        .from("notifications")
+        .select("deliverable_id, to_user:to_user_id(id, name, email, avatar_url)")
+        .in("deliverable_id", pendingDeliverableIds)
+        .eq("type", "deliverable_assignment")
+        .eq("status", "pending");
+
+      if (pendingNotifications) {
+        pendingAssigneesMap = pendingNotifications.reduce((acc: Record<string, any>, notif: any) => {
+          acc[notif.deliverable_id] = notif.to_user;
+          return acc;
+        }, {});
+      }
+    }
+
     // Transform data to match frontend expectations
     const transformedData = (data || []).map((d: any) => ({
       id: d.id,
@@ -68,6 +90,12 @@ export async function GET(request: NextRequest) {
         name: usersMap[d.assigned_to].name,
         email: usersMap[d.assigned_to].email,
         avatar_url: usersMap[d.assigned_to].avatar_url
+      } : null,
+      pendingAssignee: d.status === "pending" && pendingAssigneesMap[d.id] ? {
+        id: pendingAssigneesMap[d.id].id,
+        name: pendingAssigneesMap[d.id].name,
+        email: pendingAssigneesMap[d.id].email,
+        avatar_url: pendingAssigneesMap[d.id].avatar_url
       } : null,
       groupId: d.group_id,
       projectId: d.project_id,

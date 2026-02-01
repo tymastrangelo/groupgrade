@@ -25,9 +25,10 @@ type Deliverable = {
   id: string;
   title: string;
   description?: string;
-  status: "not-started" | "in-progress" | "submitted";
+  status: "not-started" | "in-progress" | "submitted" | "pending";
   dueDate?: string;
   assignedTo?: { id: string; name: string; email: string; avatar_url?: string | null };
+  pendingAssignee?: { id: string; name: string; email: string; avatar_url?: string | null };
   submittedAt?: string;
   groupId: string;
   createdAt?: string;
@@ -139,7 +140,6 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
     description: "",
     dueDate: "",
   });
-  const [assignDropdownOpen, setAssignDropdownOpen] = useState<string | null>(null);
   const [viewDeliverableId, setViewDeliverableId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [submitWorkId, setSubmitWorkId] = useState<string | null>(null);
@@ -147,6 +147,9 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
     url: "",
     notes: "",
   });
+  const [reassignModalOpen, setReassignModalOpen] = useState<string | null>(null);
+  const [selectedReassignUser, setSelectedReassignUser] = useState<{ id: string; name: string; email: string; avatar_url?: string | null } | null>(null);
+  const [showReassignConfirm, setShowReassignConfirm] = useState(false);
 
   // Find the student's group
   const myGroup = project?.groups?.find((g) => 
@@ -273,20 +276,7 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
     }
   }, [myGroup?.id, project?.id, showAllActivities]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.assign-dropdown-container')) {
-        setAssignDropdownOpen(null);
-      }
-    };
-    
-    if (assignDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [assignDropdownOpen]);
+
 
   // Update countdown every minute
   useEffect(() => {
@@ -332,7 +322,12 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
       const response = await fetch(`/api/deliverables/${deliverableId}/assign`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignedTo: userId }),
+        body: JSON.stringify({ 
+          assignedTo: userId, 
+          userName, 
+          userEmail,
+          createPendingAssignment: true // Always create pending assignment requiring acceptance
+        }),
       });
 
       if (response.ok) {
@@ -461,13 +456,28 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
       assignDeliverable(del.id, next.id, next.name, next.email);
     };
 
-  const toggleAssignDropdown = (deliverableId: string) => {
-    setAssignDropdownOpen(assignDropdownOpen === deliverableId ? null : deliverableId);
+  const openReassignModal = (deliverableId: string) => {
+    setReassignModalOpen(deliverableId);
+    setSelectedReassignUser(null);
+    setShowReassignConfirm(false);
   };
 
-  const selectAssignee = (deliverableId: string, userId: string, userName: string, userEmail: string) => {
-    assignDeliverable(deliverableId, userId, userName, userEmail);
-    setAssignDropdownOpen(null);
+  const closeReassignModal = () => {
+    setReassignModalOpen(null);
+    setSelectedReassignUser(null);
+    setShowReassignConfirm(false);
+  };
+
+  const selectReassignUser = (user: { id: string; name: string; email: string; avatar_url?: string | null }) => {
+    setSelectedReassignUser(user);
+    setShowReassignConfirm(true);
+  };
+
+  const confirmReassignment = () => {
+    if (reassignModalOpen && selectedReassignUser) {
+      assignDeliverable(reassignModalOpen, selectedReassignUser.id, selectedReassignUser.name, selectedReassignUser.email);
+      closeReassignModal();
+    }
   };
 
   const viewDeliverableDetails = (deliverableId: string) => {
@@ -1075,12 +1085,19 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
             <h2 className="text-lg font-bold text-[#111318] mb-4">Project Assets & Submissions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {/* Your Deliverables */}
-              <div className="bg-white rounded-xl border border-[#e5e7eb] p-5 shadow-sm">
+              <div className="bg-white rounded-xl border border-[#e5e7eb] p-5 shadow-sm flex flex-col">
                 <div className="pb-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#616f89] mb-4 flex items-center">
-                    <span className="material-symbols-outlined text-sm mr-1.5">upload_file</span>
-                    Your Deliverables
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#616f89] flex items-center">
+                      <span className="material-symbols-outlined text-sm mr-1.5">upload_file</span>
+                      Deliverables
+                    </h3>
+                    {deliverables.length > 0 && (
+                      <span className="text-[10px] font-medium text-[#616f89] bg-[#f9fafb] px-2 py-0.5 rounded-full">
+                        {deliverables.length} total
+                      </span>
+                    )}
+                  </div>
                   <button
                     onClick={() => setShowDeliverableModal(true)}
                     className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs transition-all flex items-center justify-center shadow-sm"
@@ -1089,98 +1106,147 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                     Add Deliverable
                   </button>
                 </div>
-                <div className="flex-1 space-y-3">
-                  {deliverables.length === 0 ? (
-                    <p className="text-xs text-[#616f89]">No deliverables added yet</p>
-                  ) : (
-                    deliverables.map((del) => {
+                <div className="flex-1 space-y-2 max-h-44 overflow-y-auto pr-1 scrollbar-thin">
+                  {(() => {
+                    if (deliverables.length === 0) {
+                      return <p className="text-xs text-[#616f89]">No deliverables added yet</p>;
+                    }
+
+                    // Sort deliverables: mine first (not submitted), then by due date, then submitted, then others
+                    const sortedDeliverables = [...deliverables].sort((a, b) => {
+                      const aIsMine = a.assignedTo?.email === session?.user?.email;
+                      const bIsMine = b.assignedTo?.email === session?.user?.email;
+                      const aIsSubmitted = a.status === "submitted";
+                      const bIsSubmitted = b.status === "submitted";
+
+                      // Priority 1: My active (not submitted) deliverables first
+                      if (aIsMine && !aIsSubmitted && !(bIsMine && !bIsSubmitted)) return -1;
+                      if (bIsMine && !bIsSubmitted && !(aIsMine && !aIsSubmitted)) return 1;
+
+                      // Priority 2: Among my active deliverables, sort by due date
+                      if (aIsMine && !aIsSubmitted && bIsMine && !bIsSubmitted) {
+                        if (!a.dueDate && !b.dueDate) return 0;
+                        if (!a.dueDate) return 1;
+                        if (!b.dueDate) return -1;
+                        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                      }
+
+                      // Priority 3: My submitted deliverables
+                      if (aIsMine && aIsSubmitted && !(bIsMine && bIsSubmitted)) return -1;
+                      if (bIsMine && bIsSubmitted && !(aIsMine && aIsSubmitted)) return 1;
+
+                      // Priority 4: Others' active deliverables (by due date)
+                      if (!aIsSubmitted && !bIsSubmitted) {
+                        if (!a.dueDate && !b.dueDate) return 0;
+                        if (!a.dueDate) return 1;
+                        if (!b.dueDate) return -1;
+                        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                      }
+
+                      // Priority 5: Others' submitted deliverables last
+                      if (aIsSubmitted && !bIsSubmitted) return 1;
+                      if (bIsSubmitted && !aIsSubmitted) return -1;
+
+                      return 0;
+                    });
+
+                    return sortedDeliverables.map((del) => {
                       const isAssignedToCurrentUser = del.assignedTo?.email === session?.user?.email;
-                      
+                      const isPending = del.status === "pending";
+
                       return (
                         <div
                           key={del.id}
                           className={`relative group flex items-center justify-between p-3 rounded-xl border transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-md ${
                             del.status === "submitted"
                               ? "bg-emerald-50 border-emerald-200"
-                              : "bg-white border-[#e5e7eb]"
+                              : isPending
+                                ? "bg-amber-50 border-amber-200"
+                                : isAssignedToCurrentUser
+                                  ? "bg-white border-primary/30"
+                                  : "bg-[#f9fafb] border-[#e5e7eb]"
                           }`}
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
-                            <span className="material-symbols-outlined text-primary text-xl shrink-0">description</span>
-                            <p className="text-sm font-semibold text-[#111318] truncate">{del.title}</p>
+                            <span className={`material-symbols-outlined text-xl shrink-0 ${
+                              isPending 
+                                ? 'text-amber-600' 
+                                : isAssignedToCurrentUser 
+                                  ? 'text-primary' 
+                                  : 'text-[#616f89]'
+                            }`}>description</span>
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-[#111318] truncate">{del.title}</p>
+                              {isPending && del.pendingAssignee ? (
+                                <p className="text-[9px] text-amber-700 truncate">Pending: {del.pendingAssignee.name}</p>
+                              ) : !isAssignedToCurrentUser && del.assignedTo ? (
+                                <p className="text-[9px] text-[#616f89] truncate">{del.assignedTo.name}</p>
+                              ) : null}
+                            </div>
                           </div>
-                            
+
                             {/* Status badge - fades out on hover */}
                             <span
-                              className={`shrink-0 text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider whitespace-nowrap transition-opacity duration-200 group-hover:opacity-0 ${
+                              className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wider whitespace-nowrap transition-opacity duration-200 group-hover:opacity-0 ${
                                 del.status === "submitted"
                                   ? "bg-emerald-500 text-white"
-                                  : del.status === "in-progress"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "bg-[#e5e7eb] text-[#616f89]"
+                                  : del.status === "pending"
+                                    ? "bg-amber-500 text-white"
+                                    : del.status === "in-progress"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-[#e5e7eb] text-[#616f89]"
                               }`}
                             >
-                              {del.status === "submitted" ? "Submitted" : del.status === "in-progress" ? "Started" : "New"}
+                              {del.status === "submitted" 
+                                ? "Done" 
+                                : del.status === "pending"
+                                  ? "Pending"
+                                  : del.status === "in-progress" 
+                                    ? "Started" 
+                                    : "New"}
                             </span>
 
                             {/* Action buttons - fade in on hover */}
                             <div className={`absolute right-0 top-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 flex items-center pr-3 pl-4 rounded-r-xl backdrop-blur-sm ${
-                              del.status === "submitted" ? "bg-emerald-50/95" : "bg-white/95"
+                              del.status === "submitted"
+                                ? "bg-emerald-50/95"
+                                : isPending
+                                  ? "bg-amber-50/95"
+                                  : isAssignedToCurrentUser
+                                    ? "bg-white/95"
+                                    : "bg-[#f9fafb]/95"
                             }`}><div className="flex items-center gap-2">
-                              {/* Reassign Dropdown */}
-                              <div className="relative assign-dropdown-container">
-                                <button
-                                  onClick={() => toggleAssignDropdown(del.id)}
-                                  className="h-9 w-9 flex items-center justify-center rounded-xl border border-primary/30 text-primary hover:bg-primary hover:text-white transition-all"
-                                  title="Reassign"
-                                >
-                                  <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
-                                </button>
-                                {assignDropdownOpen === del.id && myGroup && (
-                                  <div className="absolute right-0 mt-1 w-52 bg-white border border-[#e5e7eb] rounded-lg shadow-lg z-50 py-1">
-                                    {myGroup.members.map((member) => (
-                                      <button
-                                        key={member.id}
-                                        onClick={() => selectAssignee(del.id, member.id, member.name, member.email)}
-                                        className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 ${
-                                          del.assignedTo?.id === member.id ? 'bg-blue-50' : ''
-                                        }`}
-                                      >
-                                        <Avatar name={member.name} src={member.avatar_url} size="h-6 w-6" />
-                                        <span className="flex-1 truncate">{member.name}</span>
-                                        {del.assignedTo?.id === member.id && (
-                                          <span className="material-symbols-outlined text-primary text-[16px]">check</span>
-                                        )}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                              
+                              {/* Reassign Button */}
+                              <button
+                                onClick={() => openReassignModal(del.id)}
+                                className="h-8 w-8 flex items-center justify-center rounded-lg border border-primary/30 text-primary hover:bg-primary hover:text-white transition-all"
+                                title="Reassign"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
+                              </button>
 
-                              
                               {/* View Button */}
                               <button
                                 onClick={() => viewDeliverableDetails(del.id)}
-                                className="h-9 w-9 flex items-center justify-center rounded-xl border border-primary/30 text-primary hover:bg-primary hover:text-white transition-all"
+                                className="h-8 w-8 flex items-center justify-center rounded-lg border border-primary/30 text-primary hover:bg-primary hover:text-white transition-all"
                                 title="View Details"
                               >
-                                <span className="material-symbols-outlined text-[18px]">visibility</span>
+                                <span className="material-symbols-outlined text-[16px]">visibility</span>
                               </button>
-                              
+
                               {/* Delete Button */}
                               <button
                                 onClick={() => confirmDelete(del.id)}
-                                className="h-9 w-9 flex items-center justify-center rounded-xl border border-red-300 text-red-600 hover:bg-red-600 hover:text-white transition-all"
+                                className="h-8 w-8 flex items-center justify-center rounded-lg border border-red-300 text-red-600 hover:bg-red-600 hover:text-white transition-all"
                                 title="Delete"
                               >
-                                <span className="material-symbols-outlined text-[18px]">delete_outline</span>
+                                <span className="material-symbols-outlined text-[16px]">delete_outline</span>
                               </button>
                             </div></div>
                         </div>
                       );
-                    })
-                  )}
+                    });
+                  })()}
                 </div>
               </div>
 
@@ -1199,7 +1265,7 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                     + Add Meeting
                   </button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-44 overflow-y-auto pr-1 scrollbar-thin">
                   {meetings.length === 0 ? (
                     <p className="text-xs text-[#616f89]">No meetings scheduled yet</p>
                   ) : (
@@ -1244,7 +1310,7 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                     Add Link
                   </button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-44 overflow-y-auto pr-1 scrollbar-thin">
                   {collaborationLinks.length === 0 ? (
                     <p className="text-xs text-[#616f89]">No collaboration links added</p>
                   ) : (
@@ -1399,21 +1465,59 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
               {/* Your Contribution */}
               <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 shadow-sm">
                 <h2 className="text-lg font-bold text-[#111318] mb-4">Your Contribution</h2>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-[#111318]">Completion Status</span>
-                      <span className="text-sm font-bold text-primary">65%</span>
+                {(() => {
+                  // Calculate user's stats
+                  const myDeliverables = deliverables.filter(d => d.assignedTo?.email === session?.user?.email);
+                  const mySubmitted = myDeliverables.filter(d => d.status === "submitted").length;
+                  const myInProgress = myDeliverables.filter(d => d.status === "in-progress").length;
+                  const myTotal = myDeliverables.length;
+
+                  // Calculate group stats
+                  const totalSubmitted = deliverables.filter(d => d.status === "submitted").length;
+                  const totalDeliverables = deliverables.length;
+
+                  if (totalDeliverables === 0) {
+                    return (
+                      <p className="text-sm text-[#616f89]">
+                        No deliverables yet. Create deliverables to track contributions.
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Stats grid */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-[#f9fafb] rounded-lg p-3 text-center border border-[#e5e7eb]">
+                          <p className="text-xl font-bold text-[#111318]">{myTotal}</p>
+                          <p className="text-[9px] text-[#616f89] uppercase tracking-wider">Assigned</p>
+                        </div>
+                        <div className="bg-blue-50 rounded-lg p-3 text-center border border-blue-100">
+                          <p className="text-xl font-bold text-blue-600">{myInProgress}</p>
+                          <p className="text-[9px] text-blue-600 uppercase tracking-wider">In Progress</p>
+                        </div>
+                        <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-100">
+                          <p className="text-xl font-bold text-emerald-600">{mySubmitted}</p>
+                          <p className="text-[9px] text-emerald-600 uppercase tracking-wider">Submitted</p>
+                        </div>
+                      </div>
+
+                      {/* Group progress */}
+                      <div className="pt-2 border-t border-[#e5e7eb]">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-[#616f89]">Group Progress</span>
+                          <span className="text-xs font-bold text-[#111318]">{totalSubmitted}/{totalDeliverables}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-[#e5e7eb] rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 transition-all"
+                            style={{ width: totalDeliverables > 0 ? `${(totalSubmitted / totalDeliverables) * 100}%` : '0%' }}
+                          ></div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="w-full h-2 bg-[#e5e7eb] rounded-full overflow-hidden">
-                      <div className="h-full w-2/3 bg-primary"></div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-sm text-[#616f89]">
-                    <span>Your contribution</span>
-                    <span>Group average: 72%</span>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
 
               {/* Recent Work Proof */}
@@ -1785,6 +1889,140 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                   <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
                   View Project Brief
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reassign Modal */}
+        {reassignModalOpen && myGroup && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb]">
+                <h2 className="text-lg font-bold text-[#111318]">
+                  {showReassignConfirm ? "Confirm Reassignment" : "Reassign Deliverable"}
+                </h2>
+                <button
+                  onClick={closeReassignModal}
+                  className="text-[#616f89] hover:text-[#111318] text-lg leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                {!showReassignConfirm ? (
+                  <>
+                    <p className="text-sm text-[#616f89] mb-4">
+                      Select a team member to assign this deliverable to:
+                    </p>
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                      {myGroup.members.map((member) => {
+                        const currentDeliverable = deliverables.find(d => d.id === reassignModalOpen);
+                        const isCurrentAssignee = currentDeliverable?.assignedTo?.id === member.id;
+                        
+                        return (
+                          <button
+                            key={member.id}
+                            onClick={() => selectReassignUser(member)}
+                            disabled={isCurrentAssignee}
+                            className={`w-full px-4 py-3 text-left rounded-lg border transition-all flex items-center gap-3 ${
+                              isCurrentAssignee
+                                ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-60'
+                                : selectedReassignUser?.id === member.id
+                                  ? 'bg-blue-50 border-primary shadow-sm'
+                                  : 'bg-white border-[#e5e7eb] hover:border-primary/50 hover:bg-gray-50'
+                            }`}
+                          >
+                            <Avatar name={member.name} src={member.avatar_url} size="h-10 w-10" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-[#111318] truncate">{member.name}</p>
+                              <p className="text-xs text-[#616f89] truncate">{member.email}</p>
+                            </div>
+                            {isCurrentAssignee && (
+                              <span className="text-[10px] font-bold text-gray-600 bg-gray-200 px-2 py-1 rounded uppercase">
+                                Current
+                              </span>
+                            )}
+                            {selectedReassignUser?.id === member.id && !isCurrentAssignee && (
+                              <span className="material-symbols-outlined text-primary">check_circle</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-center py-4">
+                      <div className="w-16 h-16 rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center mx-auto mb-4">
+                        <span className="material-symbols-outlined text-amber-600 text-3xl">swap_horiz</span>
+                      </div>
+                      <h3 className="text-base font-bold text-[#111318] mb-2">Confirm Reassignment</h3>
+                      <p className="text-sm text-[#616f89] mb-4">
+                        Are you sure you want to reassign this deliverable to:
+                      </p>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3 mb-4">
+                        <Avatar 
+                          name={selectedReassignUser?.name || ""} 
+                          src={selectedReassignUser?.avatar_url} 
+                          size="h-12 w-12" 
+                        />
+                        <div className="text-left flex-1 min-w-0">
+                          <p className="text-sm font-bold text-[#111318] truncate">{selectedReassignUser?.name}</p>
+                          <p className="text-xs text-[#616f89] truncate">{selectedReassignUser?.email}</p>
+                        </div>
+                      </div>
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-left">
+                        <div className="flex gap-2">
+                          <span className="material-symbols-outlined text-amber-600 text-lg shrink-0">info</span>
+                          <p className="text-xs text-amber-800">
+                            This user will receive a notification and must accept the deliverable before it appears in their task list.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-[#e5e7eb] flex gap-3">
+                {!showReassignConfirm ? (
+                  <>
+                    <button
+                      onClick={closeReassignModal}
+                      className="flex-1 px-4 py-2 border border-[#e5e7eb] rounded-lg text-sm font-medium text-[#111318] hover:bg-gray-50 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => selectedReassignUser && setShowReassignConfirm(true)}
+                      disabled={!selectedReassignUser}
+                      className="flex-1 px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Continue
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setShowReassignConfirm(false)}
+                      className="flex-1 px-4 py-2 border border-[#e5e7eb] rounded-lg text-sm font-medium text-[#111318] hover:bg-gray-50 transition-all"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={confirmReassignment}
+                      className="flex-1 px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-base">send</span>
+                      Confirm & Send
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
