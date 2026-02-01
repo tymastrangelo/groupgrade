@@ -5,7 +5,6 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { TasksWidget } from './TasksWidget';
 import { TeamActivityWidget } from './TeamActivityWidget';
-import { SubmissionCompletionCard } from './SubmissionCompletionCard';
 import DeliverableFileUpload from './DeliverableFileUpload';
 import { tasksCache } from '@/lib/tasksCache';
 
@@ -192,7 +191,22 @@ export default function StudentDashboard() {
           <div>
             <h1 className="text-[#111318] text-4xl font-black tracking-tight mb-1">Welcome back, {firstName}</h1>
             <p className="text-[#657386]">
-              You have <span className="text-primary font-bold">{Math.max(0, projects.filter(p => p.due_date).length)}</span> {projects.filter(p => p.due_date).length === 1 ? 'deadline' : 'deadlines'} approaching. Stay focused!
+              {(() => {
+                const oneWeekFromNow = new Date();
+                oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
+                const upcomingProjects = projects.filter(p => {
+                  if (!p.due_date) return false;
+                  const dueDate = new Date(p.due_date);
+                  return dueDate <= oneWeekFromNow && dueDate >= new Date();
+                });
+                return upcomingProjects.length > 0 ? (
+                  <>
+                    You have <span className="text-primary font-bold">{upcomingProjects.length}</span> {upcomingProjects.length === 1 ? 'project' : 'projects'} due within the week
+                  </>
+                ) : (
+                  'No upcoming deadlines this week'
+                );
+              })()}
             </p>
           </div>
           <button 
@@ -259,7 +273,6 @@ export default function StudentDashboard() {
           {/* Right Column: Team Activity and Stats */}
           <div className="lg:col-span-4 space-y-8">
             <TeamActivityWidget />
-            <SubmissionCompletionCard />
           </div>
         </div>
         </div>
