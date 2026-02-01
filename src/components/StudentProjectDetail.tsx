@@ -126,6 +126,7 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [showDeliverableModal, setShowDeliverableModal] = useState(false);
+  const [showProjectOverviewModal, setShowProjectOverviewModal] = useState(false);
   const [newDeliverableForm, setNewDeliverableForm] = useState({
     title: "",
     description: "",
@@ -1040,37 +1041,46 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
               <div className="bg-primary h-full rounded-full transition-all duration-500" style={{ width: "85%" }}></div>
             </div>
 
-            {/* Countdown */}
-            <div className="flex items-center gap-4 mt-6 p-4 rounded-xl bg-[#f9fafb] border border-[#e5e7eb]">
-              {countdown.isOverdue ? (
-                <div className="flex-1">
-                  <p className="text-xs font-bold text-red-600 uppercase tracking-wider">OVERDUE</p>
-                  <p className="text-sm text-red-500 font-medium">Submission deadline has passed</p>
-                </div>
-              ) : (
-                <>
-                  <div className="flex gap-3">
-                    <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[60px]">
-                      <span className="text-2xl font-bold">{countdown.days.toString().padStart(2, "0")}</span>
-                      <span className="text-[9px] uppercase font-bold tracking-widest opacity-60">Days</span>
-                    </div>
-                    <div className="text-xl font-bold text-[#616f89]">:</div>
-                    <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[60px]">
-                      <span className="text-2xl font-bold">{countdown.hours.toString().padStart(2, "0")}</span>
-                      <span className="text-[9px] uppercase font-bold tracking-widest opacity-60">Hours</span>
-                    </div>
-                    <div className="text-xl font-bold text-[#616f89]">:</div>
-                    <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[60px]">
-                      <span className="text-2xl font-bold">{countdown.minutes.toString().padStart(2, "0")}</span>
-                      <span className="text-[9px] uppercase font-bold tracking-widest opacity-60">Mins</span>
-                    </div>
+            {/* Countdown and Project Overview Button */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mt-6">
+              <div className="flex-1 flex items-center gap-4 p-4 rounded-xl bg-[#f9fafb] border border-[#e5e7eb]">
+                {countdown.isOverdue ? (
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-red-600 uppercase tracking-wider">OVERDUE</p>
+                    <p className="text-sm text-red-500 font-medium">Submission deadline has passed</p>
                   </div>
-                  <div className="hidden sm:block ml-4 pl-4 border-l border-[#e5e7eb]">
-                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Remaining Time</p>
-                    <p className="text-xs text-[#616f89] font-medium">Until Final Submission</p>
-                  </div>
-                </>
-              )}
+                ) : (
+                  <>
+                    <div className="flex gap-3">
+                      <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[60px]">
+                        <span className="text-2xl font-bold">{countdown.days.toString().padStart(2, "0")}</span>
+                        <span className="text-[9px] uppercase font-bold tracking-widest opacity-60">Days</span>
+                      </div>
+                      <div className="text-xl font-bold text-[#616f89]">:</div>
+                      <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[60px]">
+                        <span className="text-2xl font-bold">{countdown.hours.toString().padStart(2, "0")}</span>
+                        <span className="text-[9px] uppercase font-bold tracking-widest opacity-60">Hours</span>
+                      </div>
+                      <div className="text-xl font-bold text-[#616f89]">:</div>
+                      <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[60px]">
+                        <span className="text-2xl font-bold">{countdown.minutes.toString().padStart(2, "0")}</span>
+                        <span className="text-[9px] uppercase font-bold tracking-widest opacity-60">Mins</span>
+                      </div>
+                    </div>
+                    <div className="hidden sm:block ml-4 pl-4 border-l border-[#e5e7eb]">
+                      <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Remaining Time</p>
+                      <p className="text-xs text-[#616f89] font-medium">Until Final Submission</p>
+                    </div>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setShowProjectOverviewModal(true)}
+                className="px-6 py-4 bg-primary hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-sm whitespace-nowrap"
+              >
+                <span className="material-symbols-outlined text-lg">info</span>
+                Project Overview
+              </button>
             </div>
           </div>
 
@@ -1420,18 +1430,6 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                 </div>
               </div>
 
-              {/* Rubric Overview */}
-              {project?.rubric && (
-                <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 shadow-sm">
-                  <h2 className="text-lg font-bold text-[#111318] mb-4">Rubric Overview</h2>
-                  <div className="space-y-3 text-sm">
-                    <p className="text-[#616f89] leading-relaxed whitespace-pre-wrap text-xs">
-                      {parseRubric(project.rubric).rubric_text || "Rubric details coming soon"}
-                    </p>
-                  </div>
-                </div>
-              )}
-
               {/* Recent Work Proof */}
               <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 shadow-sm">
                 <h2 className="text-lg font-bold text-[#111318] mb-4">Recent Work Proof</h2>
@@ -1453,23 +1451,6 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                 </div>
               </div>
 
-              {/* Project Info & Brief */}
-              <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 shadow-sm">
-                <h3 className="text-lg font-bold text-[#111318] mb-4 flex items-center">
-                  <span className="material-symbols-outlined text-base mr-2" style={{ fontSize: '20px' }}>info</span>
-                  Project Info & Brief
-                </h3>
-                <div className="space-y-4">
-                  <button className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-sm transition-all flex items-center justify-center shadow-sm">
-                    <span className="material-symbols-outlined text-base mr-2">picture_as_pdf</span>
-                    View Project Brief
-                  </button>
-                  <div>
-                    <p className="font-semibold text-[#111318] mb-2 text-sm">Description:</p>
-                    <p className="text-[#616f89] text-sm leading-relaxed">{project?.description || "No description available"}</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -1715,6 +1696,85 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                     Delete
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Project Overview Modal */}
+        {showProjectOverviewModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb] shrink-0">
+                <h2 className="text-lg font-bold text-[#111318] flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">info</span>
+                  Project Overview
+                </h2>
+                <button
+                  onClick={() => setShowProjectOverviewModal(false)}
+                  className="text-[#616f89] hover:text-[#111318] text-2xl leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto space-y-6">
+                {/* Project Name & Class */}
+                <div>
+                  <h3 className="text-xl font-bold text-[#111318] mb-1">{project?.name}</h3>
+                  <p className="text-sm text-[#616f89]">{project?.class_name}</p>
+                </div>
+
+                {/* Due Date */}
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-[#f9fafb] border border-[#e5e7eb]">
+                  <span className="material-symbols-outlined text-primary text-2xl">event</span>
+                  <div>
+                    <p className="text-xs font-bold text-[#616f89] uppercase tracking-wider">Due Date</p>
+                    <p className="text-sm font-semibold text-[#111318]">{formatDate(project?.due_date) || "No due date set"}</p>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <h4 className="text-sm font-bold text-[#111318] mb-2 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[#616f89] text-lg">description</span>
+                    Description
+                  </h4>
+                  <p className="text-sm text-[#616f89] leading-relaxed bg-[#f9fafb] p-4 rounded-lg border border-[#e5e7eb]">
+                    {project?.description || "No description available"}
+                  </p>
+                </div>
+
+                {/* Expectations */}
+                {project?.expectations && (
+                  <div>
+                    <h4 className="text-sm font-bold text-[#111318] mb-2 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#616f89] text-lg">checklist</span>
+                      Expectations
+                    </h4>
+                    <p className="text-sm text-[#616f89] leading-relaxed bg-[#f9fafb] p-4 rounded-lg border border-[#e5e7eb] whitespace-pre-wrap">
+                      {project.expectations}
+                    </p>
+                  </div>
+                )}
+
+                {/* Rubric */}
+                {project?.rubric && parseRubric(project.rubric).rubric_text && (
+                  <div>
+                    <h4 className="text-sm font-bold text-[#111318] mb-2 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#616f89] text-lg">grading</span>
+                      Rubric
+                    </h4>
+                    <p className="text-sm text-[#616f89] leading-relaxed bg-[#f9fafb] p-4 rounded-lg border border-[#e5e7eb] whitespace-pre-wrap">
+                      {parseRubric(project.rubric).rubric_text}
+                    </p>
+                  </div>
+                )}
+
+                {/* View Project Brief Button */}
+                <button className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-3 rounded-lg text-sm transition-all flex items-center justify-center gap-2 shadow-sm">
+                  <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
+                  View Project Brief
+                </button>
               </div>
             </div>
           </div>
