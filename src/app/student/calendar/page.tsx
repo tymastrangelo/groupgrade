@@ -135,9 +135,23 @@ export default function StudentCalendarPage() {
             try {
               const classDetail = await tasksCache.fetch<any>(`/api/classes/${cls.id}`);
               const projects = (classDetail as any)?.projects || [];
+              
+              console.log(`[Calendar] Class ${cls.name} has ${projects.length} projects:`, projects);
+              
+              // Filter out any null/undefined/invalid projects
+              const validProjects = projects.filter((p: any) => {
+                const isValid = p && typeof p === 'object' && p.id;
+                if (!isValid) {
+                  console.warn('[Calendar] Skipping invalid project:', p);
+                }
+                return isValid;
+              });
+              
+              console.log(`[Calendar] After filtering: ${validProjects.length} valid projects`);
 
               await Promise.all(
-                projects.map(async (p: any) => {
+                validProjects.map(async (p: any) => {
+                  
                   if (p.due_date) {
                     eventsAccumulator.push({
                       id: `project-${p.id}`,
@@ -152,6 +166,10 @@ export default function StudentCalendarPage() {
 
                   // Fetch deliverables assigned to the current user for this project
                   try {
+                    if (!p.id) {
+                      console.warn('[Calendar] Project missing id, skipping deliverables fetch');
+                      return;
+                    }
                     const deliverables = await tasksCache.fetch<any>(`/api/deliverables?projectId=${p.id}`);
                     // API returns array directly
                     const deliverablesList = Array.isArray(deliverables) ? deliverables : [];
@@ -183,39 +201,6 @@ export default function StudentCalendarPage() {
                     });
                   } catch (err) {
                     console.error(`Failed to fetch deliverables for project ${p.id}:`, err);
-                  }
-
-                  // Fetch group meetings for this project
-                  try {
-                    const groupsData = await tasksCache.fetch<any>(`/api/projects/${p.id}`);
-                    const groups = (groupsData as any)?.project?.groups || [];
-                    // Find user's group
-                    const userGroup = groups.find((g: any) => 
-                      g.members?.some((m: any) => m.email === userEmail)
-                    );
-                    
-                    if (userGroup) {
-                      const meetingsRes = await tasksCache.fetch<any>(`/api/meetings?groupId=${userGroup.id}`);
-                      const meetings = Array.isArray(meetingsRes) ? meetingsRes : [];
-                      meetings.forEach((m: any) => {
-                        if (m.date) {
-                          eventsAccumulator.push({
-                            id: `meeting-${m.id}`,
-                            date: m.date,
-                            title: m.title,
-                            kind: 'meeting',
-                            course: cls.name,
-                            projectId: p.id,
-                            tone: 'orange',
-                            time: m.time,
-                            type: m.type,
-                            location: m.location || m.meeting_url
-                          });
-                        }
-                      });
-                    }
-                  } catch (err) {
-                    console.error(`Failed to fetch meetings for project ${p.id}:`, err);
                   }
                 })
               );

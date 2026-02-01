@@ -73,13 +73,26 @@ CREATE TABLE public.contributions (
   CONSTRAINT contributions_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id),
   CONSTRAINT contributions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
+CREATE TABLE public.deliverable_files (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  deliverable_id uuid NOT NULL,
+  file_name text NOT NULL,
+  file_size integer,
+  file_type text,
+  storage_path text NOT NULL,
+  uploaded_by uuid NOT NULL,
+  uploaded_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT deliverable_files_pkey PRIMARY KEY (id),
+  CONSTRAINT deliverable_files_deliverable_id_fkey FOREIGN KEY (deliverable_id) REFERENCES public.deliverables(id),
+  CONSTRAINT deliverable_files_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id)
+);
 CREATE TABLE public.deliverables (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   group_id uuid NOT NULL,
   project_id uuid NOT NULL,
   title text NOT NULL,
   description text,
-  status text NOT NULL DEFAULT 'not-started'::text CHECK (status = ANY (ARRAY['not-started'::text, 'in-progress'::text, 'submitted'::text])),
+  status text NOT NULL DEFAULT 'not-started'::text CHECK (status = ANY (ARRAY['not-started'::text, 'in-progress'::text, 'submitted'::text, 'pending'::text])),
   due_date date,
   assigned_to uuid,
   created_by uuid,
@@ -88,6 +101,7 @@ CREATE TABLE public.deliverables (
   submission_url text,
   submission_notes text,
   submitted_at timestamp with time zone,
+  submission_files jsonb DEFAULT '[]'::jsonb,
   CONSTRAINT deliverables_pkey PRIMARY KEY (id),
   CONSTRAINT deliverables_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.groups(id),
   CONSTRAINT deliverables_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id),
@@ -121,6 +135,24 @@ CREATE TABLE public.groups (
   name text,
   CONSTRAINT groups_pkey PRIMARY KEY (id),
   CONSTRAINT groups_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id)
+);
+CREATE TABLE public.notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  to_user_id uuid NOT NULL,
+  from_user_id uuid,
+  type text NOT NULL CHECK (type = ANY (ARRAY['deliverable_assignment'::text, 'assignment_declined'::text, 'info'::text])),
+  title text NOT NULL,
+  message text,
+  deliverable_id uuid,
+  read boolean NOT NULL DEFAULT false,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text, 'info'::text])),
+  metadata jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_to_user_id_fkey FOREIGN KEY (to_user_id) REFERENCES public.users(id),
+  CONSTRAINT notifications_from_user_id_fkey FOREIGN KEY (from_user_id) REFERENCES public.users(id),
+  CONSTRAINT notifications_deliverable_id_fkey FOREIGN KEY (deliverable_id) REFERENCES public.deliverables(id)
 );
 CREATE TABLE public.project_milestones (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

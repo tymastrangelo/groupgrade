@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
+import DeliverableFileUpload from "@/components/DeliverableFileUpload";
 import { useSession } from "next-auth/react";
 import { tasksCache } from "@/lib/tasksCache";
 
@@ -115,7 +117,15 @@ function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | 
 
 export default function StudentProjectDetail({ projectId }: { projectId: string }) {
   const { data: session } = useSession();
+  const router = useRouter();
   const [project, setProject] = useState<ProjectData | null>(null);
+  
+  // Guard against invalid projectId
+  useEffect(() => {
+    if (!projectId || projectId === "null" || projectId === "undefined") {
+      router.push("/student/projects");
+    }
+  }, [projectId, router]);
   const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
   const [meetings, setMeetings] = useState<GroupMeeting[]>([]);
   const [viewMeetingId, setViewMeetingId] = useState<string | null>(null);
@@ -820,20 +830,14 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                   <label className="block text-sm font-medium text-[#111318] mb-2">
                     Attach Files <span className="text-xs text-[#616f89]">(optional)</span>
                   </label>
-                  <div
-                    className="border border-dashed border-[#e5e7eb] rounded-lg p-4 text-center text-sm text-[#616f89] hover:border-primary cursor-pointer"
-                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const files = Array.from(e.dataTransfer.files || []);
-                      if (files.length > 0) {
-                        const names = files.map(f => f.name).join(', ');
-                        setSubmitWorkForm(prev => ({ ...prev, notes: prev.notes ? prev.notes + `\nFiles: ${names}` : `Files: ${names}` }));
-                      }
-                    }}
-                  >
-                    Drag & drop files here, or click to browse
-                  </div>
+                  {submitWorkId && (
+                    <DeliverableFileUpload 
+                      deliverableId={submitWorkId}
+                      onFilesUploaded={(files) => {
+                        console.log('Files uploaded:', files);
+                      }}
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#111318] mb-2">
@@ -1086,25 +1090,31 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {/* Your Deliverables */}
               <div className="bg-white rounded-xl border border-[#e5e7eb] p-5 shadow-sm flex flex-col">
-                <div className="pb-4">
-                  <div className="flex items-center justify-between mb-4">
+                <div className={deliverables.length === 0 ? "pb-4" : ""}>
+                  <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-[#616f89] flex items-center">
                       <span className="material-symbols-outlined text-sm mr-1.5">upload_file</span>
                       Deliverables
                     </h3>
                     {deliverables.length > 0 && (
-                      <span className="text-[10px] font-medium text-[#616f89] bg-[#f9fafb] px-2 py-0.5 rounded-full">
-                        {deliverables.length} total
-                      </span>
+                      <button
+                        onClick={() => setShowDeliverableModal(true)}
+                        className="text-primary hover:bg-primary/10 p-1 rounded transition text-sm"
+                        title="Add deliverable"
+                      >
+                        <span className="material-symbols-outlined text-base">add</span>
+                      </button>
                     )}
                   </div>
-                  <button
-                    onClick={() => setShowDeliverableModal(true)}
-                    className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs transition-all flex items-center justify-center shadow-sm"
-                  >
-                    <span className="material-symbols-outlined text-base mr-2">add</span>
-                    Add Deliverable
-                  </button>
+                  {deliverables.length === 0 && (
+                    <button
+                      onClick={() => setShowDeliverableModal(true)}
+                      className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs transition-all flex items-center justify-center shadow-sm"
+                    >
+                      <span className="material-symbols-outlined text-base mr-2">add</span>
+                      Add Deliverable
+                    </button>
+                  )}
                 </div>
                 <div className="flex-1 space-y-2 max-h-44 overflow-y-auto pr-1 scrollbar-thin">
                   {(() => {
@@ -1252,18 +1262,31 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
 
               {/* Group Meetings */}
               <div className="bg-white rounded-xl border border-[#e5e7eb] p-5 shadow-sm">
-                <div className="pb-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#616f89] mb-4 flex items-center">
-                    <span className="material-symbols-outlined text-sm mr-1.5">groups</span>
-                    Group Meetings
+                <div className={meetings.length === 0 ? "pb-4" : ""}>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#616f89] mb-2 flex items-center justify-between">
+                    <span className="flex items-center">
+                      <span className="material-symbols-outlined text-sm mr-1.5">groups</span>
+                      Group Meetings
+                    </span>
+                    {meetings.length > 0 && (
+                      <button
+                        onClick={() => setShowScheduleModal(true)}
+                        className="text-primary hover:bg-primary/10 p-1 rounded transition text-sm"
+                        title="Add meeting"
+                      >
+                        <span className="material-symbols-outlined text-base">add</span>
+                      </button>
+                    )}
                   </h3>
-                  <button
-                    onClick={() => setShowScheduleModal(true)}
-                    className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs transition-all flex items-center justify-center shadow-sm"
-                  >
-                    <span className="material-symbols-outlined text-base mr-2">add_alarm</span>
-                    + Add Meeting
-                  </button>
+                  {meetings.length === 0 && (
+                    <button
+                      onClick={() => setShowScheduleModal(true)}
+                      className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs transition-all flex items-center justify-center shadow-sm"
+                    >
+                      <span className="material-symbols-outlined text-base mr-2">add_alarm</span>
+                      + Add Meeting
+                    </button>
+                  )}
                 </div>
                 <div className="space-y-2 max-h-44 overflow-y-auto pr-1 scrollbar-thin">
                   {meetings.length === 0 ? (
@@ -1297,18 +1320,31 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
 
               {/* Collaboration Hub */}
               <div className="bg-white rounded-xl border border-[#e5e7eb] p-5 shadow-sm">
-                <div className="pb-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#616f89] mb-4 flex items-center">
-                    <span className="material-symbols-outlined text-sm mr-1.5">hub</span>
-                    Collaboration Hub
+                <div className={collaborationLinks.length === 0 ? "pb-4" : ""}>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#616f89] mb-2 flex items-center justify-between">
+                    <span className="flex items-center">
+                      <span className="material-symbols-outlined text-sm mr-1.5">hub</span>
+                      Collaboration Hub
+                    </span>
+                    {collaborationLinks.length > 0 && (
+                      <button
+                        onClick={() => setShowAddLinkModal(true)}
+                        className="text-primary hover:bg-primary/10 p-1 rounded transition text-sm"
+                        title="Add link"
+                      >
+                        <span className="material-symbols-outlined text-base">add</span>
+                      </button>
+                    )}
                   </h3>
-                  <button
-                    onClick={() => setShowAddLinkModal(true)}
-                    className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs transition-all flex items-center justify-center shadow-sm"
-                  >
-                    <span className="material-symbols-outlined text-base mr-2">add</span>
-                    Add Link
-                  </button>
+                  {collaborationLinks.length === 0 && (
+                    <button
+                      onClick={() => setShowAddLinkModal(true)}
+                      className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs transition-all flex items-center justify-center shadow-sm"
+                    >
+                      <span className="material-symbols-outlined text-base mr-2">add</span>
+                      Add Link
+                    </button>
+                  )}
                 </div>
                 <div className="space-y-2 max-h-44 overflow-y-auto pr-1 scrollbar-thin">
                   {collaborationLinks.length === 0 ? (
@@ -1682,6 +1718,15 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                   <div>
                     <label className="block text-sm font-bold text-[#111318] mb-2">Submitted At</label>
                     <p className="text-sm text-[#616f89]">{formatDate(viewedDeliverable.submittedAt)}</p>
+                  </div>
+                )}
+                {viewedDeliverable.status === "submitted" && (
+                  <div className="pt-4 border-t border-[#e5e7eb]">
+                    <label className="block text-sm font-bold text-[#111318] mb-3">Submitted Files</label>
+                    <DeliverableFileUpload
+                      deliverableId={viewedDeliverable.id}
+                      readOnly={true}
+                    />
                   </div>
                 )}
 

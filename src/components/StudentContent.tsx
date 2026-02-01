@@ -79,7 +79,9 @@ export function StudentContent({ userName = 'Alex' }: { userName?: string }) {
             }
             const j = await res.json();
             const viewerId = j.viewer_id;
-            return (j.projects || []).map((p: any) => {
+            return (j.projects || [])
+              .filter((p: any) => p && p.id) // Filter out null/undefined projects
+              .map((p: any) => {
               let parsed: any = {};
               try {
                 parsed = p.rubric ? JSON.parse(p.rubric) : {};
