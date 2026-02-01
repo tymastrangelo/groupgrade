@@ -62,6 +62,13 @@ function formatDate(value?: string | null) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+function formatDateTime(value?: string | null) {
+  if (!value) return "";
+  const d = new Date(value);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+    " at " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+}
+
 function formatDue(value?: string | null) {
   if (!value) return "No due date";
   const d = new Date(value);
@@ -1019,68 +1026,47 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
 
           {/* Main Header Section */}
           <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 mb-8 shadow-sm">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-2xl font-bold text-[#111318]">Your Group Progress</h1>
-                </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-[#111318] mb-1">{myGroup?.name || "Group"} Progress</h1>
                 <div className="flex items-center gap-2 text-[#616f89] text-sm">
                   <span className="material-symbols-outlined text-sm">event</span>
-                  Due: {formatDate(project?.due_date)}
+                  Due: {formatDateTime(project?.due_date)}
                 </div>
               </div>
 
-              <div className="text-right">
-                <span className="text-3xl font-bold text-primary">85%</span>
-                <span className="text-[#616f89] text-sm ml-1 uppercase tracking-wider font-semibold">Complete</span>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full bg-[#e5e7eb] h-3 rounded-full overflow-hidden mt-4">
-              <div className="bg-primary h-full rounded-full transition-all duration-500" style={{ width: "85%" }}></div>
-            </div>
-
-            {/* Countdown and Project Overview Button */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mt-6">
-              <div className="flex-1 flex items-center gap-4 p-4 rounded-xl bg-[#f9fafb] border border-[#e5e7eb]">
+              {/* Countdown */}
+              <div className="flex items-center gap-4">
                 {countdown.isOverdue ? (
-                  <div className="flex-1">
+                  <div className="px-4 py-2 rounded-xl bg-red-50 border border-red-200">
                     <p className="text-xs font-bold text-red-600 uppercase tracking-wider">OVERDUE</p>
-                    <p className="text-sm text-red-500 font-medium">Submission deadline has passed</p>
                   </div>
                 ) : (
-                  <>
-                    <div className="flex gap-3">
-                      <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[60px]">
-                        <span className="text-2xl font-bold">{countdown.days.toString().padStart(2, "0")}</span>
-                        <span className="text-[9px] uppercase font-bold tracking-widest opacity-60">Days</span>
-                      </div>
-                      <div className="text-xl font-bold text-[#616f89]">:</div>
-                      <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[60px]">
-                        <span className="text-2xl font-bold">{countdown.hours.toString().padStart(2, "0")}</span>
-                        <span className="text-[9px] uppercase font-bold tracking-widest opacity-60">Hours</span>
-                      </div>
-                      <div className="text-xl font-bold text-[#616f89]">:</div>
-                      <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[60px]">
-                        <span className="text-2xl font-bold">{countdown.minutes.toString().padStart(2, "0")}</span>
-                        <span className="text-[9px] uppercase font-bold tracking-widest opacity-60">Mins</span>
-                      </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[50px]">
+                      <span className="text-xl font-bold">{countdown.days.toString().padStart(2, "0")}</span>
+                      <span className="text-[8px] uppercase font-bold tracking-widest opacity-60">Days</span>
                     </div>
-                    <div className="hidden sm:block ml-4 pl-4 border-l border-[#e5e7eb]">
-                      <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Remaining Time</p>
-                      <p className="text-xs text-[#616f89] font-medium">Until Final Submission</p>
+                    <span className="text-lg font-bold text-[#616f89]">:</span>
+                    <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[50px]">
+                      <span className="text-xl font-bold">{countdown.hours.toString().padStart(2, "0")}</span>
+                      <span className="text-[8px] uppercase font-bold tracking-widest opacity-60">Hrs</span>
                     </div>
-                  </>
+                    <span className="text-lg font-bold text-[#616f89]">:</span>
+                    <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[50px]">
+                      <span className="text-xl font-bold">{countdown.minutes.toString().padStart(2, "0")}</span>
+                      <span className="text-[8px] uppercase font-bold tracking-widest opacity-60">Min</span>
+                    </div>
+                  </div>
                 )}
+                <button
+                  onClick={() => setShowProjectOverviewModal(true)}
+                  className="h-10 w-10 flex items-center justify-center rounded-lg border border-[#e5e7eb] text-[#616f89] hover:bg-[#f9fafb] hover:text-primary transition-all"
+                  title="Project Overview"
+                >
+                  <span className="material-symbols-outlined text-xl">info</span>
+                </button>
               </div>
-              <button
-                onClick={() => setShowProjectOverviewModal(true)}
-                className="px-6 py-4 bg-primary hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-sm whitespace-nowrap"
-              >
-                <span className="material-symbols-outlined text-lg">info</span>
-                Project Overview
-              </button>
             </div>
           </div>
 
