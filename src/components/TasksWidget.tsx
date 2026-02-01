@@ -4,7 +4,13 @@ import { useEffect, useState } from 'react';
 import { AddTaskModal, type Project } from './AddTaskModal';
 import { tasksCache } from '@/lib/tasksCache';
 
-type TaskStatus = 'todo' | 'in_progress' | 'submitted' | 'done';
+type TaskStatus = 'todo' | 'in_progress' | 'done';
+
+const STATUS_CONFIG: Record<TaskStatus, { label: string; bg: string; text: string; border: string }> = {
+  todo: { label: 'To Do', bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' },
+  in_progress: { label: 'In Progress', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+  done: { label: 'Done', bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+};
 
 interface Task {
   id: string;
@@ -135,13 +141,13 @@ export function TasksWidget({ projectId, title = 'Your Tasks', showAddNewButton 
   let displayTasks: Task[] = [];
   
   if (activeFilter === 'active') {
-    displayTasks = tasks.filter((t) => t.status !== 'done' && t.status !== 'submitted');
+    displayTasks = tasks.filter((t) => t.status !== 'done');
   } else if (activeFilter === 'completed') {
-    displayTasks = tasks.filter((t) => t.status === 'done' || t.status === 'submitted');
+    displayTasks = tasks.filter((t) => t.status === 'done');
   } else {
     // 'all' - show active first, then completed
-    const activeTasks = tasks.filter((t) => t.status !== 'done' && t.status !== 'submitted');
-    const completedTasks = tasks.filter((t) => t.status === 'done' || t.status === 'submitted');
+    const activeTasks = tasks.filter((t) => t.status !== 'done');
+    const completedTasks = tasks.filter((t) => t.status === 'done');
     displayTasks = [...activeTasks, ...completedTasks];
   }
 
@@ -185,7 +191,7 @@ export function TasksWidget({ projectId, title = 'Your Tasks', showAddNewButton 
       ) : (
         <div className="divide-y divide-[#f0f2f4]">
           {displayTasks.map((task) => {
-            const isComplete = task.status === 'done' || task.status === 'submitted';
+            const isComplete = task.status === 'done';
             return (
               <div
                 key={task.id}
@@ -212,13 +218,22 @@ export function TasksWidget({ projectId, title = 'Your Tasks', showAddNewButton 
                   )}
                 </button>
                 <div className="flex-1 min-w-0">
-                  <p
-                    className={`text-sm font-semibold truncate transition-all ${
-                      isComplete ? 'text-[#a0aec0] line-through' : ''
-                    }`}
-                  >
-                    {task.title}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p
+                      className={`text-sm font-semibold truncate transition-all ${
+                        isComplete ? 'text-[#a0aec0] line-through' : ''
+                      }`}
+                    >
+                      {task.title}
+                    </p>
+                    <span
+                      className={`shrink-0 px-2 py-0.5 text-[10px] font-semibold rounded-full border ${
+                        STATUS_CONFIG[task.status].bg
+                      } ${STATUS_CONFIG[task.status].text} ${STATUS_CONFIG[task.status].border}`}
+                    >
+                      {STATUS_CONFIG[task.status].label}
+                    </span>
+                  </div>
                   <p className={`text-[11px] truncate transition-all ${
                     isComplete ? 'text-[#d1d5db]' : 'text-[#657386]'
                   }`}>
@@ -470,18 +485,25 @@ function ViewEditTaskModal({ task, isOpen, onClose, onUpdate, onDelete }: ViewEd
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#111318] mb-1">
+              <label className="block text-sm font-medium text-[#111318] mb-2">
                 Status
               </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
+              <div className="flex flex-wrap gap-2">
+                {(['todo', 'in_progress', 'done'] as TaskStatus[]).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setStatus(s)}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-full border-2 transition-all ${
+                      status === s
+                        ? `${STATUS_CONFIG[s].bg} ${STATUS_CONFIG[s].text} ${STATUS_CONFIG[s].border}`
+                        : 'bg-white text-[#657386] border-[#e5e7eb] hover:bg-[#f9fafb]'
+                    }`}
+                  >
+                    {STATUS_CONFIG[s].label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {task.projectName && (
