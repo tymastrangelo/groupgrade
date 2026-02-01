@@ -1167,7 +1167,7 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                       return (
                         <div
                           key={del.id}
-                          className={`relative group flex items-center justify-between p-3 rounded-xl border transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-md ${
+                          className={`relative group w-full flex items-center justify-between p-3 rounded-xl border transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-md ${
                             del.status === "submitted"
                               ? "bg-emerald-50 border-emerald-200"
                               : isPending
