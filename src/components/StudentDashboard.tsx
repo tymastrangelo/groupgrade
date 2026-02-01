@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { TasksWidget } from './TasksWidget';
 import { TeamActivityWidget } from './TeamActivityWidget';
 import { SubmissionCompletionCard } from './SubmissionCompletionCard';
+import DeliverableFileUpload from './DeliverableFileUpload';
 import { tasksCache } from '@/lib/tasksCache';
 
 type ClassRow = {
@@ -34,6 +35,9 @@ export default function StudentDashboard() {
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [projects, setProjects] = useState<StudentProject[]>([]);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showSubmitWorkModal, setShowSubmitWorkModal] = useState(false);
+  const [selectedDeliverable, setSelectedDeliverable] = useState<any | null>(null);
+  const [pendingDeliverables, setPendingDeliverables] = useState<any[]>([]);
   const [joinCode, setJoinCode] = useState('');
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -115,6 +119,66 @@ export default function StudentDashboard() {
     }
   };
 
+  const fetchPendingDeliverables = async () => {
+    try {
+      const userEmail = session?.user?.email;
+      if (!userEmail) return;
+
+      const allDeliverables: any[] = [];
+      
+      // Fetch deliverables for each project
+      for (const project of projects) {
+        const res = await fetch(`/api/deliverables?projectId=${project.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          const deliverables = Array.isArray(data) ? data : [];
+          
+          // Filter for deliverables assigned to current user that are not submitted
+          const userDeliverables = deliverables.filter((d: any) => 
+            d.assignedTo?.email === userEmail && 
+            d.status !== 'submitted'
+          ).map((d: any) => ({
+            ...d,
+            projectName: project.name,
+            projectId: project.id,
+          }));
+          
+          allDeliverables.push(...userDeliverables);
+        }
+      }
+      
+      setPendingDeliverables(allDeliverables);
+    } catch (err) {
+      console.error('Error fetching pending deliverables:', err);
+    }
+  };
+
+  const handleSubmitWorkClick = async () => {
+    await fetchPendingDeliverables();
+    setShowSubmitWorkModal(true);
+  };
+
+  const handleSubmitDeliverable = async (deliverableId: string) => {
+    try {
+      const res = await fetch(`/api/deliverables/${deliverableId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          status: 'submitted',
+          submittedAt: new Date().toISOString()
+        }),
+      });
+
+      if (res.ok) {
+        // Refresh the pending deliverables list
+        await fetchPendingDeliverables();
+        setSelectedDeliverable(null);
+      }
+    } catch (err) {
+      console.error('Error submitting deliverable:', err);
+    }
+  };
+
   return (
     <>
       <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
@@ -131,7 +195,10 @@ export default function StudentDashboard() {
               You have <span className="text-primary font-bold">{Math.max(0, projects.filter(p => p.due_date).length)}</span> {projects.filter(p => p.due_date).length === 1 ? 'deadline' : 'deadlines'} approaching. Stay focused!
             </p>
           </div>
-          <button className="bg-primary text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-blue-700 transition-all">
+          <button 
+            onClick={handleSubmitWorkClick}
+            className="bg-primary text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-primary/20 hover:bg-blue-700 transition-all"
+          >
             <span className="material-symbols-outlined">upload_file</span>
             Submit Work
           </button>
@@ -197,6 +264,134 @@ export default function StudentDashboard() {
         </div>
         </div>
       </div>
+
+      {/* Submit Work Modal */}
+      {showSubmitWorkModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full max-h-[90vh] overflow-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb]">
+              <h2 className="text-lg font-bold text-[#111318]">
+                {selectedDeliverable ? 'Submit Work' : 'Choose Deliverable'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowSubmitWorkModal(false);
+                  setSelectedDeliverable(null);
+                }}
+                className="text-[#616f89] hover:text-[#111318] text-lg leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6">
+              {selectedDeliverable ? (
+                <div>
+                  <div className="mb-4 pb-4 border-b border-[#e5e7eb]">
+                    <h3 className="font-medium text-[#111318] mb-1">{selectedDeliverable.title}</h3>
+                    <p className="text-sm text-[#616f89]">
+                      Project: {selectedDeliverable.projectName}
+                    </p>
+                    {selectedDeliverable.dueDate && (
+                      <p className="text-xs text-[#616f89] mt-1">
+                        Due: {new Date(selectedDeliverable.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[#111318] mb-2">
+                        Attach Files <span className="text-xs text-[#616f89]">(optional)</span>
+                      </label>
+                      <DeliverableFileUpload 
+                        deliverableId={selectedDeliverable.id}
+                        onFilesUploaded={(files) => {
+                          console.log('Files uploaded:', files);
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-[#111318] mb-2">
+                        Submission Link <span className="text-xs text-[#616f89]">(optional)</span>
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://..."
+                        className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      <p className="text-xs text-[#616f89] mt-1">Link to your Google Drive, Dropbox, GitHub, etc.</p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-[#111318] mb-2">
+                        Notes <span className="text-xs text-[#616f89]">(optional)</span>
+                      </label>
+                      <textarea
+                        placeholder="Add any additional notes about your submission..."
+                        rows={4}
+                        className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : pendingDeliverables.length === 0 ? (
+                <div className="text-center py-8">
+                  <span className="material-symbols-outlined text-6xl text-[#616f89] mb-4">task_alt</span>
+                  <p className="text-[#616f89]">You have no pending deliverables to submit!</p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-[#616f89] mb-4">
+                    Select a deliverable to submit:
+                  </p>
+                  <div className="space-y-2">
+                    {pendingDeliverables.map((deliverable) => (
+                      <button
+                        key={deliverable.id}
+                        onClick={() => setSelectedDeliverable(deliverable)}
+                        className="w-full text-left p-4 border border-[#e5e7eb] rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-[#111318]">{deliverable.title}</h4>
+                            <p className="text-sm text-[#616f89] mt-1">{deliverable.projectName}</p>
+                            {deliverable.dueDate && (
+                              <p className="text-xs text-[#616f89] mt-1">
+                                Due: {new Date(deliverable.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </p>
+                            )}
+                          </div>
+                          <span className="material-symbols-outlined text-primary">
+                            chevron_right
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {selectedDeliverable && (
+              <div className="px-6 py-4 border-t border-[#e5e7eb] flex gap-3">
+                <button
+                  onClick={() => setSelectedDeliverable(null)}
+                  className="flex-1 px-4 py-2 border border-[#e5e7eb] rounded-lg text-sm font-medium text-[#111318] hover:bg-gray-50 transition-all"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={() => handleSubmitDeliverable(selectedDeliverable.id)}
+                  className="flex-1 px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
+                >
+                  Submit
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
