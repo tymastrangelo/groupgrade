@@ -1,23 +1,10 @@
 import { getServerSession } from 'next-auth/next';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { authOptions } from '@/lib/auth';
+import { supabaseAdmin } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/auth-utils';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-async function getCurrentUser(sessionEmail: string) {
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('id, role')
-    .eq('email', sessionEmail)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!user) throw new Error('User not found');
-  return { ...user, normalizedRole: user.role === 'professor' ? 'teacher' : user.role };
-}
+const supabase = supabaseAdmin;
 
 async function getClassByCode(rawCode: string, userId?: string) {
   const code = rawCode.trim().toUpperCase();
