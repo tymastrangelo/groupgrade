@@ -209,7 +209,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Fetch groups with members to return
     const { data: finalGroups, error: finalErr } = await supabase
       .from('groups')
-      .select('id, name, group_members(user_id, users(name, email, avatar_url))')
+      .select('id, name, group_members(user_id, users(name, email, avatar_url, last_active))')
       .eq('project_id', projectId)
       .order('name');
     if (finalErr) throw new Error(finalErr.message);
@@ -222,6 +222,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         name: m.users?.name || 'Student',
         email: m.users?.email || '',
         avatar_url: m.users?.avatar_url || null,
+        last_active: m.users?.last_active || null,
       })),
     }));
 

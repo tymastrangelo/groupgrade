@@ -20,7 +20,7 @@ type ProjectData = {
   deliverables: string | null;
   created_at: string | null;
   updated_at: string | null;
-  groups: { id: string; name: string; members: { id: string; name: string; email: string; avatar_url?: string | null }[] }[];
+  groups: { id: string; name: string; members: { id: string; name: string; email: string; avatar_url?: string | null; last_active?: string | null }[] }[];
 };
 
 type Deliverable = {
@@ -95,6 +95,40 @@ function getCountdown(dueDate?: string | null) {
   const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
   
   return { days, hours, minutes, isOverdue: false };
+}
+
+function getActivityStatus(lastActive?: string | null) {
+  if (!lastActive) return { text: "Never", color: "text-gray-400", dot: "bg-gray-300" };
+  
+  const now = new Date();
+  const last = new Date(lastActive);
+  const diffMs = now.getTime() - last.getTime();
+  
+  const minutes = Math.floor(diffMs / (1000 * 60));
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  // Online: last 5 minutes
+  if (minutes < 5) {
+    return { text: "Now", color: "text-green-600", dot: "bg-green-500" };
+  }
+  
+  // Active: last hour
+  if (minutes < 60) {
+    return { text: `${minutes}m ago`, color: "text-green-600", dot: "bg-green-400" };
+  }
+  
+  // Recent: last day
+  if (hours < 24) {
+    return { text: `${hours}h ago`, color: "text-yellow-600", dot: "bg-yellow-400" };
+  }
+  
+  // Away: more than a day
+  if (days < 7) {
+    return { text: `${days}d ago`, color: "text-gray-500", dot: "bg-gray-400" };
+  }
+  
+  return { text: `${days}d ago`, color: "text-gray-400", dot: "bg-gray-300" };
 }
 
 function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | null; size?: string }) {
@@ -286,7 +320,24 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
     }
   }, [myGroup?.id, project?.id, showAllActivities]);
 
+  // Track user activity (last_active timestamp)
+  useEffect(() => {
+    const trackActivity = async () => {
+      try {
+        await fetch('/api/user/last-active', { method: 'POST' });
+      } catch (err) {
+        console.error('Failed to track activity:', err);
+      }
+    };
 
+    // Track on component mount
+    trackActivity();
+
+    // Track every 5 minutes of activity
+    const interval = setInterval(trackActivity, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Update countdown every minute
   useEffect(() => {
@@ -1405,48 +1456,43 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                 <div className="p-6 border-b border-[#e5e7eb] flex justify-between items-center">
                   <h2 className="text-lg font-bold text-[#111318]">Your Group Roster</h2>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead className="bg-[#f9fafb] text-[#616f89] text-xs uppercase tracking-wider font-semibold border-b border-[#e5e7eb]">
-                      <tr>
-                        <th className="px-6 py-4">Student</th>
-                        <th className="px-6 py-4">Role</th>
-                        <th className="px-6 py-4">Contribution</th>
-                        <th className="px-6 py-4">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#e5e7eb]">
-                      {myGroup?.members.map((member) => (
-                        <tr key={member.id} className="hover:bg-[#f9fafb] transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <Avatar name={member.name} src={member.avatar_url} size="h-8 w-8" />
-                              <div>
-                                <p className="text-sm font-medium text-[#111318]">{member.name}</p>
-                                {member.email === session?.user?.email && (
-                                  <p className="text-xs text-primary font-semibold">You</p>
-                                )}
-                              </div>
+                <div className="divide-y divide-[#e5e7eb]">
+                  {myGroup?.members.map((member) => {
+                    let status = getActivityStatus(member.last_active);
+                    const isCurrentUser = member.email === session?.user?.email;
+                    // Show "Now" for current user if they're viewing this page
+                    if (isCurrentUser && status.text === "Never") {
+                      status = { text: "Now", color: "text-green-600", dot: "bg-green-500" };
+                    }
+                    return (
+                      <div key={member.id} className="px-6 py-3 flex items-center justify-between hover:bg-[#f9fafb] transition-colors">
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                          <div className="relative flex-shrink-0">
+                            <Avatar name={member.name} src={member.avatar_url} size="h-10 w-10" />
+                            <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ${status.dot} border-2 border-white`} title={status.text}></div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-[#111318]">{member.name}</p>
+                              {isCurrentUser && (
+                                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded font-medium">You</span>
+                              )}
                             </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="px-2 py-1 rounded bg-[#f9fafb] text-[#616f89] text-[10px] font-bold uppercase tracking-tight border border-[#e5e7eb]">
-                              Member
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="w-24 bg-[#e5e7eb] h-1.5 rounded-full overflow-hidden">
-                              <div className="bg-primary h-full" style={{ width: "65%" }}></div>
-                            </div>
-                            <span className="text-[10px] text-[#616f89] mt-1 block">65% share</span>
-                          </td>
-                          <td className="px-6 py-4 text-xs font-medium text-green-600 whitespace-nowrap">
-                            Active Now
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            <p className={`text-xs mt-0.5 ${status.color}`}>{status.text}</p>
+                          </div>
+                        </div>
+                        {!isCurrentUser && (
+                          <button
+                            onClick={() => console.log('Message', member.name)}
+                            className="ml-4 flex-shrink-0 p-2 rounded-lg text-[#616f89] hover:bg-[#e5e7eb] hover:text-primary transition-colors"
+                            title={`Message ${member.name}`}
+                          >
+                            <span className="material-symbols-outlined text-xl">message</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

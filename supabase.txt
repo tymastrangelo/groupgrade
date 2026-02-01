@@ -232,5 +232,6 @@ CREATE TABLE public.users (
   email text,
   role text CHECK (role = ANY (ARRAY['professor'::text, 'student'::text])),
   avatar_url text,
+  last_active timestamp with time zone DEFAULT now(),
   CONSTRAINT users_pkey PRIMARY KEY (id)
 );
