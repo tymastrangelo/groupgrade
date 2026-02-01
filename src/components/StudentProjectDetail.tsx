@@ -1420,20 +1420,44 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
               <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 shadow-sm">
                 <h2 className="text-lg font-bold text-[#111318] mb-4">Recent Work Proof</h2>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-3 rounded-lg border border-[#e5e7eb] hover:bg-[#f9fafb] transition">
-                    <span className="material-symbols-outlined text-[#616f89]">file_present</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-[#111318] truncate">Project_Outline.pdf</p>
-                      <p className="text-[9px] text-[#616f89]">2 hours ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg border border-[#e5e7eb] hover:bg-[#f9fafb] transition">
-                    <span className="material-symbols-outlined text-[#616f89]">image</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-[#111318] truncate">Mockup_Design.png</p>
-                      <p className="text-[9px] text-[#616f89]">1 day ago</p>
-                    </div>
-                  </div>
+                  {(() => {
+                    // Filter to show only the current user's submitted deliverables
+                    const mySubmissions = deliverables
+                      .filter(d => d.assignedTo?.email === session?.user?.email && d.status === "submitted")
+                      .sort((a, b) => {
+                        if (!a.submittedAt) return 1;
+                        if (!b.submittedAt) return -1;
+                        return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+                      })
+                      .slice(0, 5); // Show up to 5 recent submissions
+
+                    if (mySubmissions.length === 0) {
+                      return (
+                        <p className="text-xs text-[#616f89] py-2">
+                          No submissions yet. Submit your first deliverable to see it here.
+                        </p>
+                      );
+                    }
+
+                    return mySubmissions.map((submission) => (
+                      <button
+                        key={submission.id}
+                        onClick={() => viewDeliverableDetails(submission.id)}
+                        className="w-full flex items-center gap-3 p-3 rounded-lg border border-[#e5e7eb] hover:bg-[#f9fafb] transition text-left"
+                      >
+                        <span className="material-symbols-outlined text-emerald-600">task_alt</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-[#111318] truncate">{submission.title}</p>
+                          <p className="text-[9px] text-[#616f89]">
+                            {submission.submittedAt ? formatActivityDate(submission.submittedAt) : "Submitted"}
+                          </p>
+                        </div>
+                        {submission.submissionUrl && (
+                          <span className="material-symbols-outlined text-[#616f89] text-sm">link</span>
+                        )}
+                      </button>
+                    ));
+                  })()}
                 </div>
               </div>
 
