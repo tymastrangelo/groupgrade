@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Transform data to include user info
+    // Transform data to include user info (nested for frontend compatibility)
     const transformedData = (data || []).map((activity: any) => {
       const user = usersMap[activity.user_id] || {};
       return {
@@ -60,10 +60,12 @@ export async function GET(request: NextRequest) {
         entityId: activity.entity_id,
         entityTitle: activity.entity_title,
         createdAt: activity.created_at,
-        userId: activity.user_id,
-        userName: user.name || 'Unknown',
-        userEmail: user.email || '',
-        userAvatar: user.avatar_url || null
+        user: {
+          id: activity.user_id,
+          name: user.name || 'Unknown',
+          email: user.email || '',
+          avatar_url: user.avatar_url || null
+        }
       };
     });
 

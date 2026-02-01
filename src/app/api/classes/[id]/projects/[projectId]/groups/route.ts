@@ -61,15 +61,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (projErr) throw new Error(projErr.message);
     if (!project || project.class_id !== classId) return NextResponse.json({ error: 'Project not found for class' }, { status: 404 });
 
-    // existing groups cleanup
+    // Get existing groups - we'll update memberships rather than delete groups to preserve deliverables
     const { data: existingGroups } = await supabase
       .from('groups')
-      .select('id')
+      .select('id, name')
       .eq('project_id', projectId);
+    const existingGroupsMap = new Map((existingGroups || []).map(g => [g.name, g.id]));
     const existingIds = (existingGroups || []).map((g) => g.id);
+
+    // Only clear memberships, not the groups themselves
     if (existingIds.length) {
       await supabase.from('group_members').delete().in('group_id', existingIds);
-      await supabase.from('groups').delete().in('id', existingIds);
     }
 
     // fetch class students list
@@ -141,16 +143,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       groupsToInsert = buckets.map((members, idx) => ({ name: groupName(idx), members }));
     }
 
-    const groupPayload = groupsToInsert.map((g) => ({ name: g.name, project_id: projectId }));
-    const { data: createdGroups, error: insertGroupsErr } = await supabase
-      .from('groups')
-      .insert(groupPayload)
-      .select('id, name')
-      .order('name');
-    if (insertGroupsErr) throw new Error(insertGroupsErr.message);
-
+    // Reuse existing groups or create new ones
     const groupIdByName = new Map<string, string>();
-    (createdGroups || []).forEach((g) => groupIdByName.set(g.name, g.id));
+    const usedGroupIds = new Set<string>();
+    const newGroupsToCreate: { name: string; project_id: string }[] = [];
+
+    for (const g of groupsToInsert) {
+      const existingId = existingGroupsMap.get(g.name);
+      if (existingId) {
+        groupIdByName.set(g.name, existingId);
+        usedGroupIds.add(existingId);
+      } else {
+        newGroupsToCreate.push({ name: g.name, project_id: projectId });
+      }
+    }
+
+    // Create only the new groups that don't exist
+    if (newGroupsToCreate.length > 0) {
+      const { data: createdGroups, error: insertGroupsErr } = await supabase
+        .from('groups')
+        .insert(newGroupsToCreate)
+        .select('id, name');
+      if (insertGroupsErr) throw new Error(insertGroupsErr.message);
+      (createdGroups || []).forEach((g) => {
+        groupIdByName.set(g.name, g.id);
+        usedGroupIds.add(g.id);
+      });
+    }
 
     const memberPayload: { group_id: string; user_id: string }[] = [];
     groupsToInsert.forEach((g) => {
@@ -164,7 +183,202 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       if (insertMembersErr) throw new Error(insertMembersErr.message);
     }
 
+    // Clean up unused groups that have no deliverables, meetings, or other data
+    const unusedGroupIds = existingIds.filter(id => !usedGroupIds.has(id));
+    if (unusedGroupIds.length > 0) {
+      // Check if any of these groups have deliverables, meetings, or collaboration links
+      const [deliverables, meetings, links] = await Promise.all([
+        supabase.from('deliverables').select('group_id').in('group_id', unusedGroupIds),
+        supabase.from('meetings').select('group_id').in('group_id', unusedGroupIds),
+        supabase.from('collaboration_links').select('group_id').in('group_id', unusedGroupIds),
+      ]);
+
+      const groupsWithData = new Set([
+        ...(deliverables.data || []).map(d => d.group_id),
+        ...(meetings.data || []).map(m => m.group_id),
+        ...(links.data || []).map(l => l.group_id),
+      ]);
+
+      // Only delete groups that have no associated data
+      const safeToDelete = unusedGroupIds.filter(id => !groupsWithData.has(id));
+      if (safeToDelete.length > 0) {
+        await supabase.from('groups').delete().in('id', safeToDelete);
+      }
+    }
+
     // Fetch groups with members to return
+    const { data: finalGroups, error: finalErr } = await supabase
+      .from('groups')
+      .select('id, name, group_members(user_id, users(name, email, avatar_url))')
+      .eq('project_id', projectId)
+      .order('name');
+    if (finalErr) throw new Error(finalErr.message);
+
+    const shaped = (finalGroups || []).map((g: any) => ({
+      id: g.id,
+      name: g.name,
+      members: (g.group_members || []).map((m: any) => ({
+        id: m.user_id,
+        name: m.users?.name || 'Student',
+        email: m.users?.email || '',
+        avatar_url: m.users?.avatar_url || null,
+      })),
+    }));
+
+    return NextResponse.json({ groups: shaped });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 });
+  }
+}
+
+// PATCH - Update group membership without destroying groups (preserves deliverables, meetings, etc.)
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; projectId: string }> }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { action, groupId, userId, targetGroupId } = body || {};
+    const { id: classId, projectId } = await params;
+
+    if (!classId || !projectId || !isUuid(classId) || !isUuid(projectId)) {
+      return NextResponse.json({ error: 'Invalid ids' }, { status: 400 });
+    }
+
+    // Auth check
+    const { data: user, error: userErr } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('email', session.user.email)
+      .maybeSingle();
+    if (userErr) throw new Error(userErr.message);
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    const { data: cls, error: clsErr } = await supabase
+      .from('classes')
+      .select('professor_id')
+      .eq('id', classId)
+      .maybeSingle();
+    if (clsErr) throw new Error(clsErr.message);
+    if (!cls) return NextResponse.json({ error: 'Class not found' }, { status: 404 });
+    if (cls.professor_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    // Verify project belongs to class
+    const { data: project, error: projErr } = await supabase
+      .from('projects')
+      .select('id, class_id')
+      .eq('id', projectId)
+      .maybeSingle();
+    if (projErr) throw new Error(projErr.message);
+    if (!project || project.class_id !== classId) {
+      return NextResponse.json({ error: 'Project not found for class' }, { status: 404 });
+    }
+
+    if (action === 'add_member') {
+      // Add a user to a group
+      if (!groupId || !userId || !isUuid(groupId) || !isUuid(userId)) {
+        return NextResponse.json({ error: 'groupId and userId required' }, { status: 400 });
+      }
+
+      // Verify group belongs to project
+      const { data: group } = await supabase
+        .from('groups')
+        .select('id')
+        .eq('id', groupId)
+        .eq('project_id', projectId)
+        .maybeSingle();
+      if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+
+      // Remove from any existing group in this project first
+      const { data: existingGroups } = await supabase
+        .from('groups')
+        .select('id')
+        .eq('project_id', projectId);
+      const groupIds = (existingGroups || []).map(g => g.id);
+      if (groupIds.length > 0) {
+        await supabase
+          .from('group_members')
+          .delete()
+          .eq('user_id', userId)
+          .in('group_id', groupIds);
+      }
+
+      // Add to target group
+      const { error: insertErr } = await supabase
+        .from('group_members')
+        .insert({ group_id: groupId, user_id: userId });
+      if (insertErr) throw new Error(insertErr.message);
+
+    } else if (action === 'remove_member') {
+      // Remove a user from a group
+      if (!groupId || !userId || !isUuid(groupId) || !isUuid(userId)) {
+        return NextResponse.json({ error: 'groupId and userId required' }, { status: 400 });
+      }
+
+      const { error: deleteErr } = await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', userId);
+      if (deleteErr) throw new Error(deleteErr.message);
+
+      // Unassign any deliverables assigned to this user in this group
+      await supabase
+        .from('deliverables')
+        .update({ assigned_to: null })
+        .eq('group_id', groupId)
+        .eq('assigned_to', userId);
+
+    } else if (action === 'move_member') {
+      // Move a user from one group to another
+      if (!groupId || !targetGroupId || !userId || !isUuid(groupId) || !isUuid(targetGroupId) || !isUuid(userId)) {
+        return NextResponse.json({ error: 'groupId, targetGroupId, and userId required' }, { status: 400 });
+      }
+
+      // Verify both groups belong to project
+      const { data: sourceGroup } = await supabase
+        .from('groups')
+        .select('id')
+        .eq('id', groupId)
+        .eq('project_id', projectId)
+        .maybeSingle();
+      const { data: targetGroup } = await supabase
+        .from('groups')
+        .select('id')
+        .eq('id', targetGroupId)
+        .eq('project_id', projectId)
+        .maybeSingle();
+      if (!sourceGroup || !targetGroup) {
+        return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+      }
+
+      // Remove from source group
+      await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', userId);
+
+      // Unassign deliverables from old group
+      await supabase
+        .from('deliverables')
+        .update({ assigned_to: null })
+        .eq('group_id', groupId)
+        .eq('assigned_to', userId);
+
+      // Add to target group
+      const { error: insertErr } = await supabase
+        .from('group_members')
+        .insert({ group_id: targetGroupId, user_id: userId });
+      if (insertErr) throw new Error(insertErr.message);
+
+    } else {
+      return NextResponse.json({ error: 'Invalid action. Use add_member, remove_member, or move_member' }, { status: 400 });
+    }
+
+    // Return updated groups
     const { data: finalGroups, error: finalErr } = await supabase
       .from('groups')
       .select('id, name, group_members(user_id, users(name, email, avatar_url))')

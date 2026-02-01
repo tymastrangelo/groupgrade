@@ -2,17 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { tasksCache } from '@/lib/tasksCache';
 
 interface Activity {
   id: string;
-  userId: string;
-  userName: string;
-  userEmail: string;
-  userAvatar?: string;
   actionType: string;
   entityTitle: string;
   createdAt: string;
+  groupName: string;
+  projectName: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    avatar_url?: string | null;
+  };
 }
 
 export function TeamActivityWidget() {
@@ -51,51 +54,11 @@ export function TeamActivityWidget() {
     const fetchActivities = async () => {
       setLoading(true);
       try {
-        // Fetch user's classes and projects
-        const classesRes = await tasksCache.fetch<{ classes: any[] }>('/api/classes');
-        const classes = (classesRes as any)?.classes || [];
-
-        const allActivities: Activity[] = [];
-
-        // Fetch activity from each project
-        await Promise.all(
-          classes.map(async (cls: any) => {
-            try {
-              const classDetail = await tasksCache.fetch<any>(`/api/classes/${cls.id}`);
-              const projects = (classDetail as any)?.projects || [];
-
-              await Promise.all(
-                projects.map(async (p: any) => {
-                  try {
-                    // Get groups for this project to fetch their activity
-                    const groups = p.groups || [];
-                    await Promise.all(
-                      groups.map(async (g: any) => {
-                        try {
-                          const activityRes = await tasksCache.fetch<any>(
-                            `/api/activity?groupId=${g.id}&projectId=${p.id}&limit=10`
-                          );
-                          const activityList = Array.isArray(activityRes) ? activityRes : activityRes?.activities || [];
-                          allActivities.push(...activityList);
-                        } catch (err) {
-                          console.error(`Failed to fetch activity for group ${g.id}:`, err);
-                        }
-                      })
-                    );
-                  } catch (err) {
-                    console.error(`Failed to fetch activity for project ${p.id}:`, err);
-                  }
-                })
-              );
-            } catch (err) {
-              console.error(`Failed to fetch project details for class ${cls.id}:`, err);
-            }
-          })
-        );
-
-        // Sort by date and take latest 4
-        allActivities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setActivities(allActivities.slice(0, 4));
+        // Fetch activity from all groups the user belongs to
+        const res = await fetch('/api/user/activity?limit=10');
+        if (!res.ok) throw new Error('Failed to fetch activity');
+        const data = await res.json();
+        setActivities(Array.isArray(data) ? data.slice(0, 4) : []);
       } catch (e) {
         console.error('Failed to fetch team activity:', e);
       } finally {
@@ -122,20 +85,20 @@ export function TeamActivityWidget() {
         ) : (
           activities.map((activity) => {
             const message = getActivityMessage(activity);
-            const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(activity.userName || 'User')}&background=E5E7EB&color=111827`;
+            const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(activity.user.name || 'User')}&background=E5E7EB&color=111827`;
             return (
               <div key={activity.id} className="flex items-start gap-3">
                 <div className="relative">
                   <div
                     className="size-10 rounded-full bg-cover border-2 border-white"
                     style={{
-                      backgroundImage: `url("${activity.userAvatar || defaultAvatar}")`,
+                      backgroundImage: `url("${activity.user.avatar_url || defaultAvatar}")`,
                     }}
                   ></div>
                   <div className="absolute bottom-0 right-0 size-3 border-2 border-white rounded-full bg-green-500"></div>
                 </div>
                 <div>
-                  <p className="text-sm font-bold">{activity.userName}</p>
+                  <p className="text-sm font-bold">{activity.user.name}</p>
                   <p className="text-xs text-[#657386]">
                     {message.action}{' '}
                     <span className="text-primary font-medium">{activity.entityTitle}</span>

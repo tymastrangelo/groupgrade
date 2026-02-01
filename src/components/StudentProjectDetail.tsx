@@ -1109,14 +1109,14 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                               : "bg-white border-[#e5e7eb]"
                           }`}
                         >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <span className="material-symbols-outlined text-primary text-xl">description</span>
+                          <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
+                            <span className="material-symbols-outlined text-primary text-xl shrink-0">description</span>
                             <p className="text-sm font-semibold text-[#111318] truncate">{del.title}</p>
                           </div>
                             
                             {/* Status badge - fades out on hover */}
                             <span
-                              className={`text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider whitespace-nowrap transition-opacity duration-200 group-hover:opacity-0 ${
+                              className={`shrink-0 text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider whitespace-nowrap transition-opacity duration-200 group-hover:opacity-0 ${
                                 del.status === "submitted"
                                   ? "bg-emerald-500 text-white"
                                   : del.status === "in-progress"
@@ -1128,7 +1128,9 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                             </span>
 
                             {/* Action buttons - fade in on hover */}
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"><div className="flex items-center gap-2">
+                            <div className={`absolute right-0 top-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 flex items-center pr-3 pl-4 rounded-r-xl backdrop-blur-sm ${
+                              del.status === "submitted" ? "bg-emerald-50/95" : "bg-white/95"
+                            }`}><div className="flex items-center gap-2">
                               {/* Reassign Dropdown */}
                               <div className="relative assign-dropdown-container">
                                 <button
