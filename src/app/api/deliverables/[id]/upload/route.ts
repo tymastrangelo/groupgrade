@@ -135,6 +135,45 @@ export async function POST(
       })
       .eq("id", deliverableId);
 
+    // If this deliverable is marked as final (title starts with [FINAL]), create approval notifications
+    try {
+      const { data: deliverable } = await supabase
+        .from('deliverables')
+        .select('id, title, group_id')
+        .eq('id', deliverableId)
+        .single();
+
+      if (deliverable && typeof deliverable.title === 'string' && deliverable.title.startsWith('[FINAL]')) {
+        // Fetch group members
+        const { data: members } = await supabase
+          .from('group_members')
+          .select('user_id, users(id, name, email, avatar_url)')
+          .eq('group_id', deliverable.group_id);
+
+        const recipients = (members || []).map((m: any) => m.user_id).filter((id: any) => id !== userData.id);
+
+        // Create a notification for each recipient asking to approve final deliverable
+        const notificationsPayload = recipients.map((toId: any) => ({
+          to_user_id: toId,
+          from_user_id: userData.id,
+          type: 'deliverable_assignment',
+          title: 'Final deliverable submitted — please approve',
+          message: `A final deliverable was submitted for your group. Please review and approve.`,
+          deliverable_id: deliverable.id,
+          metadata: { final: true },
+          read: false,
+          status: 'pending'
+        }));
+
+        if (notificationsPayload.length > 0) {
+          const { error: notifError } = await supabase.from('notifications').insert(notificationsPayload);
+          if (notifError) console.error('Failed to create final approval notifications:', notifError);
+        }
+      }
+    } catch (notifEx) {
+      console.error('Error creating final approval notifications:', notifEx);
+    }
+
     // Log activity (optional - ignore errors)
     try {
       const { data: deliverable } = await supabase

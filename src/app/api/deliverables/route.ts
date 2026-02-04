@@ -123,13 +123,56 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { groupId, projectId, title, description, dueDate, status } = body;
+    const { groupId, projectId, title, description, dueDate, status, isFinal } = body;
 
     if (!groupId || !projectId || !title) {
       return NextResponse.json(
         { error: "groupId, projectId, and title are required" },
         { status: 400 }
       );
+    }
+
+    // Require description and dueDate on creation
+    if (!description || !dueDate) {
+      return NextResponse.json({ error: "description and dueDate are required" }, { status: 400 });
+    }
+
+    // Fetch project to validate project due date
+    const { data: projectData, error: projErr } = await supabase
+      .from('projects')
+      .select('due_date')
+      .eq('id', projectId)
+      .single();
+
+    const projectDueDate = projectData?.due_date ? new Date(projectData.due_date) : null;
+
+    // If creating a final deliverable and no dueDate provided, default to project due date
+    let normalizedDueDate: Date | null = null;
+    if (dueDate) {
+      normalizedDueDate = new Date(dueDate);
+    }
+    if (isFinal && !normalizedDueDate && projectDueDate) {
+      normalizedDueDate = projectDueDate;
+    }
+
+    // If a project due date exists, ensure the deliverable due date is not past it
+    if (projectDueDate && normalizedDueDate && normalizedDueDate > projectDueDate) {
+      return NextResponse.json({ error: "Deliverable due date cannot be after the project's due date" }, { status: 400 });
+    }
+
+    // If this is marked as the final deliverable, ensure one-per-group/project
+    if (isFinal) {
+      // Fetch existing deliverables for the group/project and check for any final marker
+      const { data: existing } = await supabase
+        .from("deliverables")
+        .select("title")
+        .eq("group_id", groupId)
+        .eq("project_id", projectId);
+
+      const hasFinal = (existing || []).some((d: any) => typeof d.title === 'string' && d.title.startsWith('[FINAL]'));
+      if (hasFinal) {
+        return NextResponse.json({ error: "A final deliverable already exists for this group" }, { status: 409 });
+      }
     }
 
     // Get user ID from email
@@ -143,14 +186,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // If isFinal is true, prefix title with a marker so we can identify final deliverables
+    const finalTitle = isFinal ? `[FINAL] ${title}` : title;
+
     const { data, error } = await supabase
       .from("deliverables")
       .insert({
         group_id: groupId,
         project_id: projectId,
-        title,
+        title: finalTitle,
         description,
-        due_date: dueDate || null,
+        due_date: normalizedDueDate ? normalizedDueDate.toISOString().split('T')[0] : null,
         status: status || "not-started",
         created_by: userData.id,
         assigned_to: userData.id,

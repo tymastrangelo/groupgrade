@@ -35,3 +35,66 @@ body {
   align-items: center;
   justify-content: center;
 }
+
+/* Custom scrollbar styles */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Timeline styles */
+.timeline-tooltip {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(-10px);
+  transition: all 0.2s ease-out;
+  pointer-events: none;
+}
+
+.timeline-group:hover .timeline-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.timeline-label {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(5px);
+  transition: all 0.2s ease-out;
+  pointer-events: none;
+}
+
+.timeline-group:hover .timeline-label {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Timeline marker glow effect */
+.historical-glow:hover .timeline-marker {
+  box-shadow: 0 0 15px currentColor;
+}
+
+/* Smooth transition for timeline events */
+.timeline-event {
+  transition: all 0.2s ease-in-out;
+}
+
+.timeline-event:hover {
+  transform: scale(1.1);
+}

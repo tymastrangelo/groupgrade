@@ -7,6 +7,8 @@ import DashboardLayout from "@/components/DashboardLayout";
 import DeliverableFileUpload from "@/components/DeliverableFileUpload";
 import { useSession } from "next-auth/react";
 import { tasksCache } from "@/lib/tasksCache";
+import { getMemberColor } from "@/components/GroupMemberColors";
+import { GroupProjectTimeline, TimelineEvent } from "@/components/GroupProjectTimeline";
 
 type ProjectData = {
   id: string;
@@ -37,6 +39,22 @@ type Deliverable = {
   submissionUrl?: string;
   submissionNotes?: string;
 };
+
+// Date conversion helpers for handling timezone issues
+function pad(n: number): string { return n.toString().padStart(2, '0'); }
+function toLocalInput(value?: string | null): string {
+  if (!value) return '';
+  const d = new Date(value);
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  return `${year}-${month}-${day}`;
+}
+function fromLocalInput(value?: string | null): string | null {
+  if (!value) return null;
+  const d = new Date(value + 'T00:00:00');
+  return d.toISOString();
+}
 
 type GroupMeeting = {
   id: string;
@@ -184,6 +202,11 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
     description: "",
     dueDate: "",
   });
+
+  const [deliverableErrors, setDeliverableErrors] = useState<{ title?: string; description?: string; dueDate?: string }>({});
+
+  // Flag for creating a final deliverable
+  const [isFinalDeliverable, setIsFinalDeliverable] = useState(false);
   const [viewDeliverableId, setViewDeliverableId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [submitWorkId, setSubmitWorkId] = useState<string | null>(null);
@@ -194,6 +217,12 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
   const [reassignModalOpen, setReassignModalOpen] = useState<string | null>(null);
   const [selectedReassignUser, setSelectedReassignUser] = useState<{ id: string; name: string; email: string; avatar_url?: string | null } | null>(null);
   const [showReassignConfirm, setShowReassignConfirm] = useState(false);
+  const [viewedDeliverableFilesCount, setViewedDeliverableFilesCount] = useState<number | null>(null);
+  // Member deliverables list modal
+  const [selectedMember, setSelectedMember] = useState<{ id: string; name: string; email: string; avatar_url?: string | null } | null>(null);
+  const [showMemberDeliverables, setShowMemberDeliverables] = useState(false);
+  // When opening a deliverable from the member list, store the member so we can return to the list
+  const [memberReturn, setMemberReturn] = useState<{ id: string; name: string; email: string; avatar_url?: string | null } | null>(null);
 
   // Find the student's group
   const myGroup = project?.groups?.find((g) => 
@@ -349,8 +378,36 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
   }, [project]);
 
   const handleAddDeliverable = async () => {
-    if (!newDeliverableForm.title.trim() || !myGroup || !project || !session?.user) return;
-    
+    if (!myGroup || !project || !session?.user) return;
+
+    const errors: { title?: string; description?: string; dueDate?: string } = {};
+
+    if (!newDeliverableForm.title.trim()) errors.title = 'Title is required';
+    if (!newDeliverableForm.description.trim()) errors.description = 'Description is required';
+    if (!newDeliverableForm.dueDate) errors.dueDate = 'Due date is required';
+
+    // If user chose final but a final already exists, prevent creation
+    const hasFinal = deliverables.some(d => typeof d.title === 'string' && d.title.startsWith('[FINAL]'));
+    if (isFinalDeliverable && hasFinal) {
+      errors.title = 'A final deliverable already exists for this group';
+    }
+
+    // Prevent creating deliverable past project due date
+    if (project?.due_date && newDeliverableForm.dueDate) {
+      const projectDue = new Date(project.due_date);
+      const chosen = new Date(newDeliverableForm.dueDate + 'T00:00:00');
+      if (chosen > projectDue) {
+        errors.dueDate = 'Deliverable due date cannot be after the project due date';
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setDeliverableErrors(errors);
+      return;
+    }
+
+    setDeliverableErrors({});
+
     try {
       const response = await fetch("/api/deliverables", {
         method: "POST",
@@ -360,17 +417,19 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
           projectId: project.id,
           title: newDeliverableForm.title,
           description: newDeliverableForm.description,
-          dueDate: newDeliverableForm.dueDate,
+          dueDate: fromLocalInput(newDeliverableForm.dueDate),
           status: "not-started",
           assignedTo: session.user.id, // Auto-assign to creator
+          isFinal: isFinalDeliverable,
         }),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setDeliverables([...deliverables, data]);
+        // Refresh deliverables from server so `assignedTo` and pending assignee info are populated
+        await fetchDeliverables();
         await fetchActivityLogs();
         setNewDeliverableForm({ title: "", description: "", dueDate: "" });
+        setIsFinalDeliverable(false);
         setShowDeliverableModal(false);
       }
     } catch (error) {
@@ -547,6 +606,8 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
 
   const closeDeliverableView = () => {
     setViewDeliverableId(null);
+    setViewedDeliverableFilesCount(null);
+    setMemberReturn(null);
   };
 
   const viewedDeliverable = deliverables.find(d => d.id === viewDeliverableId);
@@ -563,6 +624,28 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
     setViewDeliverableId(null);
     setSubmitWorkId(deliverableId);
   };
+
+  // When opening a deliverable view, fetch file count for that deliverable
+  useEffect(() => {
+    const fetchFilesCount = async (id: string) => {
+      try {
+        const res = await fetch(`/api/deliverables/${id}/files`);
+        if (!res.ok) {
+          setViewedDeliverableFilesCount(0);
+          return;
+        }
+        const data = await res.json();
+        setViewedDeliverableFilesCount(Array.isArray(data) ? data.length : 0);
+      } catch (err) {
+        console.error('Failed to fetch deliverable files count', err);
+        setViewedDeliverableFilesCount(0);
+      }
+    };
+
+    if (viewDeliverableId) {
+      fetchFilesCount(viewDeliverableId);
+    }
+  }, [viewDeliverableId]);
 
   const closeSubmitWorkModal = () => {
     setSubmitWorkId(null);
@@ -809,37 +892,73 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                   <input
                     type="text"
                     value={newDeliverableForm.title}
-                    onChange={(e) => setNewDeliverableForm({ ...newDeliverableForm, title: e.target.value })}
+                    onChange={(e) => {
+                      setNewDeliverableForm({ ...newDeliverableForm, title: e.target.value });
+                      setDeliverableErrors(prev => ({ ...prev, title: undefined }));
+                    }}
                     placeholder="e.g. Financial Projections"
                     className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
+                  {deliverableErrors.title && (
+                    <p className="text-xs text-red-600 mt-1">{deliverableErrors.title}</p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    id="isFinal"
+                    type="checkbox"
+                    checked={isFinalDeliverable}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setIsFinalDeliverable(checked);
+                      if (checked && project?.due_date) {
+                        setNewDeliverableForm({ ...newDeliverableForm, dueDate: toLocalInput(project.due_date) });
+                      }
+                    }}
+                    className="h-4 w-4"
+                    disabled={deliverables.some(d => typeof d.title === 'string' && d.title.startsWith('[FINAL]'))}
+                  />
+                  <label htmlFor="isFinal" className="text-sm text-[#111318]">Mark as final deliverable (requires approval from all members)</label>
                 </div>
 
                 {/* Description */}
                 <div>
                   <label className="block text-sm font-medium text-[#111318] mb-2">
-                    Description
+                    Description <span className="text-red-600">*</span>
                   </label>
                   <textarea
                     value={newDeliverableForm.description}
-                    onChange={(e) => setNewDeliverableForm({ ...newDeliverableForm, description: e.target.value })}
-                    placeholder="Add deliverable details (optional)"
+                    onChange={(e) => {
+                      setNewDeliverableForm({ ...newDeliverableForm, description: e.target.value });
+                      setDeliverableErrors(prev => ({ ...prev, description: undefined }));
+                    }}
+                    placeholder="Add deliverable details"
                     rows={3}
                     className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                   />
+                  {deliverableErrors.description && (
+                    <p className="text-xs text-red-600 mt-1">{deliverableErrors.description}</p>
+                  )}
                 </div>
 
                 {/* Due Date */}
                 <div>
                   <label className="block text-sm font-medium text-[#111318] mb-2">
-                    Due Date
+                    Due Date <span className="text-red-600">*</span>
                   </label>
                   <input
                     type="date"
                     value={newDeliverableForm.dueDate}
-                    onChange={(e) => setNewDeliverableForm({ ...newDeliverableForm, dueDate: e.target.value })}
+                    onChange={(e) => {
+                      setNewDeliverableForm({ ...newDeliverableForm, dueDate: e.target.value });
+                      setDeliverableErrors(prev => ({ ...prev, dueDate: undefined }));
+                    }}
                     className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
+                  {deliverableErrors.dueDate && (
+                    <p className="text-xs text-red-600 mt-1">{deliverableErrors.dueDate}</p>
+                  )}
                 </div>
 
                 {/* Actions */}
@@ -1460,26 +1579,64 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                   {myGroup?.members.map((member) => {
                     let status = getActivityStatus(member.last_active);
                     const isCurrentUser = member.email === session?.user?.email;
+                    const memberColor = getMemberColor(member.name);
+                    
                     // Show "Now" for current user if they're viewing this page
                     if (isCurrentUser && status.text === "Never") {
                       status = { text: "Now", color: "text-green-600", dot: "bg-green-500" };
                     }
+                    
                     return (
-                      <div key={member.id} className="px-6 py-3 flex items-center justify-between hover:bg-[#f9fafb] transition-colors">
+                      <div 
+                        key={member.id} 
+                        className={`px-6 py-3 flex items-center justify-between hover:${memberColor.bg} transition-colors`}
+                      >
                         <div className="flex items-center gap-4 flex-1 min-w-0">
                           <div className="relative flex-shrink-0">
-                            <Avatar name={member.name} src={member.avatar_url} size="h-10 w-10" />
+                            <div className={`h-10 w-10 rounded-full ${memberColor.bg} border-2 ${memberColor.text} flex items-center justify-center font-bold text-sm`}>
+                              {member.name.split(" ").map(n => n.charAt(0)).join("").toUpperCase()}
+                            </div>
                             <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ${status.dot} border-2 border-white`} title={status.text}></div>
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="text-sm font-semibold text-[#111318]">{member.name}</p>
+                              <button
+                                onClick={() => {
+                                  setSelectedMember(member);
+                                  setShowMemberDeliverables(true);
+                                }}
+                                title={`View ${member.name}'s deliverables`}
+                                className={`text-left text-sm font-semibold ${memberColor.text} cursor-pointer focus:outline-none`}
+                              >
+                                {member.name}
+                              </button>
                               {isCurrentUser && (
                                 <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded font-medium">You</span>
                               )}
                             </div>
                             <p className={`text-xs mt-0.5 ${status.color}`}>{status.text}</p>
                           </div>
+                        </div>
+                        {/* Deliverable counts column */}
+                        <div className="flex items-center gap-4 mr-4">
+                          {(() => {
+                            const assignedCount = deliverables.filter(d => d.assignedTo?.email === member.email).length;
+                            const completedCount = deliverables.filter(d => d.assignedTo?.email === member.email && d.status === 'submitted').length;
+                            return (
+                              <button
+                                onClick={() => {
+                                  setSelectedMember(member);
+                                  setShowMemberDeliverables(true);
+                                }}
+                                title={`View ${member.name}'s deliverables (${completedCount}/${assignedCount} complete)`}
+                                className="text-sm text-[#111318] hover:bg-[#f9fafb] px-3 py-1 rounded-lg border border-[#e5e7eb] transition-colors"
+                              >
+                                <span className="font-medium">{completedCount}</span>
+                                <span className="text-xs text-[#616f89] ml-1">/</span>
+                                <span className="text-xs text-[#616f89] ml-1">{assignedCount}</span>
+                              </button>
+                            );
+                          })()}
                         </div>
                         {!isCurrentUser && (
                           <button
@@ -1508,21 +1665,54 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                   ) : (
                     activityLogs.map((activity, index) => {
                       const message = getActivityMessage(activity);
+                      const activityUserColor = activity.user ? getMemberColor(activity.user.name) : null;
                       return (
                         <div key={activity.id} className="flex gap-4 relative">
                           {index < activityLogs.length - 1 && (
                             <div className="absolute left-[15px] top-8 bottom-[-1.5rem] w-[1px] bg-[#e5e7eb]"></div>
                           )}
-                          <Avatar
-                            name={activity.user?.name || "Unknown"}
-                            src={activity.user?.avatar_url}
-                            size="h-8 w-8"
-                          />
+                          {activityUserColor ? (
+                            <div className={`h-8 w-8 rounded-full ${activityUserColor.bg} flex items-center justify-center font-bold text-xs ${activityUserColor.text} shrink-0 z-10`}>
+                              {(activity.user?.name || "?").split(" ").map((n: string) => n.charAt(0)).join("").toUpperCase()}
+                            </div>
+                          ) : (
+                            <Avatar
+                              name={activity.user?.name || "Unknown"}
+                              src={activity.user?.avatar_url}
+                              size="h-8 w-8"
+                            />
+                          )}
                           <div>
                             <p className="text-sm font-medium">
-                              <span className="text-[#111318]">{activity.user?.name || "Unknown"}</span>{" "}
+                              <button
+                                onClick={() => {
+                                  if (activity.user && activity.user.email) {
+                                    setSelectedMember(activity.user);
+                                    setShowMemberDeliverables(true);
+                                  }
+                                }}
+                                className={activityUserColor ? `${activityUserColor.text} font-semibold cursor-pointer focus:outline-none` : "text-[#111318] cursor-pointer focus:outline-none"}
+                                title={`View ${activity.user?.name || 'User'}'s deliverables`}
+                              >
+                                {activity.user?.name || "Unknown"}
+                              </button>{" "}
                               <span className="text-[#616f89] font-normal">{message.action}</span>{" "}
-                              <span className="text-primary font-semibold">{message.title}</span>
+                              {activity.entityId ? (
+                                <button
+                                  onClick={() => {
+                                    // If this activity references a deliverable, open it
+                                    if (activity.entityId && activity.actionType && activity.actionType.startsWith('deliverable')) {
+                                      setViewDeliverableId(activity.entityId);
+                                    }
+                                  }}
+                                  className="text-primary font-semibold cursor-pointer focus:outline-none"
+                                  title={message.title}
+                                >
+                                  {message.title}
+                                </button>
+                              ) : (
+                                <span className="text-primary font-semibold">{message.title}</span>
+                              )}
                             </p>
                             <p className="text-xs text-[#616f89] mt-0.5">{formatActivityDate(activity.createdAt)}</p>
                           </div>
@@ -1649,6 +1839,141 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
 
             </div>
           </div>
+
+          {/* Group Project Timeline */}
+          <section className="bg-white rounded-xl border border-[#e5e7eb] shadow-sm overflow-hidden mt-8">
+            <div className="p-6 border-b border-[#e5e7eb]">
+              <div>
+                <h2 className="text-lg font-bold text-[#111318] mb-1">Group Project Timeline</h2>
+                <p className="text-xs text-[#616f89]">Click or hover over markers to review historical data</p>
+              </div>
+              
+              {/* Legend */}
+              <div className="flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-widest text-[#616f89] mt-4">
+                {myGroup?.members.map((member) => {
+                  const memberColor = getMemberColor(member.name);
+                  return (
+                    <div key={member.id} className="flex items-center">
+                      <div 
+                        className="w-2 h-2 rounded-full mr-1.5" 
+                        style={{ backgroundColor: memberColor.hex }}
+                      ></div>
+                      <span>{member.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <div className="p-8 pb-20 overflow-x-auto">
+              <GroupProjectTimeline
+                events={(() => {
+                  const timelineEvents: TimelineEvent[] = [];
+
+                  // Identify final deliverable IDs so we can suppress duplicate timeline entries (submission/create)
+                  const finalDeliverableIds = new Set(deliverables.filter(d => typeof d.title === 'string' && d.title.startsWith('[FINAL]')).map(d => d.id));
+
+                  // Add activity events
+                  activityLogs.forEach((activity) => {
+                    // Skip deleted deliverable activity from timeline
+                    if (activity.actionType === 'deliverable_deleted') return;
+                    // If this is a submission for a final deliverable, skip it (represented by the deadline flag)
+                    if (activity.actionType === 'deliverable_submitted' && activity.entityId && finalDeliverableIds.has(activity.entityId)) return;
+                    if (activity.user && activity.createdAt && activity.entityTitle) {
+                      const actionLabel = 
+                        activity.actionType === "deliverable_submitted" ? "Deliverable submitted" :
+                        activity.actionType === "task_completed" ? "Task completed" :
+                        activity.actionType === "file_uploaded" ? "File uploaded" :
+                        activity.actionType === "comment_added" ? "Comment added" :
+                        activity.actionType.replace(/_/g, " ");
+                      
+                      const event: TimelineEvent = {
+                        id: activity.id,
+                        date: activity.createdAt.split("T")[0],
+                        title: activity.entityTitle,
+                        memberName: activity.user.name,
+                        type: activity.actionType === "deliverable_submitted" ? "deliverable" : "member-update",
+                        description: actionLabel,
+                      };
+
+                      // Only add viewButton for deliverable submissions
+                      if (activity.actionType === "deliverable_submitted" && activity.entityId) {
+                        event.viewButton = {
+                          label: "View Work",
+                          onClick: () => {
+                            setViewDeliverableId(activity.entityId);
+                          },
+                        };
+                      }
+
+                      timelineEvents.push(event);
+                    }
+                  });
+
+                  // Add deliverable events (including final marker)
+                  deliverables.forEach((d) => {
+                    if (d.dueDate) {
+                      timelineEvents.push({
+                        id: `deliverable-${d.id}`,
+                        date: d.dueDate.split("T")[0],
+                        title: d.title,
+                        type: "deliverable",
+                        description: d.status === 'submitted' ? 'Submitted' : d.status,
+                        status: d.status,
+                        color: d.assignedTo ? getMemberColor(d.assignedTo.name).hex : undefined,
+                        memberName: d.assignedTo?.name,
+                        viewButton: {
+                          label: 'View Deliverable',
+                          onClick: () => setViewDeliverableId(d.id),
+                        },
+                      });
+                    } else if (d.createdAt) {
+                      timelineEvents.push({
+                        id: `deliverable-${d.id}`,
+                        date: d.createdAt.split("T")[0],
+                        title: d.title,
+                        type: "deliverable",
+                        description: d.status === 'submitted' ? 'Submitted' : d.status,
+                        status: d.status,
+                        color: d.assignedTo ? getMemberColor(d.assignedTo.name).hex : undefined,
+                        memberName: d.assignedTo?.name,
+                        viewButton: {
+                          label: 'View Deliverable',
+                          onClick: () => setViewDeliverableId(d.id),
+                        },
+                      });
+                    }
+                  });
+
+                  // Add meeting events
+                  meetings.forEach((meeting) => {
+                    const meetingDate = meeting.date;
+                    if (meetingDate) {
+                      timelineEvents.push({
+                        id: `meeting-${meeting.id}`,
+                        date: meetingDate,
+                        title: meeting.title,
+                        type: "meeting",
+                        color: "#6b7280",
+                        description: `${meeting.type === "virtual" ? "Online" : "In-person"} • ${meeting.time}`,
+                        viewButton: {
+                          label: "View Details",
+                          onClick: () => setViewMeetingId(meeting.id),
+                        },
+                      });
+                    }
+                  });
+
+                  return timelineEvents.sort((a, b) => 
+                    new Date(a.date).getTime() - new Date(b.date).getTime()
+                  );
+                })()}
+                projectStartDate={project?.created_at ? new Date(project.created_at).toISOString().split("T")[0] : undefined}
+                projectDueDate={project?.due_date ? new Date(project.due_date).toISOString().split("T")[0] : undefined}
+              />
+            </div>
+          </section>
         </div>
 
         {/* Delete Confirmation Modal */}
@@ -1688,6 +2013,62 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
         )}
 
         {/* View Deliverable Modal */}
+        {/* Member Deliverables Modal */}
+        {showMemberDeliverables && selectedMember && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-lg max-w-lg w-full">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb]">
+                <h2 className="text-lg font-bold text-[#111318]">{selectedMember.name}'s Deliverables</h2>
+                <button
+                  onClick={() => { setShowMemberDeliverables(false); setSelectedMember(null); }}
+                  className="text-[#616f89] hover:text-[#111318] text-lg leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+              <div className="p-6 space-y-3 max-h-80 overflow-y-auto">
+                {deliverables.filter(d => d.assignedTo?.email === selectedMember.email).length === 0 ? (
+                  <p className="text-sm text-[#616f89]">No deliverables assigned to {selectedMember.name}.</p>
+                ) : (
+                  deliverables
+                    .filter(d => d.assignedTo?.email === selectedMember.email)
+                    .map(d => (
+                      <button
+                        key={d.id}
+                        onClick={() => {
+                          // remember which member's list we came from so we can return
+                          setMemberReturn(selectedMember);
+                          setShowMemberDeliverables(false);
+                          setSelectedMember(null);
+                          setViewDeliverableId(d.id);
+                        }}
+                        className="w-full text-left p-3 rounded-lg border border-[#e5e7eb] hover:bg-[#f9fafb] transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-[#111318] truncate">{d.title}</p>
+                            <p className="text-xs text-[#616f89]">Status: {d.status}</p>
+                          </div>
+                          <div className="text-xs text-[#616f89]">
+                            {d.dueDate ? formatDate(d.dueDate) : "No due date"}
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                )}
+              </div>
+              <div className="px-6 py-4 border-t border-[#e5e7eb] flex justify-end">
+                <button
+                  onClick={() => { setShowMemberDeliverables(false); setSelectedMember(null); }}
+                  className="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {viewDeliverableId && viewedDeliverable && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full">
@@ -1766,7 +2147,7 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                     <p className="text-sm text-[#616f89]">{formatDate(viewedDeliverable.submittedAt)}</p>
                   </div>
                 )}
-                {viewedDeliverable.status === "submitted" && (
+                {viewedDeliverable.status === "submitted" && (typeof viewedDeliverableFilesCount === 'number' && viewedDeliverableFilesCount > 0) && (
                   <div className="pt-4 border-t border-[#e5e7eb]">
                     <label className="block text-sm font-bold text-[#111318] mb-3">Submitted Files</label>
                     <DeliverableFileUpload
@@ -1784,6 +2165,22 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                     className="px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary hover:text-white transition-all"
                   >
                     Submit Work
+                  </button>
+                )}
+                {memberReturn && (
+                  <button
+                    onClick={() => {
+                      // return to the member deliverables list
+                      const m = memberReturn;
+                      setViewDeliverableId(null);
+                      setViewedDeliverableFilesCount(null);
+                      setSelectedMember(m);
+                      setShowMemberDeliverables(true);
+                      setMemberReturn(null);
+                    }}
+                    className="px-4 py-2 border border-[#e5e7eb] rounded-lg text-sm font-medium hover:bg-[#f9fafb] transition-all"
+                  >
+                    Back to list
                   </button>
                 )}
                 <button
@@ -1962,18 +2359,22 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                   </div>
                 )}
 
-                {/* Rubric */}
-                {project?.rubric && parseRubric(project.rubric).rubric_text && (
-                  <div>
-                    <h4 className="text-sm font-bold text-[#111318] mb-2 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[#616f89] text-lg">grading</span>
-                      Rubric
-                    </h4>
-                    <p className="text-sm text-[#616f89] leading-relaxed bg-[#f9fafb] p-4 rounded-lg border border-[#e5e7eb] whitespace-pre-wrap">
-                      {parseRubric(project.rubric).rubric_text}
-                    </p>
-                  </div>
-                )}
+                {/* Teacher-defined deliverables (from project settings) */}
+                <div>
+                  <h4 className="text-sm font-bold text-[#111318] mb-2 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[#616f89] text-lg">assignment</span>
+                    Deliverables (from instructor)
+                  </h4>
+                  {project?.deliverables ? (
+                    <ul className="list-disc list-inside text-sm text-[#111318] space-y-1">
+                      {project.deliverables.split("\n").filter(Boolean).map((d: string, idx: number) => (
+                        <li key={`proj-del-${idx}`}>{d.trim()}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-[#616f89]">No instructor-defined deliverables.</p>
+                  )}
+                </div>
 
                 {/* View Project Brief Button */}
                 <button className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-3 rounded-lg text-sm transition-all flex items-center justify-center gap-2 shadow-sm">
