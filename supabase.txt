@@ -47,6 +47,12 @@ CREATE TABLE public.classes (
   professor_id uuid,
   join_code_expires_at timestamp with time zone DEFAULT (now() + '14 days'::interval),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
+  term text,
+  location text,
+  meeting_days ARRAY,
+  start_time time without time zone,
+  end_time time without time zone,
+  auto_generate_code boolean DEFAULT true,
   CONSTRAINT classes_pkey PRIMARY KEY (id),
   CONSTRAINT classes_professor_id_fkey FOREIGN KEY (professor_id) REFERENCES public.users(id)
 );

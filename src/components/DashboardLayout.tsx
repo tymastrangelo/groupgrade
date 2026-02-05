@@ -17,7 +17,7 @@ export default function Dashboard({
   children,
 }: {
   initialRole?: 'teacher' | 'student';
-  overrideHeaderLabel?: string;
+  overrideHeaderLabel?: ReactNode;
   children?: ReactNode;
 }) {
   const { data: session } = useSession();
@@ -190,10 +190,13 @@ export default function Dashboard({
                 <span className="text-sm font-medium">Logout</span>
               </button>
               {isTeacher && (
-                <button className="w-full bg-primary hover:bg-blue-700 text-white rounded-lg py-2.5 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all mt-4">
+                <Link
+                  href="/teacher/classes?new=1"
+                  className="w-full bg-primary hover:bg-blue-700 text-white rounded-lg py-2.5 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all mt-4"
+                >
                   <span className="material-symbols-outlined text-sm">add</span>
                   <span>Create Class</span>
-                </button>
+                </Link>
               )}
               {!isTeacher && (
                 <button 
@@ -220,9 +223,13 @@ export default function Dashboard({
                 Dashboard
               </Link>
               <span className="text-[#616f89] text-sm">/</span>
-              <span className="text-[#111318] text-sm font-medium">
-                {overrideHeaderLabel ?? (isTeacher ? 'Your Classes' : 'Student Dashboard')}
-              </span>
+              {typeof overrideHeaderLabel === 'string' || overrideHeaderLabel == null ? (
+                <span className="text-[#111318] text-sm font-medium">
+                  {overrideHeaderLabel ?? (isTeacher ? 'Your Classes' : 'Student Dashboard')}
+                </span>
+              ) : (
+                overrideHeaderLabel
+              )}
             </div>
             <div className="flex items-center gap-6">
               <div className="relative hidden md:block">

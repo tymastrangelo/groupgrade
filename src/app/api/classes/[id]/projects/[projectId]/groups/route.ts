@@ -12,10 +12,61 @@ function isUuid(id: string) {
   return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(id);
 }
 
-function groupName(idx: number) {
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  if (idx < letters.length) return `Group ${letters[idx]}`;
-  return `Group ${idx + 1}`;
+const GROUP_NAME_ADJECTIVES = [
+  "Brisk",
+  "Bright",
+  "Clever",
+  "Curious",
+  "Daring",
+  "Electric",
+  "Epic",
+  "Fearless",
+  "Golden",
+  "Happy",
+  "Lively",
+  "Mighty",
+  "Nimble",
+  "Quantum",
+  "Rapid",
+  "Stellar",
+  "Sunny",
+  "Swift",
+  "Vivid",
+  "Zen",
+];
+
+const GROUP_NAME_NOUNS = [
+  "Comets",
+  "Creators",
+  "Dragons",
+  "Explorers",
+  "Falcons",
+  "Foxes",
+  "Inventors",
+  "Knights",
+  "Lions",
+  "Pioneers",
+  "Rangers",
+  "Rockets",
+  "Scholars",
+  "Storm",
+  "Trailblazers",
+  "Voyagers",
+  "Wolves",
+  "Wizards",
+  "Zephyrs",
+];
+
+function randomGroupName(existing: Set<string>) {
+  const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+  let name = `${pick(GROUP_NAME_ADJECTIVES)} ${pick(GROUP_NAME_NOUNS)}`;
+  let counter = 2;
+  while (existing.has(name)) {
+    name = `${name} ${counter}`;
+    counter += 1;
+  }
+  existing.add(name);
+  return name;
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string; projectId: string }> }) {
@@ -66,7 +117,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .from('groups')
       .select('id, name')
       .eq('project_id', projectId);
-    const existingGroupsMap = new Map((existingGroups || []).map(g => [g.name, g.id]));
+    const existingGroupsById = new Map((existingGroups || []).map(g => [g.id, g]));
+    const existingNames = new Set((existingGroups || []).map(g => g.name));
     const existingIds = (existingGroups || []).map((g) => g.id);
 
     // Only clear memberships, not the groups themselves
@@ -114,18 +166,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'No students to group' }, { status: 400 });
     }
 
-    let groupsToInsert: { name: string; members: string[] }[] = [];
+    let groupsToInsert: { id?: string; name: string; members: string[] }[] = [];
 
     if (mode === 'manual') {
       const validIds = new Set(students.map((s) => s.id));
-      for (const g of manualGroups) {
-        if (!g?.name || !Array.isArray(g.member_ids)) continue;
-        const filtered = g.member_ids.filter((id: string) => validIds.has(id));
-        if (filtered.length === 0) continue;
-        groupsToInsert.push({ name: g.name, members: filtered });
+      for (const [idx, g] of manualGroups.entries()) {
+        if (!g) continue;
+        const name = g.name || randomGroupName(existingNames);
+        const filtered = Array.isArray(g.member_ids)
+          ? g.member_ids.filter((id: string) => validIds.has(id))
+          : [];
+        const id = g.id && isUuid(g.id) ? g.id : undefined;
+        groupsToInsert.push({ id, name, members: filtered });
       }
       if (groupsToInsert.length === 0) {
-        return NextResponse.json({ error: 'No valid groups provided' }, { status: 400 });
+        return NextResponse.json({ error: 'No groups provided' }, { status: 400 });
       }
     } else {
       const size = Math.max(2, Math.min(6, Number(groupSizeRaw) || 3));
@@ -140,23 +195,45 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       ranked.forEach((s, idx) => {
         buckets[idx % groupCount].push(s.id);
       });
-      groupsToInsert = buckets.map((members, idx) => ({ name: groupName(idx), members }));
+      groupsToInsert = buckets.map((members) => ({ name: randomGroupName(existingNames), members }));
     }
 
     // Reuse existing groups or create new ones
-    const groupIdByName = new Map<string, string>();
+    const groupIdByKey = new Map<string, string>();
+    const groupNameByKey = new Map<string, string>();
     const usedGroupIds = new Set<string>();
     const newGroupsToCreate: { name: string; project_id: string }[] = [];
 
-    for (const g of groupsToInsert) {
-      const existingId = existingGroupsMap.get(g.name);
-      if (existingId) {
-        groupIdByName.set(g.name, existingId);
-        usedGroupIds.add(existingId);
-      } else {
-        newGroupsToCreate.push({ name: g.name, project_id: projectId });
+    const reserveUniqueName = (base: string) => {
+      let name = base;
+      let counter = 2;
+      while (existingNames.has(name) || newGroupsToCreate.some((g) => g.name === name)) {
+        name = `${base} (${counter})`;
+        counter += 1;
       }
-    }
+      existingNames.add(name);
+      return name;
+    };
+
+    const groupsToRename: { id: string; name: string }[] = [];
+
+    groupsToInsert.forEach((g, idx) => {
+      const key = g.id || `new-${idx}`;
+      if (g.id && existingGroupsById.has(g.id)) {
+        groupIdByKey.set(key, g.id);
+        usedGroupIds.add(g.id);
+        groupNameByKey.set(key, g.name);
+        const existing = existingGroupsById.get(g.id);
+        if (existing && existing.name !== g.name) {
+          groupsToRename.push({ id: g.id, name: g.name });
+        }
+        return;
+      }
+
+      const uniqueName = reserveUniqueName(g.name);
+      newGroupsToCreate.push({ name: uniqueName, project_id: projectId });
+      groupNameByKey.set(key, uniqueName);
+    });
 
     // Create only the new groups that don't exist
     if (newGroupsToCreate.length > 0) {
@@ -166,14 +243,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         .select('id, name');
       if (insertGroupsErr) throw new Error(insertGroupsErr.message);
       (createdGroups || []).forEach((g) => {
-        groupIdByName.set(g.name, g.id);
+        groupIdByKey.set(g.name, g.id);
         usedGroupIds.add(g.id);
       });
     }
 
+    if (groupsToRename.length > 0) {
+      await Promise.all(
+        groupsToRename.map((g) =>
+          supabase.from('groups').update({ name: g.name }).eq('id', g.id)
+        )
+      );
+    }
+
     const memberPayload: { group_id: string; user_id: string }[] = [];
-    groupsToInsert.forEach((g) => {
-      const gid = groupIdByName.get(g.name);
+    groupsToInsert.forEach((g, idx) => {
+      const key = g.id || `new-${idx}`;
+      const resolvedName = groupNameByKey.get(key) || g.name;
+      const gid = groupIdByKey.get(g.id || resolvedName);
       if (!gid) return;
       g.members.forEach((mid) => memberPayload.push({ group_id: gid, user_id: mid }));
     });
@@ -189,7 +276,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       // Check if any of these groups have deliverables, meetings, or collaboration links
       const [deliverables, meetings, links] = await Promise.all([
         supabase.from('deliverables').select('group_id').in('group_id', unusedGroupIds),
-        supabase.from('meetings').select('group_id').in('group_id', unusedGroupIds),
+        supabase.from('group_meetings').select('group_id').in('group_id', unusedGroupIds),
         supabase.from('collaboration_links').select('group_id').in('group_id', unusedGroupIds),
       ]);
 

@@ -53,7 +53,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     const { data: cls, error: clsError } = await supabase
       .from('classes')
-      .select('id, name, code, join_code_expires_at, created_at, professor_id')
+      .select('id, name, code, join_code_expires_at, created_at, professor_id, term, location, meeting_days, start_time, end_time, auto_generate_code')
       .eq('id', classId)
       .maybeSingle();
 
@@ -161,6 +161,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         code: cls.code,
         join_code_expires_at: cls.join_code_expires_at,
         created_at: cls.created_at,
+        term: cls.term,
+        location: cls.location,
+        meeting_days: cls.meeting_days,
+        start_time: cls.start_time,
+        end_time: cls.end_time,
+        auto_generate_code: cls.auto_generate_code,
       },
       members,
       notes,
@@ -222,6 +228,61 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .single();
     if (error) throw new Error(error.message);
     return NextResponse.json({ class: data, revoked: false });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const user = await getCurrentUser(session.user.email);
+    const { id: classId } = await params;
+    if (!classId || !isUuid(classId)) {
+      return NextResponse.json({ error: 'Invalid class id' }, { status: 400 });
+    }
+
+    const { name, term, location, meetingDays, startTime, endTime, autoGenerateCode } = await req.json();
+    if (!name || typeof name !== 'string') {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    }
+
+    const { data: cls, error: clsError } = await supabase
+      .from('classes')
+      .select('professor_id')
+      .eq('id', classId)
+      .maybeSingle();
+    if (clsError) throw new Error(clsError.message);
+    if (!cls) return NextResponse.json({ error: 'Class not found' }, { status: 404 });
+    if (cls.professor_id !== user.id) {
+      return NextResponse.json({ error: 'Only the class professor can edit this class' }, { status: 403 });
+    }
+
+    const normalizedMeetingDays = Array.isArray(meetingDays)
+      ? meetingDays.filter((d) => typeof d === 'string')
+      : null;
+
+    const { data, error } = await supabase
+      .from('classes')
+      .update({
+        name,
+        term: typeof term === 'string' ? term : null,
+        location: typeof location === 'string' ? location : null,
+        meeting_days: normalizedMeetingDays,
+        start_time: typeof startTime === 'string' ? startTime : null,
+        end_time: typeof endTime === 'string' ? endTime : null,
+        auto_generate_code: typeof autoGenerateCode === 'boolean' ? autoGenerateCode : true,
+      })
+      .eq('id', classId)
+      .select('id, name, code, join_code_expires_at, created_at, term, location, meeting_days, start_time, end_time, auto_generate_code')
+      .single();
+
+    if (error) throw new Error(error.message);
+    return NextResponse.json({ class: data });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 });
   }

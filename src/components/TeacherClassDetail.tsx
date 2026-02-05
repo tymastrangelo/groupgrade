@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { tasksCache } from "@/lib/tasksCache";
 
 type ClassData = {
@@ -9,6 +10,12 @@ type ClassData = {
   code: string;
   join_code_expires_at?: string | null;
   created_at?: string | null;
+  term?: string | null;
+  location?: string | null;
+  meeting_days?: string[] | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  auto_generate_code?: boolean | null;
 };
 
 type Member = {
@@ -19,13 +26,6 @@ type Member = {
   classRole: string;
   avatar_url?: string | null;
   joined_at?: string | null;
-};
-
-type Note = {
-  id: string;
-  content: string;
-  created_at?: string | null;
-  author_name?: string | null;
 };
 
 type Project = {
@@ -83,18 +83,81 @@ function makeEmptyGroups(count: number) {
   }));
 }
 
-export function TeacherClassDetail({ classId }: { classId: string }) {
+const GROUP_NAME_ADJECTIVES = [
+  "Brisk",
+  "Bright",
+  "Clever",
+  "Curious",
+  "Daring",
+  "Electric",
+  "Epic",
+  "Fearless",
+  "Golden",
+  "Happy",
+  "Lively",
+  "Mighty",
+  "Nimble",
+  "Quantum",
+  "Rapid",
+  "Stellar",
+  "Sunny",
+  "Swift",
+  "Vivid",
+  "Zen",
+];
+
+const GROUP_NAME_NOUNS = [
+  "Comets",
+  "Creators",
+  "Dragons",
+  "Explorers",
+  "Falcons",
+  "Foxes",
+  "Inventors",
+  "Knights",
+  "Lions",
+  "Pioneers",
+  "Rangers",
+  "Rockets",
+  "Scholars",
+  "Storm",
+  "Trailblazers",
+  "Voyagers",
+  "Wolves",
+  "Wizards",
+  "Zephyrs",
+];
+
+function generateGroupName(existing: Set<string>) {
+  const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+  let name = `${pick(GROUP_NAME_ADJECTIVES)} ${pick(GROUP_NAME_NOUNS)}`;
+  let counter = 2;
+  while (existing.has(name)) {
+    name = `${name} ${counter}`;
+    counter += 1;
+  }
+  existing.add(name);
+  return name;
+}
+
+export function TeacherClassDetail({
+  classId,
+  embeddedGroups = false,
+  initialGroupProjectId,
+}: {
+  classId: string;
+  embeddedGroups?: boolean;
+  initialGroupProjectId?: string;
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [classData, setClassData] = useState<ClassData | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [notesLoading, setNotesLoading] = useState(true);
-  const [notesError, setNotesError] = useState<string | null>(null);
   const [codeBusy, setCodeBusy] = useState(false);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
-  const [noteInput, setNoteInput] = useState("");
   const [projectName, setProjectName] = useState("");
   const [projectDue, setProjectDue] = useState("");
   const [assignmentMode, setAssignmentMode] = useState<"teacher_assigns" | "students_self_assign">("teacher_assigns");
@@ -121,6 +184,18 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [openedFromQuery, setOpenedFromQuery] = useState(false);
+  const [unassignedSearch, setUnassignedSearch] = useState("");
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editBusy, setEditBusy] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editTerm, setEditTerm] = useState("Spring 2026");
+  const [editLocation, setEditLocation] = useState("");
+  const [editMeetingDays, setEditMeetingDays] = useState<string[]>(["Mon", "Wed", "Fri"]);
+  const [editStartTime, setEditStartTime] = useState("10:00");
+  const [editEndTime, setEditEndTime] = useState("11:15");
+  const [editAutoGenerateCode, setEditAutoGenerateCode] = useState(true);
 
   const stats = useMemo(() => {
     const professors = members.filter((m) => m.classRole === "professor").length;
@@ -136,16 +211,23 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
     return studentMembers.filter((s) => !assigned.has(s.id));
   }, [studentMembers, manualGroups]);
 
+  const filteredUnassignedStudents = useMemo(() => {
+    if (!unassignedSearch.trim()) return unassignedStudents;
+    const term = unassignedSearch.toLowerCase();
+    return unassignedStudents.filter((s) =>
+      [s.name, s.email].some((v) => (v || "").toLowerCase().includes(term))
+    );
+  }, [unassignedStudents, unassignedSearch]);
+
   const url = `/api/classes/${classId}`;
   const fetchData = async () => {
     setError(null);
     setLoading(true);
     try {
-      const j = await tasksCache.fetch<{ class: ClassData; members: any[]; notes: any[]; projects: any[] }>(url);
+      const j = await tasksCache.fetch<{ class: ClassData; members: any[]; projects: any[] }>(url);
       if (j) {
         setClassData((j as any).class);
         setMembers((j as any).members || []);
-        setNotes((j as any).notes || []);
         setProjects((j as any).projects || []);
       }
     } catch (e: any) {
@@ -155,39 +237,19 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
     }
   };
 
-  const notesUrl = `/api/classes/${classId}/notes`;
-  const fetchNotes = async () => {
-    setNotesLoading(true);
-    setNotesError(null);
-    try {
-      const j = await tasksCache.fetch<{ notes: Note[] }>(notesUrl);
-      if (j && (j as any).notes) setNotes((j as any).notes || []);
-    } catch (e: any) {
-      setNotesError(e.message || "Failed to load notes");
-    } finally {
-      setNotesLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (!classId) return;
     const unsubClass = tasksCache.subscribe(url, (data: any) => {
       if (data) {
         setClassData(data.class);
         setMembers(data.members || []);
-        setNotes(data.notes || []);
         setProjects(data.projects || []);
       }
     });
-    const unsubNotes = tasksCache.subscribe<{ notes: Note[] }>(notesUrl, (data) => {
-      if (data && (data as any).notes) setNotes((data as any).notes || []);
-    });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
-    fetchNotes();
     return () => {
       unsubClass();
-      unsubNotes();
     };
   }, [classId]);
 
@@ -202,22 +264,63 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
     }
   };
 
-  const addNote = async () => {
-    if (!noteInput.trim()) return;
-    const res = await fetch(`/api/classes/${classId}/notes`, {
-      method: "POST",
+  const openEditModal = () => {
+    if (!classData) return;
+    setEditName(classData.name || "");
+    setEditTerm(classData.term || "Spring 2026");
+    setEditLocation(classData.location || "");
+    setEditMeetingDays(classData.meeting_days || ["Mon", "Wed", "Fri"]);
+    setEditStartTime(classData.start_time || "10:00");
+    setEditEndTime(classData.end_time || "11:15");
+    setEditAutoGenerateCode(classData.auto_generate_code ?? true);
+    setEditError(null);
+    setShowEditModal(true);
+  };
+
+  const toggleEditDay = (day: string) => {
+    setEditMeetingDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
+  const saveClassEdits = async () => {
+    if (!editName.trim()) return;
+    setEditBusy(true);
+    setEditError(null);
+    const res = await fetch(`/api/classes/${classId}`, {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: noteInput.trim() }),
+      body: JSON.stringify({
+        name: editName.trim(),
+        term: editTerm,
+        location: editLocation,
+        meetingDays: editMeetingDays,
+        startTime: editStartTime,
+        endTime: editEndTime,
+        autoGenerateCode: editAutoGenerateCode,
+      }),
     });
+
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      setNotesError(j.error || "Failed to add note");
+      setEditError(j.error || "Failed to update class");
+      setEditBusy(false);
       return;
     }
-    setNoteInput("");
-    // Revalidate notes via cache fetch
-    await fetchNotes();
+
+    const j = await res.json().catch(() => ({}));
+    const updated = j?.class as ClassData | undefined;
+    if (updated) {
+      setClassData(updated);
+      tasksCache.mutate(url, (prev: any) => {
+        if (!prev) return prev;
+        return { ...prev, class: updated };
+      });
+    }
+    setShowEditModal(false);
+    setEditBusy(false);
   };
+
 
   const removeStudent = async (userId: string) => {
     setRemoveBusyId(userId);
@@ -363,6 +466,24 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
     setGroupBusy(false);
   };
 
+  useEffect(() => {
+    if (openedFromQuery) return;
+    if (initialGroupProjectId && projects.length > 0) {
+      openGrouping(initialGroupProjectId);
+      setOpenedFromQuery(true);
+      return;
+    }
+    const openGroups = searchParams?.get("openGroups");
+    const projectId = searchParams?.get("projectId");
+    if (openGroups && projectId && projects.length > 0) {
+      openGrouping(projectId);
+      setOpenedFromQuery(true);
+      if (!embeddedGroups) {
+        router.replace(`/teacher/classes/${classId}`);
+      }
+    }
+  }, [openedFromQuery, searchParams, projects, classId, router, embeddedGroups, initialGroupProjectId]);
+
   const adjustGroupCount = (count: number) => {
     const safeCount = Math.max(1, Math.min(12, count));
     setManualGroups((prev) => {
@@ -374,6 +495,21 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
       return base;
     });
     setManualGroupCount(safeCount);
+  };
+
+  const addManualGroup = () => {
+    setManualGroups((prev) => {
+      const existingNames = new Set(prev.map((g) => g.name));
+      const name = generateGroupName(existingNames);
+      const nextIndex = prev.length + 1;
+      return [...prev, { id: `temp-${Date.now()}-${nextIndex}`, name, member_ids: [] }];
+    });
+    setManualGroupCount((prev) => Math.min(12, prev + 1));
+  };
+
+  const removeManualGroup = (groupId: string) => {
+    setManualGroups((prev) => prev.filter((g) => g.id !== groupId));
+    setManualGroupCount((prev) => Math.max(1, prev - 1));
   };
 
   const handleDrop = (targetId: string | null) => {
@@ -393,7 +529,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
     const payload =
       groupMode === "auto"
         ? { mode: "auto", group_size: groupSize }
-        : { mode: "manual", groups: manualGroups.map((g) => ({ name: g.name, member_ids: g.member_ids })) };
+        : { mode: "manual", groups: manualGroups.map((g) => ({ id: g.id, name: g.name, member_ids: g.member_ids })) };
 
     const res = await fetch(`/api/classes/${classId}/projects/${groupProjectId}/groups`, {
       method: "POST",
@@ -408,6 +544,7 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
       return;
     }
 
+    tasksCache.invalidate(`/api/classes/${classId}`);
     await fetchData();
     setGroupBusy(false);
     setGroupProjectId(null);
@@ -421,105 +558,281 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
     return <div className="text-sm text-red-600">{error || "Class not found"}</div>;
   }
 
+  const renderGroupModalBody = (showHeader: boolean) => (
+    <>
+      {showHeader && (
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h4 className="text-xl font-bold text-[#111318]">Set groups</h4>
+            <p className="text-sm text-[#616f89]">Choose a strategy and organize students into teams.</p>
+          </div>
+          <button onClick={() => setGroupProjectId(null)} className="text-[#616f89] hover:text-[#111318]">
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button
+          type="button"
+          onClick={() => setGroupMode("manual")}
+          className={`text-left border-2 rounded-xl p-4 transition-all ${
+            groupMode === "manual"
+              ? "border-primary bg-primary/5"
+              : "border-[#e5e7eb] hover:border-primary/30"
+          }`}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <span className="material-symbols-outlined text-primary">edit_note</span>
+            <span className="text-sm font-bold text-[#111318]">Manual Assignment</span>
+          </div>
+          <p className="text-xs text-[#616f89]">Drag students into groups to build teams intentionally.</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setGroupMode("auto")}
+          className={`text-left border-2 rounded-xl p-4 transition-all ${
+            groupMode === "auto"
+              ? "border-primary bg-primary/5"
+              : "border-[#e5e7eb] hover:border-primary/30"
+          }`}
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <span className="material-symbols-outlined text-primary">diversity_3</span>
+            <span className="text-sm font-bold text-[#111318]">Auto Balance</span>
+          </div>
+          <p className="text-xs text-[#616f89]">Balance teams using student strengths and preferences.</p>
+        </button>
+      </div>
+
+      {groupMode === "auto" ? (
+        <div className="flex flex-col gap-3">
+          <label className="text-sm font-semibold text-[#111318]">
+            Preferred group size (2-6)
+            <input
+              type="number"
+              min={2}
+              max={6}
+              value={groupSize}
+              onChange={(e) => setGroupSize(Number(e.target.value))}
+              className="mt-1 w-24 bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </label>
+          <p className="text-sm text-[#616f89]">We’ll distribute students evenly while balancing strengths.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-[#111318]">Groups</p>
+              <p className="text-sm text-[#616f89]">Drag and drop students between groups.</p>
+            </div>
+            <button
+              type="button"
+              onClick={addManualGroup}
+              className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] text-[#111318] hover:bg-[#f9fafb] flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-base">add_circle</span>
+              Add group
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div
+              className="border border-[#e5e7eb] rounded-xl p-4 bg-[#fafafa]"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => handleDrop(null)}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-bold text-[#111318] uppercase tracking-wider">Unassigned</p>
+                <span className="text-[10px] text-[#616f89] font-bold">{filteredUnassignedStudents.length}</span>
+              </div>
+              <div className="relative mb-3">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af] text-base">search</span>
+                <input
+                  value={unassignedSearch}
+                  onChange={(e) => setUnassignedSearch(e.target.value)}
+                  placeholder="Search students..."
+                  className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-[#e5e7eb] rounded-lg"
+                />
+              </div>
+              <div className="flex flex-col gap-2 max-h-80 overflow-y-auto">
+                {filteredUnassignedStudents.length === 0 ? (
+                  <p className="text-sm text-[#616f89]">Everyone is assigned.</p>
+                ) : (
+                  filteredUnassignedStudents.map((s) => (
+                    <div
+                      key={s.id}
+                      draggable
+                      onDragStart={() => setDraggingId(s.id)}
+                      className="flex items-center gap-2 px-2 py-2 rounded-lg bg-white text-sm text-[#111318] border border-[#e5e7eb] cursor-move"
+                    >
+                      <Avatar name={s.name} src={s.avatar_url} />
+                      <div className="flex flex-col">
+                        <span className="font-semibold leading-tight">{s.name}</span>
+                        <span className="text-xs text-[#616f89]">{s.email}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+              {manualGroups.map((g, idx) => (
+                <div
+                  key={g.id}
+                  className="border border-[#e5e7eb] rounded-xl p-3 min-h-36 bg-white"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleDrop(g.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <input
+                      className="text-sm font-semibold bg-transparent border-b border-dashed border-[#e5e7eb] focus:outline-none"
+                      value={g.name}
+                      onChange={(e) =>
+                        setManualGroups((prev) =>
+                          prev.map((grp) => (grp.id === g.id ? { ...grp, name: e.target.value || `Group ${idx + 1}` } : grp))
+                        )
+                      }
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-[#616f89]">{g.member_ids.length} members</span>
+                      <button
+                        type="button"
+                        onClick={() => removeManualGroup(g.id)}
+                        className="p-1 rounded text-[#9ca3af] hover:text-red-500 hover:bg-red-50"
+                        title="Remove group"
+                      >
+                        <span className="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2 min-h-16">
+                    {g.member_ids.map((id) => {
+                      const stu = studentMembers.find((s) => s.id === id);
+                      return (
+                        <div
+                          key={id}
+                          draggable
+                          onDragStart={() => setDraggingId(id)}
+                          className="flex items-center gap-2 px-2 py-1 rounded-full bg-[#f3f4f6] text-xs text-[#111318] border border-[#e5e7eb] cursor-move"
+                        >
+                          <Avatar name={stu?.name || "Student"} src={stu?.avatar_url} size="h-6 w-6" />
+                          {stu?.name || "Student"}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {groupError && <div className="text-sm text-red-600">{groupError}</div>}
+
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={() => setGroupProjectId(null)}
+          className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] text-[#111318]"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={submitGrouping}
+          disabled={
+            groupBusy ||
+            (groupMode === "manual" && manualGroups.every((g) => g.member_ids.length === 0))
+          }
+          className="px-4 py-2 rounded-lg text-sm font-bold bg-primary text-white disabled:opacity-50"
+        >
+          {groupBusy ? "Saving..." : "Save groups"}
+        </button>
+      </div>
+    </>
+  );
+
+  if (embeddedGroups) {
+    if (!groupProjectId) {
+      return <div className="p-6 text-sm text-[#616f89]">Loading groups...</div>;
+    }
+    return (
+      <div className="w-full h-full bg-white">
+        <div className="w-full h-full bg-white p-6 flex flex-col gap-6 overflow-y-auto">
+          {renderGroupModalBody(false)}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 max-w-screen-2xl mx-auto w-full">
-      <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-white rounded-xl border border-[#e5e7eb] p-6 flex flex-col gap-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div>
-              <p className="text-sm text-[#616f89]">Class</p>
-              <h1 className="text-3xl font-black text-[#111318] tracking-tight">{classData.name}</h1>
-              <p className="text-xs text-[#616f89] mt-1">Created {formatDate(classData.created_at)}</p>
+      <div className="flex flex-col gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2 bg-white rounded-2xl border border-[#e5e7eb] p-6 flex flex-col gap-5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-[#9ca3af] font-semibold">Class overview</p>
+                <h1 className="text-3xl font-black text-[#111318] tracking-tight">{classData.name}</h1>
+                <p className="text-xs text-[#616f89] mt-1">Created {formatDate(classData.created_at)}</p>
+              </div>
+              <div className="flex items-center">
+                <button
+                  onClick={openEditModal}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#e5e7eb] text-[#111318] text-sm font-bold hover:bg-[#f9fafb]"
+                >
+                  <span className="material-symbols-outlined text-base">edit</span>
+                  Edit class
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="px-3 py-2 rounded-lg bg-[#f3f4f6] text-xs text-[#616f89]">
-                Expires {formatDate(classData.join_code_expires_at) || "soon"}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-4 rounded-xl border border-[#e5e7eb] bg-[#f9fafb]">
+                <p className="text-xs text-[#616f89]">Total members</p>
+                <p className="text-2xl font-bold text-[#111318]">{stats.total}</p>
+              </div>
+              <div className="p-4 rounded-xl border border-[#e5e7eb] bg-[#f9fafb]">
+                <p className="text-xs text-[#616f89]">Students</p>
+                <p className="text-2xl font-bold text-[#111318]">{stats.students}</p>
+              </div>
+              <div className="p-4 rounded-xl border border-[#e5e7eb] bg-[#f9fafb]">
+                <p className="text-xs text-[#616f89]">Professors</p>
+                <p className="text-2xl font-bold text-[#111318]">{stats.professors}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-[#e5e7eb] p-6 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-[#111318]">Join code</h3>
+                <p className="text-xs text-[#616f89]">Expires {formatDate(classData.join_code_expires_at) || "soon"}</p>
               </div>
               <button
                 onClick={mutateCode}
                 disabled={codeBusy}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-white text-sm font-bold disabled:opacity-60"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-white text-xs font-bold disabled:opacity-60"
                 title="Regenerate code"
               >
                 <span className="material-symbols-outlined text-base">refresh</span>
+                New code
               </button>
+            </div>
+            <div className="flex items-center justify-between gap-2 p-3 rounded-xl border border-[#e5e7eb] bg-[#f9fafb]">
+              <span className="text-lg font-bold tracking-widest text-[#111318]">{classData.code}</span>
               <button
                 onClick={() => copyCode(classData.code)}
-                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-primary/10 text-primary font-bold text-sm hover:bg-primary/20"
+                className="flex items-center gap-1 px-3 py-2 rounded-lg bg-primary/10 text-primary font-bold text-xs hover:bg-primary/20"
               >
                 <span className="material-symbols-outlined text-base">content_copy</span>
-                {copyMessage ?? classData.code}
+                {copyMessage ?? "Copy"}
               </button>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
-              <p className="text-xs text-[#616f89]">Total members</p>
-              <p className="text-2xl font-bold text-[#111318]">{stats.total}</p>
-            </div>
-            <div className="p-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
-              <p className="text-xs text-[#616f89]">Students</p>
-              <p className="text-2xl font-bold text-[#111318]">{stats.students}</p>
-            </div>
-            <div className="p-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
-              <p className="text-xs text-[#616f89]">Professors</p>
-              <p className="text-2xl font-bold text-[#111318]">{stats.professors}</p>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-[#e5e7eb] p-4 flex flex-col gap-2 bg-[#fdfefe]">
-            <div className="flex items-center gap-2 text-primary">
-              <span className="material-symbols-outlined text-base">tips_and_updates</span>
-              <p className="text-sm font-semibold">Share this code with students to join.</p>
-            </div>
-            <p className="text-xs text-[#616f89]">Codes expire after 14 days. Students can join from their dashboard using the join form.</p>
+            <p className="text-xs text-[#616f89]">Share this code with students so they can join from their dashboard.</p>
           </div>
         </div>
-
-        <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 flex flex-col gap-4">
-          <h3 className="text-lg font-bold text-[#111318]">Class content</h3>
-          <p className="text-sm text-[#616f89]">Share notes or announcements for students.</p>
-          <div className="flex gap-2">
-            <input
-              className="flex-1 bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Add a note"
-              value={noteInput}
-              onChange={(e) => setNoteInput(e.target.value)}
-            />
-            <button
-              onClick={addNote}
-              className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold disabled:opacity-50"
-              disabled={!noteInput.trim()}
-            >
-              Add
-            </button>
-          </div>
-          <div className="flex flex-col gap-2 max-h-56 overflow-y-auto">
-            {notesLoading ? (
-              <div className="text-sm text-[#616f89]">Loading notes...</div>
-            ) : notesError ? (
-              <div className="text-sm text-red-600">{notesError}</div>
-            ) : notes.length === 0 ? (
-              <p className="text-sm text-[#616f89]">No notes yet.</p>
-            ) : (
-              notes.map((note) => (
-                <div
-                  key={note.id}
-                  className="p-3 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] text-sm text-[#111318]"
-                >
-                  <div className="flex justify-between items-start gap-2">
-                    <p className="font-semibold text-xs text-[#4b5563]">{note.author_name || "Professor"}</p>
-                    <p className="text-[10px] text-[#9ca3af]">{formatDate(note.created_at)}</p>
-                  </div>
-                  <p className="mt-1 leading-snug">{note.content}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
 
       <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 flex flex-col gap-4">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
@@ -851,168 +1164,171 @@ export function TeacherClassDetail({ classId }: { classId: string }) {
 
       {groupProjectId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-5xl bg-white rounded-xl shadow-2xl border border-[#e5e7eb] p-6 flex flex-col gap-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <h4 className="text-lg font-bold text-[#111318]">Set groups</h4>
-                <p className="text-sm text-[#616f89]">Build teams manually or auto-balance using strengths.</p>
-              </div>
-              <button onClick={() => setGroupProjectId(null)} className="text-[#616f89] hover:text-[#111318]">
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="flex gap-3 items-center">
-              <button
-                className={`px-4 py-2 rounded-lg text-sm font-bold border ${
-                  groupMode === "auto"
-                    ? "bg-primary text-white border-primary"
-                    : "border-[#e5e7eb] text-[#111318]"
-                }`}
-                onClick={() => setGroupMode("auto")}
-              >
-                Auto (strengths)
-              </button>
-              <button
-                className={`px-4 py-2 rounded-lg text-sm font-bold border ${
-                  groupMode === "manual"
-                    ? "bg-primary text-white border-primary"
-                    : "border-[#e5e7eb] text-[#111318]"
-                }`}
-                onClick={() => setGroupMode("manual")}
-              >
-                Manual (drag & drop)
-              </button>
-            </div>
-
-            {groupMode === "auto" ? (
-              <div className="flex flex-col gap-3">
-                <label className="text-sm font-semibold text-[#111318]">
-                  Preferred group size (2-6)
-                  <input
-                    type="number"
-                    min={2}
-                    max={6}
-                    value={groupSize}
-                    onChange={(e) => setGroupSize(Number(e.target.value))}
-                    className="mt-1 w-24 bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </label>
-                <p className="text-sm text-[#616f89]">We’ll balance teams by total strengths and distribute round-robin.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3">
-                  <label className="text-sm font-semibold text-[#111318]">
-                    Number of groups
-                    <input
-                      type="number"
-                      min={1}
-                      max={12}
-                      value={manualGroupCount}
-                      onChange={(e) => adjustGroupCount(Number(e.target.value))}
-                      className="mt-1 w-24 bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </label>
-                  <p className="text-sm text-[#616f89]">Drag students into groups; unassigned stay in the right column.</p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {manualGroups.map((g, idx) => (
-                      <div
-                        key={g.id}
-                        className="border border-[#e5e7eb] rounded-lg p-3 min-h-36"
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={() => handleDrop(g.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <input
-                            className="text-sm font-semibold bg-transparent border-b border-dashed border-[#e5e7eb] focus:outline-none"
-                            value={g.name}
-                            onChange={(e) =>
-                              setManualGroups((prev) =>
-                                prev.map((grp) => (grp.id === g.id ? { ...grp, name: e.target.value || `Group ${idx + 1}` } : grp))
-                              )
-                            }
-                          />
-                          <span className="text-xs text-[#616f89]">{g.member_ids.length} members</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mt-2 min-h-16">
-                          {g.member_ids.map((id) => {
-                            const stu = studentMembers.find((s) => s.id === id);
-                            return (
-                              <div
-                                key={id}
-                                draggable
-                                onDragStart={() => setDraggingId(id)}
-                                className="flex items-center gap-2 px-2 py-1 rounded-full bg-[#f3f4f6] text-xs text-[#111318] border border-[#e5e7eb] cursor-move"
-                              >
-                                <Avatar name={stu?.name || "Student"} src={stu?.avatar_url} size="h-6 w-6" />
-                                {stu?.name || "Student"}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div
-                    className="border border-dashed border-[#e5e7eb] rounded-lg p-3 bg-[#f9fafb]"
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => handleDrop(null)}
-                  >
-                    <p className="text-sm font-semibold text-[#111318] mb-2">Unassigned</p>
-                    <div className="flex flex-col gap-2 max-h-72 overflow-y-auto">
-                      {unassignedStudents.length === 0 ? (
-                        <p className="text-sm text-[#616f89]">Everyone is assigned.</p>
-                      ) : (
-                        unassignedStudents.map((s) => (
-                          <div
-                            key={s.id}
-                            draggable
-                            onDragStart={() => setDraggingId(s.id)}
-                            className="flex items-center gap-2 px-2 py-2 rounded-lg bg-white text-sm text-[#111318] border border-[#e5e7eb] cursor-move"
-                          >
-                            <Avatar name={s.name} src={s.avatar_url} />
-                            <div className="flex flex-col">
-                              <span className="font-semibold leading-tight">{s.name}</span>
-                              <span className="text-xs text-[#616f89]">{s.email}</span>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {groupError && <div className="text-sm text-red-600">{groupError}</div>}
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={() => setGroupProjectId(null)}
-                className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] text-[#111318]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitGrouping}
-                disabled={
-                  groupBusy ||
-                  (groupMode === "manual" && manualGroups.every((g) => g.member_ids.length === 0))
-                }
-                className="px-4 py-2 rounded-lg text-sm font-bold bg-primary text-white disabled:opacity-50"
-              >
-                {groupBusy ? "Saving..." : "Save groups"}
-              </button>
-            </div>
+          <div className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl border border-[#e5e7eb] p-6 flex flex-col gap-6 max-h-[90vh] overflow-y-auto">
+            {renderGroupModalBody(true)}
           </div>
         </div>
       )}
       </div>
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-[#e5e7eb]">
+            <div className="p-6 border-b border-[#eef2f7] flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-black text-[#111318]">Edit Class</h2>
+                <p className="text-xs text-[#616f89] mt-1">Update schedule, term, or room details.</p>
+              </div>
+              <button
+                className="text-[#616f89] hover:text-primary transition-colors"
+                onClick={() => setShowEditModal(false)}
+                type="button"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <form
+              className="p-6 space-y-5 overflow-y-auto max-h-[80vh]"
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveClassEdits();
+              }}
+            >
+              {editError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+                  {editError}
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-[#111318] mb-2">Course Name</label>
+                <input
+                  className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="e.g., BUSFIN 4265 - Financial Institutions"
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                  <label className="block text-sm font-medium text-[#111318] mb-2">Term / Semester</label>
+                  <select
+                    className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={editTerm}
+                    onChange={(e) => setEditTerm(e.target.value)}
+                  >
+                    <option>Spring 2026</option>
+                    <option>Fall 2025</option>
+                    <option>Summer 2025</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                  <label className="block text-sm font-medium text-[#111318] mb-2">Location / Room</label>
+                  <input
+                    className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="e.g., Schoenbaum Hall 105"
+                    type="text"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-2 border-b border-[#eef2f7] pb-2">
+                  <span className="material-symbols-outlined text-[#616f89] text-xl">schedule</span>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-[#616f89]">Class Schedule</h3>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-[#616f89] uppercase">Meeting Days</label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: "Mon", label: "M" },
+                      { key: "Tue", label: "T" },
+                      { key: "Wed", label: "W" },
+                      { key: "Thu", label: "Th" },
+                      { key: "Fri", label: "F" },
+                      { key: "Sat", label: "S" },
+                      { key: "Sun", label: "Su" },
+                    ].map((day) => (
+                      <button
+                        key={day.key}
+                        type="button"
+                        onClick={() => toggleEditDay(day.key)}
+                        className={`flex items-center justify-center w-9 h-9 text-xs font-bold border rounded-lg cursor-pointer transition-all hover:bg-gray-50 ${
+                          editMeetingDays.includes(day.key)
+                            ? "bg-primary text-white border-primary"
+                            : "border-gray-200 text-[#111318]"
+                        }`}
+                      >
+                        {day.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-[#111318] mb-2">Start Time</label>
+                    <input
+                      className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      type="time"
+                      value={editStartTime}
+                      onChange={(e) => setEditStartTime(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium text-[#111318] mb-2">End Time</label>
+                    <input
+                      className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      type="time"
+                      value={editEndTime}
+                      onChange={(e) => setEditEndTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 bg-background-light rounded-xl border border-[#eef2f7] mt-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[#616f89]">vpn_key</span>
+                    <div>
+                      <p className="text-sm font-bold text-[#111318]">Auto-generate Class Code</p>
+                      <p className="text-xs text-[#616f89]">Students will use this to join</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      checked={editAutoGenerateCode}
+                      className="sr-only peer"
+                      type="checkbox"
+                      onChange={(e) => setEditAutoGenerateCode(e.target.checked)}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+                <div className="mt-4 flex items-center justify-center bg-white border-2 border-dashed border-gray-200 rounded-lg py-3">
+                  <span className="text-2xl font-black tracking-widest text-primary">{classData.code}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#eef2f7]">
+                <button
+                  className="px-6 py-2.5 text-sm font-bold text-[#616f89] hover:text-[#111318] border border-gray-200 rounded-lg transition-colors"
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  disabled={editBusy}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-6 py-2.5 text-sm font-bold text-white bg-primary hover:bg-red-700 rounded-lg shadow-sm transition-colors disabled:opacity-60"
+                  type="submit"
+                  disabled={editBusy || !editName.trim()}
+                >
+                  {editBusy ? "Saving..." : "Save changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

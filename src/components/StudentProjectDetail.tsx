@@ -171,7 +171,15 @@ function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | 
   );
 }
 
-export default function StudentProjectDetail({ projectId }: { projectId: string }) {
+export default function StudentProjectDetail({
+  projectId,
+  previewGroupId,
+  hideLayout = false,
+}: {
+  projectId: string;
+  previewGroupId?: string | null;
+  hideLayout?: boolean;
+}) {
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -241,9 +249,9 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
   const [memberReturn, setMemberReturn] = useState<{ id: string; name: string; email: string; avatar_url?: string | null } | null>(null);
 
   // Find the student's group
-  const myGroup = project?.groups?.find((g) => 
-    g.members.some((m) => m.email === session?.user?.email)
-  );
+  const myGroup = previewGroupId
+    ? project?.groups?.find((g) => g.id === previewGroupId)
+    : project?.groups?.find((g) => g.members.some((m) => m.email === session?.user?.email));
 
   const fetchDeliverables = async () => {
     if (!myGroup || !project) return;
@@ -883,6 +891,13 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
 
 
   if (loading) {
+    if (hideLayout) {
+      return (
+        <div className="p-8">
+          <p className="text-sm text-[#616f89]">Loading...</p>
+        </div>
+      );
+    }
     return (
       <DashboardLayout initialRole="student" overrideHeaderLabel="Project">
         <div className="p-8">
@@ -893,6 +908,13 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
   }
 
   if (error || !project) {
+    if (hideLayout) {
+      return (
+        <div className="p-8">
+          <p className="text-sm text-red-600">{error || "Project not found"}</p>
+        </div>
+      );
+    }
     return (
       <DashboardLayout initialRole="student" overrideHeaderLabel="Project">
         <div className="p-8">
@@ -903,10 +925,17 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
   }
 
   const parsed = parseRubric(project.rubric);
+  const headerLabel = (
+    <div className="flex items-center gap-2 text-sm font-medium">
+      <span className="text-[#111318]">{project.class_name}</span>
+      <span className="text-[#9ca3af]">/</span>
+      <span className="text-[#111318]">{project.name}</span>
+    </div>
+  );
 
-  return (
-    <DashboardLayout initialRole="student" overrideHeaderLabel="Project">
-      <div className="w-full bg-background-light min-h-screen">
+  const content = (
+    <div className="w-full bg-background-light min-h-screen">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Add Collaboration Link Modal */}
         {showAddLinkModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -927,7 +956,7 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
               <form onSubmit={(e) => { e.preventDefault(); handleAddLink(); }} className="p-6 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-[#111318] mb-2">
-                    Name <span className="text-red-600">*</span>
+                    Title <span className="text-red-600">*</span>
                   </label>
                   <input
                     type="text"
@@ -1361,22 +1390,7 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
           </div>
         )}
 
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          {/* Header with Breadcrumb */}
-          <div className="mb-8">
-            <div className="flex items-center gap-2 text-sm text-[#616f89] mb-4">
-              <Link href="/student/classes" className="hover:text-primary transition-colors">
-                Classes
-              </Link>
-              <span className="material-symbols-outlined text-xs">chevron_right</span>
-              <Link href={`/student/classes/${project?.class_id}`} className="hover:text-primary transition-colors">
-                {project?.class_name}
-              </Link>
-              <span className="material-symbols-outlined text-xs">chevron_right</span>
-              <span className="text-[#111318] font-medium">{project?.name}</span>
-            </div>
-          </div>
-
+        <div className="max-w-7xl mx-auto px-6 py-4">
           {/* Main Header Section */}
           <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 mb-8 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -2994,6 +3008,14 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
           </div>
         )}
       </div>
+    </div>
+  );
+
+  if (hideLayout) return content;
+
+  return (
+    <DashboardLayout initialRole="student" overrideHeaderLabel={headerLabel}>
+      {content}
     </DashboardLayout>
   );
 }
