@@ -35,6 +35,7 @@ type CalendarEvent = {
   time?: string; // For meetings
   type?: string; // virtual or in-person for meetings
   location?: string; // For meetings
+  groupId?: string;
 };
 
 type ViewMode = 'month' | 'week';
@@ -91,7 +92,29 @@ function daysInViewWeek(anchor: Date) {
 function isoDate(d: Date) {
   const copy = new Date(d);
   copy.setHours(0, 0, 0, 0);
-  return copy.toISOString();
+  // Return date-only key (YYYY-MM-DD) to avoid timezone shifts when matching events to days
+  const y = copy.getFullYear();
+  const m = String(copy.getMonth() + 1).padStart(2, '0');
+  const dd = String(copy.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+function toDateKey(value?: string | null) {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  if (value.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value.slice(0, 10);
+  }
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return isoDate(d);
+}
+
+function parseEventDate(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T00:00:00`);
+  }
+  return new Date(value);
 }
 
 function isSameDay(a: Date, b: Date) {
@@ -109,6 +132,9 @@ export default function StudentCalendarPage() {
   const [viewedDeliverable, setViewedDeliverable] = useState<any>(null);
   const [viewTaskId, setViewTaskId] = useState<string | null>(null);
   const [viewedTask, setViewedTask] = useState<any>(null);
+  const [viewMeetingId, setViewMeetingId] = useState<string | null>(null);
+  const [viewMeeting, setViewMeeting] = useState<any>(null);
+  const [meetingLoading, setMeetingLoading] = useState(false);
 
   const today = useMemo(() => {
     const t = new Date();
@@ -153,9 +179,10 @@ export default function StudentCalendarPage() {
                 validProjects.map(async (p: any) => {
                   
                   if (p.due_date) {
+                    const projectDateOnly = p.due_date; // YYYY-MM-DD
                     eventsAccumulator.push({
                       id: `project-${p.id}`,
-                      date: p.due_date,
+                      date: projectDateOnly,
                       title: p.name,
                       kind: 'project',
                       course: cls.name,
@@ -164,43 +191,66 @@ export default function StudentCalendarPage() {
                     });
                   }
 
-                  // Fetch deliverables assigned to the current user for this project
+                  // NOTE: deliverables will be fetched per-group below (so we only show group-specific deliverables)
+
+                  // Fetch meetings for any group the current user belongs to for this project
                   try {
-                    if (!p.id) {
-                      console.warn('[Calendar] Project missing id, skipping deliverables fetch');
-                      return;
-                    }
-                    const deliverables = await tasksCache.fetch<any>(`/api/deliverables?projectId=${p.id}`);
-                    // API returns array directly
-                    const deliverablesList = Array.isArray(deliverables) ? deliverables : [];
-                    console.log(`[Calendar] Project ${p.name} (${p.id}):`, {
-                      totalDeliverables: deliverablesList.length,
-                      userEmail,
-                      deliverables: deliverablesList.map((d: any) => ({
-                        id: d.id,
-                        title: d.title,
-                        assignedEmail: d.assignedTo?.email,
-                        dueDate: d.dueDate,
-                        matches: d.assignedTo?.email === userEmail && !!d.dueDate
-                      }))
-                    });
-                    deliverablesList.forEach((d: any) => {
-                      // Only show deliverables assigned to the current user
-                      if (d.assignedTo?.email === userEmail && d.dueDate) {
-                        console.log(`[Calendar] Adding deliverable: ${d.title} on ${d.dueDate}`);
-                        eventsAccumulator.push({
-                          id: `deliverable-${d.id}`,
-                          date: d.dueDate,
-                          title: d.title,
-                          kind: 'deliverable',
-                          course: cls.name,
-                          projectId: p.id,
-                          tone: 'purple',
-                        });
+                    if (Array.isArray(p.groups)) {
+                      for (const g of p.groups) {
+                        if (!g || !Array.isArray(g.members)) continue;
+                        const isMember = g.members.some((m: any) => m.email === userEmail);
+                        if (!isMember) continue;
+
+                        // Fetch deliverables for this group+project so calendar matches project detail behaviour
+                        try {
+                          const groupDeliverables = await tasksCache.fetch<any>(`/api/deliverables?projectId=${p.id}&groupId=${g.id}`);
+                          const deliverablesList = Array.isArray(groupDeliverables) ? groupDeliverables : [];
+                          deliverablesList.forEach((d: any) => {
+                            const dateKey = toDateKey(d.dueDate);
+                            if (!dateKey) return;
+                            eventsAccumulator.push({
+                              id: `deliverable-${d.id}`,
+                              date: dateKey,
+                              title: d.title,
+                              kind: 'deliverable',
+                              course: cls.name,
+                              projectId: p.id,
+                              groupId: g.id,
+                              tone: 'purple',
+                            });
+                          });
+                        } catch (delErr) {
+                          console.error(`Failed to fetch deliverables for group ${g.id} project ${p.id}:`, delErr);
+                        }
+
+                        try {
+                          const meetings = await tasksCache.fetch<any>(`/api/meetings?groupId=${g.id}`);
+                          const meetingList = Array.isArray(meetings) ? meetings : [];
+                          meetingList.forEach((mm: any) => {
+                            if (mm.date) {
+                              // Use full datetime to avoid timezone-only date shifts in the calendar
+                              const datetime = mm.time ? `${mm.date}T${mm.time}` : `${mm.date}T00:00:00`;
+                              eventsAccumulator.push({
+                                id: `meeting-${mm.id}`,
+                                date: datetime,
+                                title: mm.title,
+                                kind: 'meeting',
+                                course: cls.name,
+                                projectId: p.id,
+                                tone: 'yellow',
+                                time: mm.time || undefined,
+                                type: mm.type || undefined,
+                                location: mm.location || mm.meeting_url || undefined,
+                              });
+                            }
+                          });
+                        } catch (meetErr) {
+                          console.error(`Failed to fetch meetings for group ${g.id}:`, meetErr);
+                        }
                       }
-                    });
+                    }
                   } catch (err) {
-                    console.error(`Failed to fetch deliverables for project ${p.id}:`, err);
+                    console.error(`Failed processing groups for project ${p.id}:`, err);
                   }
                 })
               );
@@ -210,7 +260,7 @@ export default function StudentCalendarPage() {
           })
         );
 
-        eventsAccumulator.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        eventsAccumulator.sort((a, b) => parseEventDate(a.date).getTime() - parseEventDate(b.date).getTime());
         setEvents(eventsAccumulator);
 
         // Fetch personal tasks
@@ -221,9 +271,10 @@ export default function StudentCalendarPage() {
           tasksList.forEach((t: any) => {
             if (t.dueDate) {
               console.log(`[Calendar] Adding task: ${t.title} on ${t.dueDate}`);
+              const taskDateOnly = t.dueDate;
               eventsAccumulator.push({
                 id: `task-${t.id}`,
-                date: t.dueDate,
+                date: taskDateOnly,
                 title: t.title,
                 kind: 'task',
                 course: 'Personal',
@@ -235,7 +286,7 @@ export default function StudentCalendarPage() {
             }
           });
           // Re-sort after adding tasks
-          eventsAccumulator.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          eventsAccumulator.sort((a, b) => parseEventDate(a.date).getTime() - parseEventDate(b.date).getTime());
           setEvents(eventsAccumulator);
         } catch (err) {
           console.error('Failed to fetch personal tasks:', err);
@@ -246,8 +297,23 @@ export default function StudentCalendarPage() {
         setLoading(false);
       }
     };
-
+    // Initial load
     load();
+
+    // Listen for deliverable changes elsewhere in the app and reload
+    const onDeliverableChange = (e: any) => {
+      try {
+        // optionally inspect e.detail.projectId
+        load();
+      } catch (err) {
+        console.error('Error reloading calendar after deliverable change', err);
+      }
+    };
+    window.addEventListener('deliverables:changed', onDeliverableChange as EventListener);
+
+    return () => {
+      window.removeEventListener('deliverables:changed', onDeliverableChange as EventListener);
+    };
   }, []);
 
   const days = useMemo(() => (viewMode === 'month' ? daysInViewMonth(viewDate) : daysInViewWeek(viewDate)), [viewDate, viewMode]);
@@ -258,7 +324,7 @@ export default function StudentCalendarPage() {
       map.set(isoDate(d), []);
     });
     events.forEach((ev) => {
-      const dayKey = isoDate(new Date(ev.date));
+      const dayKey = toDateKey(ev.date) || isoDate(new Date(ev.date));
       if (map.has(dayKey)) {
         map.get(dayKey)!.push(ev);
       }
@@ -275,16 +341,16 @@ export default function StudentCalendarPage() {
         const minutes = timeParts[1];
         const ampm = hours >= 12 ? 'PM' : 'AM';
         const displayHours = hours % 12 || 12;
-        return `${format(new Date(date), 'MMM d')} at ${displayHours}:${minutes} ${ampm}`;
+        return `${format(parseEventDate(date), 'MMM d')} at ${displayHours}:${minutes} ${ampm}`;
       }
-      return format(new Date(date), 'MMM d');
+      return format(parseEventDate(date), 'MMM d');
     };
 
     if (viewMode === 'month') {
       const monthStart = startOfMonth(viewDate);
       const nextMonthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
       const inMonth = events.filter((ev) => {
-        const t = new Date(ev.date);
+        const t = parseEventDate(ev.date);
         return t >= monthStart && t < nextMonthStart;
       });
       return [
@@ -302,14 +368,14 @@ export default function StudentCalendarPage() {
     const thisWeekEnd = addDays(weekStart, 7).getTime();
     const nextWeekEnd = addDays(weekStart, 14).getTime();
 
-    const upcoming = events.filter((ev) => new Date(ev.date) >= weekStart);
+    const upcoming = events.filter((ev) => parseEventDate(ev.date) >= weekStart);
 
     const thisWeek = upcoming.filter((ev) => {
-      const t = new Date(ev.date).getTime();
+      const t = parseEventDate(ev.date).getTime();
       return t < thisWeekEnd;
     });
     const nextWeek = upcoming.filter((ev) => {
-      const t = new Date(ev.date).getTime();
+      const t = parseEventDate(ev.date).getTime();
       return t >= thisWeekEnd && t < nextWeekEnd;
     });
 
@@ -352,7 +418,8 @@ export default function StudentCalendarPage() {
       // Fetch deliverable details
       const deliverableId = event.id.replace('deliverable-', '');
       try {
-        const response = await fetch(`/api/deliverables?projectId=${event.projectId}`);
+        const groupParam = event.groupId ? `&groupId=${event.groupId}` : '';
+        const response = await fetch(`/api/deliverables?projectId=${event.projectId}${groupParam}`);
         const deliverables = await response.json();
         const deliverable = Array.isArray(deliverables) 
           ? deliverables.find((d: any) => d.id === deliverableId)
@@ -378,8 +445,23 @@ export default function StudentCalendarPage() {
         console.error('Failed to fetch task:', err);
       }
     } else if (event.kind === 'meeting') {
-      // Navigate to project page for meetings
-      router.push(`/student/projects/${event.projectId}`);
+      // Open meeting details modal
+      try {
+        setMeetingLoading(true);
+        const meetingId = event.id.replace('meeting-', '');
+        const res = await fetch(`/api/meetings/${meetingId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setViewMeetingId(meetingId);
+          setViewMeeting(data.meeting || data);
+        } else {
+          console.error('Failed to fetch meeting details', await res.text());
+        }
+      } catch (err) {
+        console.error('Error loading meeting details', err);
+      } finally {
+        setMeetingLoading(false);
+      }
     }
   };
 
@@ -390,6 +472,17 @@ export default function StudentCalendarPage() {
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'MMM d, yyyy');
+  };
+
+  const formatTime = (timeString?: string) => {
+    if (!timeString) return '';
+    const parts = timeString.split(':');
+    if (parts.length < 2) return timeString;
+    const hours = parseInt(parts[0], 10);
+    const minutes = parts[1];
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${minutes} ${ampm}`;
   };
 
   return (
@@ -423,6 +516,61 @@ export default function StudentCalendarPage() {
               </button>
             </div>
           </div>
+
+          {/* Meeting Details Modal */}
+          {viewMeetingId && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb]">
+                  <h2 className="text-lg font-bold text-[#111318]">Meeting Details</h2>
+                  <button onClick={() => { setViewMeetingId(null); setViewMeeting(null); }} className="text-[#616f89] hover:text-[#111318] text-lg leading-none">&times;</button>
+                </div>
+                <div className="p-6 space-y-4">
+                  {meetingLoading ? (
+                    <p className="text-sm text-[#616f89]">Loading...</p>
+                  ) : viewMeeting ? (
+                    <>
+                      <div>
+                        <label className="block text-sm font-bold text-[#111318] mb-2">Title</label>
+                        <p className="text-sm text-[#616f89]">{viewMeeting.title}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-bold text-[#111318] mb-2">Date</label>
+                          <p className="text-sm text-[#616f89]">{formatDate(viewMeeting.date)}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-[#111318] mb-2">Time</label>
+                          <p className="text-sm text-[#616f89]">{formatTime(viewMeeting.time)}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-[#111318] mb-2">Type</label>
+                        <p className="text-sm text-[#616f89]">{viewMeeting.type === 'virtual' ? 'Online' : 'In-Person'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-[#111318] mb-2">{viewMeeting.type === 'virtual' ? 'Meeting Link' : 'Location'}</label>
+                        {viewMeeting.type === 'virtual' ? (
+                          <a href={viewMeeting.meeting_url || viewMeeting.location} className="text-sm text-primary hover:underline break-all" target="_blank" rel="noreferrer">{viewMeeting.meeting_url || viewMeeting.location}</a>
+                        ) : (
+                          <p className="text-sm text-[#616f89]">{viewMeeting.location}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-[#111318] mb-2">Length</label>
+                        <p className="text-sm text-[#616f89]">{(viewMeeting.length_minutes || viewMeeting.lengthMinutes) ? `${viewMeeting.length_minutes || viewMeeting.lengthMinutes} minutes` : '60 minutes'}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-[#616f89]">Meeting not found</p>
+                  )}
+                </div>
+                <div className="px-6 py-4 border-t border-[#e5e7eb] flex justify-end gap-3">
+                  <button onClick={() => { setViewMeetingId(null); setViewMeeting(null); }} className="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all">Close</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="bg-white border border-[#f5f0f0] rounded-xl shadow-sm overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-[#f5f0f0]">
@@ -566,7 +714,7 @@ export default function StudentCalendarPage() {
                           </div>
                           <div className="text-right min-w-[140px]">
                             <p className="text-sm font-bold text-primary">{item.due}</p>
-                            <p className="text-[10px] text-[#8d5e5e]">{format(new Date(item.date), 'EEE')}</p>
+                            <p className="text-[10px] text-[#8d5e5e]">{format(parseEventDate(item.date), 'EEE')}</p>
                           </div>
                         </button>
                       ))}

@@ -28,12 +28,51 @@ export async function GET(request: NextRequest) {
     }
 
     const now = new Date();
+    const { data: groupInfo } = await supabase
+      .from("groups")
+      .select("project_id")
+      .eq("id", groupId)
+      .single();
 
-    // Filter and transform - only return upcoming meetings
+    // Update meetings that have ended to 'concluded' and notify members
+    for (const m of data || []) {
+      try {
+        const lengthMinutes = m.length_minutes || 60;
+        const meetingDateTime = new Date(`${m.date}T${m.time}`);
+        const meetingEnd = new Date(meetingDateTime.getTime() + lengthMinutes * 60000);
+        if (meetingEnd.getTime() < now.getTime() && m.status !== "concluded" && m.status !== "cancelled") {
+          // mark concluded
+          await supabase.from("group_meetings").update({ status: "concluded" }).eq("id", m.id);
+
+          // fetch group members
+          const { data: members } = await supabase.from("group_members").select("user_id").eq("group_id", groupId);
+          if (members && members.length > 0) {
+            const notifications = members.map((mem: any) => ({
+              to_user_id: mem.user_id,
+              from_user_id: m.created_by || null,
+              type: "info",
+              title: `Meeting concluded: ${m.title}`,
+              message: "Please add a short summary of what happened in this meeting.",
+              deliverable_id: null,
+              metadata: { meetingId: m.id, projectId: groupInfo?.project_id || null },
+              read: false,
+            }));
+            await supabase.from("notifications").insert(notifications);
+          }
+        }
+      } catch (err) {
+        console.error("Error concluding meeting:", err);
+      }
+    }
+
+    // Transform and return upcoming meetings by default
     const transformed = (data || [])
       .map((m: any) => {
         const meetingDateTime = new Date(`${m.date}T${m.time}`);
-        const isUpcoming = meetingDateTime.getTime() >= now.getTime();
+        const lengthMinutes = m.length_minutes || 60;
+        const meetingEnd = new Date(meetingDateTime.getTime() + lengthMinutes * 60000);
+        const status = m.status || "scheduled";
+        const isUpcoming = meetingEnd.getTime() >= now.getTime() && status === "scheduled";
         return {
           id: m.id,
           title: m.title,
@@ -43,9 +82,11 @@ export async function GET(request: NextRequest) {
           location: m.type === "in-person" ? m.location : m.meeting_url,
           isUpcoming,
           createdBy: m.created_by,
+          lengthMinutes,
+          status,
         };
       })
-      .filter((m: any) => m.isUpcoming);
+      .filter((m: any) => m.status !== "cancelled");
 
     // Fetch creator emails for meetings
     const creatorIds = [...new Set(transformed.map((m: any) => m.createdBy).filter(Boolean))];
@@ -85,7 +126,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { groupId, title, date, time, type, link, location } = body;
+    const { groupId, title, date, time, type, link, location, lengthMinutes } = body;
 
     if (!groupId || !title || !date || !time || !type) {
       return NextResponse.json(
@@ -113,6 +154,8 @@ export async function POST(request: NextRequest) {
       type,
       location: type === "in-person" ? location || null : null,
       meeting_url: type === "virtual" ? link || null : null,
+      length_minutes: lengthMinutes || 60,
+      status: "scheduled",
       created_by: userData?.id || null,
     };
 

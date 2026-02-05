@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 
 type Notification = {
   id: string;
@@ -10,6 +11,10 @@ type Notification = {
   read: boolean;
   status: 'pending' | 'accepted' | 'declined' | 'info';
   created_at: string;
+  metadata?: {
+    meetingId?: string | null;
+    projectId?: string | null;
+  } | null;
   from_user?: {
     id: string;
     name: string;
@@ -58,6 +63,7 @@ function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | 
 }
 
 export function NotificationDropdown() {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -141,6 +147,33 @@ export function NotificationDropdown() {
     }
   };
 
+  const handleNotificationClick = async (notification: Notification) => {
+    const meetingId = notification.metadata?.meetingId;
+    if (!notification.read) {
+      await markAsRead(notification.id);
+    }
+
+    if (!meetingId) return;
+
+    let projectId = notification.metadata?.projectId || null;
+    if (!projectId) {
+      try {
+        const res = await fetch(`/api/meetings/${meetingId}`);
+        if (res.ok) {
+          const data = await res.json();
+          projectId = data?.meeting?.project_id || null;
+        }
+      } catch (error) {
+        console.error('Failed to load meeting details:', error);
+      }
+    }
+
+    if (projectId) {
+      setIsOpen(false);
+      router.push(`/student/projects/${projectId}?meetingId=${meetingId}`);
+    }
+  };
+
   const getNotificationIcon = (type: string, status: string) => {
     if (type === 'deliverable_assignment' && status === 'pending') {
       return { icon: 'assignment_ind', color: 'text-amber-600', bg: 'bg-amber-50' };
@@ -203,7 +236,7 @@ export function NotificationDropdown() {
                     <div
                       key={notification.id}
                       className={`p-4 hover:bg-[#f9fafb] transition-colors ${!notification.read ? 'bg-blue-50/50' : ''}`}
-                      onClick={() => !notification.read && markAsRead(notification.id)}
+                      onClick={() => handleNotificationClick(notification)}
                     >
                       <div className="flex gap-3">
                         {/* Icon or Avatar */}

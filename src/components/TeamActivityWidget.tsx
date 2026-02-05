@@ -58,7 +58,25 @@ export function TeamActivityWidget() {
         const res = await fetch('/api/user/activity?limit=10');
         if (!res.ok) throw new Error('Failed to fetch activity');
         const data = await res.json();
-        setActivities(Array.isArray(data) ? data.slice(0, 4) : []);
+        if (Array.isArray(data)) {
+          const sorted = [...data].sort((a, b) => {
+            const aTime = new Date(a.createdAt).getTime();
+            const bTime = new Date(b.createdAt).getTime();
+            return bTime - aTime;
+          });
+          const uniqueByUser: Activity[] = [];
+          const seenUsers = new Set<string>();
+          for (const activity of sorted) {
+            const userId = activity.user?.id;
+            if (!userId || seenUsers.has(userId)) continue;
+            seenUsers.add(userId);
+            uniqueByUser.push(activity);
+            if (uniqueByUser.length >= 4) break;
+          }
+          setActivities(uniqueByUser);
+        } else {
+          setActivities([]);
+        }
       } catch (e) {
         console.error('Failed to fetch team activity:', e);
       } finally {

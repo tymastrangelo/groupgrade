@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
 import DeliverableFileUpload from "@/components/DeliverableFileUpload";
+import { AddTaskModal } from "@/components/AddTaskModal";
 import { useSession } from "next-auth/react";
 import { tasksCache } from "@/lib/tasksCache";
 import { getMemberColor } from "@/components/GroupMemberColors";
@@ -35,6 +36,7 @@ type Deliverable = {
   pendingAssignee?: { id: string; name: string; email: string; avatar_url?: string | null };
   submittedAt?: string;
   groupId: string;
+  projectId?: string;
   createdAt?: string;
   submissionUrl?: string;
   submissionNotes?: string;
@@ -64,6 +66,8 @@ type GroupMeeting = {
   location: string;
   type: "virtual" | "in-person";
   isUpcoming: boolean;
+  status?: "scheduled" | "concluded" | "cancelled";
+  lengthMinutes?: number;
   createdBy?: string;
   creatorEmail?: string;
 };
@@ -170,6 +174,7 @@ function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | 
 export default function StudentProjectDetail({ projectId }: { projectId: string }) {
   const { data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [project, setProject] = useState<ProjectData | null>(null);
   
   // Guard against invalid projectId
@@ -182,11 +187,20 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
   const [meetings, setMeetings] = useState<GroupMeeting[]>([]);
   const [viewMeetingId, setViewMeetingId] = useState<string | null>(null);
   const [deleteMeetingId, setDeleteMeetingId] = useState<string | null>(null);
+  const [meetingDetails, setMeetingDetails] = useState<any | null>(null);
+  const [meetingSummaries, setMeetingSummaries] = useState<any[]>([]);
+  const [meetingDetailsLoading, setMeetingDetailsLoading] = useState(false);
+  const [summaryForm, setSummaryForm] = useState({ notes: "", attended: true });
+  const [summarySaving, setSummarySaving] = useState(false);
+  const [meetingNotesByUser, setMeetingNotesByUser] = useState<Record<string, number>>({});
+  const [totalPastMeetings, setTotalPastMeetings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, isOverdue: false });
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [newMeeting, setNewMeeting] = useState({ title: "", date: "", time: "", type: "virtual" as "virtual" | "in-person", link: "", location: "" });
+  const [isEditingMeeting, setIsEditingMeeting] = useState(false);
+  const [editMeetingForm, setEditMeetingForm] = useState({ id: "", title: "", date: "", time: "", type: "virtual" as "virtual" | "in-person", link: "", location: "", lengthMinutes: 60 });
   const [collaborationLinks, setCollaborationLinks] = useState<{ id: string; title: string; url: string; iconType: string; creatorEmail?: string }[]>([]);
   const [newLink, setNewLink] = useState("");
   const [showAddLinkModal, setShowAddLinkModal] = useState(false);
@@ -218,6 +232,8 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
   const [selectedReassignUser, setSelectedReassignUser] = useState<{ id: string; name: string; email: string; avatar_url?: string | null } | null>(null);
   const [showReassignConfirm, setShowReassignConfirm] = useState(false);
   const [viewedDeliverableFilesCount, setViewedDeliverableFilesCount] = useState<number | null>(null);
+  const [chatMember, setChatMember] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   // Member deliverables list modal
   const [selectedMember, setSelectedMember] = useState<{ id: string; name: string; email: string; avatar_url?: string | null } | null>(null);
   const [showMemberDeliverables, setShowMemberDeliverables] = useState(false);
@@ -275,6 +291,19 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
       setActivityLogs(data || []);
     } catch (err) {
       console.error("Failed to fetch activity logs", err);
+    }
+  };
+
+  const fetchMeetingNotesCounts = async () => {
+    if (!myGroup) return;
+    try {
+      const res = await fetch(`/api/meetings/notes?groupId=${myGroup.id}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setMeetingNotesByUser(data?.counts || {});
+      setTotalPastMeetings(data?.total || 0);
+    } catch (err) {
+      console.error("Failed to fetch meeting notes counts", err);
     }
   };
 
@@ -346,8 +375,16 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
       fetchMeetings();
       fetchCollaborationLinks();
       fetchActivityLogs();
+      fetchMeetingNotesCounts();
     }
   }, [myGroup?.id, project?.id, showAllActivities]);
+
+  useEffect(() => {
+    const meetingId = searchParams?.get("meetingId");
+    if (meetingId) {
+      setViewMeetingId(meetingId);
+    }
+  }, [searchParams]);
 
   // Track user activity (last_active timestamp)
   useEffect(() => {
@@ -473,6 +510,7 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
         type: newMeeting.type,
         link: newMeeting.link,
         location: newMeeting.location,
+        lengthMinutes: (newMeeting as any).lengthMinutes || 60,
       };
       const res = await fetch("/api/meetings", {
         method: "POST",
@@ -487,6 +525,109 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
       }
     } catch (err) {
       console.error("Failed to create meeting", err);
+    }
+  };
+
+  useEffect(() => {
+    if (viewMeetingId) {
+      const m = meetings.find((me) => me.id === viewMeetingId);
+      if (m) {
+        setEditMeetingForm({
+          id: m.id,
+          title: m.title || "",
+          date: m.date || "",
+          time: m.time || "",
+          type: m.type || "virtual",
+          link: m.type === "virtual" ? (m.location || "") : "",
+          location: m.type === "in-person" ? (m.location || "") : "",
+          lengthMinutes: (m as any).lengthMinutes || 60,
+        });
+      }
+    } else {
+      setIsEditingMeeting(false);
+      setEditMeetingForm({ id: "", title: "", date: "", time: "", type: "virtual", link: "", location: "", lengthMinutes: 60 });
+    }
+  }, [viewMeetingId, meetings]);
+
+  useEffect(() => {
+    const loadMeetingDetails = async () => {
+      if (!viewMeetingId) {
+        setMeetingDetails(null);
+        setMeetingSummaries([]);
+        setSummaryForm({ notes: "", attended: true });
+        return;
+      }
+      setMeetingDetailsLoading(true);
+      try {
+        const res = await fetch(`/api/meetings/${viewMeetingId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setMeetingDetails(data?.meeting || null);
+          setMeetingSummaries(data?.summaries || []);
+          const mySummary = (data?.summaries || []).find(
+            (s: any) => s.user_id === session?.user?.id || s.users?.email === session?.user?.email
+          );
+          setSummaryForm({
+            notes: mySummary?.notes || "",
+            attended: mySummary?.attended !== false,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load meeting details", err);
+      } finally {
+        setMeetingDetailsLoading(false);
+      }
+    };
+
+    loadMeetingDetails();
+  }, [viewMeetingId, session?.user?.id]);
+
+  const saveMeetingEdits = async () => {
+    try {
+      const body: any = {};
+      if (editMeetingForm.link !== undefined && editMeetingForm.type === "virtual") body.meetingUrl = editMeetingForm.link;
+      if (editMeetingForm.location !== undefined && editMeetingForm.type === "in-person") body.location = editMeetingForm.location;
+      body.title = editMeetingForm.title;
+      body.date = editMeetingForm.date;
+      body.time = editMeetingForm.time;
+      body.lengthMinutes = editMeetingForm.lengthMinutes;
+
+      const res = await fetch(`/api/meetings/${editMeetingForm.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        await fetchMeetings();
+        setIsEditingMeeting(false);
+        setViewMeetingId(null);
+      }
+    } catch (err) {
+      console.error("Failed to save meeting edits", err);
+    }
+  };
+
+  const submitMeetingSummary = async () => {
+    if (!viewMeetingId) return;
+    setSummarySaving(true);
+    try {
+      const res = await fetch(`/api/meetings/${viewMeetingId}/summary`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: summaryForm.notes, attended: summaryForm.attended }),
+      });
+      if (res.ok) {
+        const refresh = await fetch(`/api/meetings/${viewMeetingId}`);
+        if (refresh.ok) {
+          const data = await refresh.json();
+          setMeetingDetails(data?.meeting || null);
+          setMeetingSummaries(data?.summaries || []);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to submit meeting summary", err);
+    } finally {
+      setSummarySaving(false);
     }
   };
 
@@ -534,10 +675,27 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
   };
 
   const deleteDeliverable = async (id: string) => {
+    // Find the deliverable first so we can invalidate caches after delete
+    const del = deliverables.find((d) => d.id === id);
+    // Optimistically remove from local state
     setDeliverables(deliverables.filter((d) => d.id !== id));
     try {
       await fetch(`/api/deliverables/${id}`, { method: "DELETE" });
       await fetchActivityLogs();
+      // Invalidate deliverables cache for affected project so other views (calendar) refresh
+      try {
+        if (del && (del.projectId || (del as any).projectId)) {
+          const pid = (del as any).projectId;
+          tasksCache.invalidate(`/api/deliverables?projectId=${pid}`);
+          // also notify listeners in other components to reload their data
+          window.dispatchEvent(new CustomEvent('deliverables:changed', { detail: { projectId: pid } }));
+        } else {
+          // Still notify listeners even if we couldn't determine projectId
+          window.dispatchEvent(new CustomEvent('deliverables:changed'));
+        }
+      } catch (e) {
+        // ignore cache invalidate failures
+      }
     } catch (err) {
       console.error("Failed to delete deliverable", err);
     }
@@ -748,7 +906,7 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
 
   return (
     <DashboardLayout initialRole="student" overrideHeaderLabel="Project">
-      <div className="w-full bg-[#f6f6f8] min-h-screen">
+      <div className="w-full bg-background-light min-h-screen">
         {/* Add Collaboration Link Modal */}
         {showAddLinkModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -904,23 +1062,24 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                   )}
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <input
-                    id="isFinal"
-                    type="checkbox"
-                    checked={isFinalDeliverable}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setIsFinalDeliverable(checked);
-                      if (checked && project?.due_date) {
-                        setNewDeliverableForm({ ...newDeliverableForm, dueDate: toLocalInput(project.due_date) });
-                      }
-                    }}
-                    className="h-4 w-4"
-                    disabled={deliverables.some(d => typeof d.title === 'string' && d.title.startsWith('[FINAL]'))}
-                  />
-                  <label htmlFor="isFinal" className="text-sm text-[#111318]">Mark as final deliverable (requires approval from all members)</label>
-                </div>
+                {!deliverables.some(d => typeof d.title === 'string' && d.title.startsWith('[FINAL]')) && (
+                  <div className="flex items-center gap-3">
+                    <input
+                      id="isFinal"
+                      type="checkbox"
+                      checked={isFinalDeliverable}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setIsFinalDeliverable(checked);
+                        if (checked && project?.due_date) {
+                          setNewDeliverableForm({ ...newDeliverableForm, dueDate: toLocalInput(project.due_date) });
+                        }
+                      }}
+                      className="h-4 w-4"
+                    />
+                    <label htmlFor="isFinal" className="text-sm text-[#111318]">Mark as final deliverable (requires approval from all members)</label>
+                  </div>
+                )}
 
                 {/* Description */}
                 <div>
@@ -1169,6 +1328,16 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                     />
                   </div>
                 )}
+                  <div>
+                    <label className="block text-sm font-medium text-[#111318] mb-2">Length (minutes)</label>
+                    <input
+                      type="number"
+                      min={5}
+                      value={(newMeeting as any).lengthMinutes || 60}
+                      onChange={(e) => setNewMeeting({ ...(newMeeting as any), lengthMinutes: parseInt(e.target.value || '60', 10) })}
+                      className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
               </div>
 
               {/* Actions */}
@@ -1227,17 +1396,17 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[50px]">
+                    <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-12.5">
                       <span className="text-xl font-bold">{countdown.days.toString().padStart(2, "0")}</span>
                       <span className="text-[8px] uppercase font-bold tracking-widest opacity-60">Days</span>
                     </div>
                     <span className="text-lg font-bold text-[#616f89]">:</span>
-                    <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[50px]">
+                    <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-12.5">
                       <span className="text-xl font-bold">{countdown.hours.toString().padStart(2, "0")}</span>
                       <span className="text-[8px] uppercase font-bold tracking-widest opacity-60">Hrs</span>
                     </div>
                     <span className="text-lg font-bold text-[#616f89]">:</span>
-                    <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-[50px]">
+                    <div className="flex flex-col items-center justify-center bg-[#111318] text-white rounded-lg px-3 py-2 min-w-12.5">
                       <span className="text-xl font-bold">{countdown.minutes.toString().padStart(2, "0")}</span>
                       <span className="text-[8px] uppercase font-bold tracking-widest opacity-60">Min</span>
                     </div>
@@ -1462,28 +1631,41 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                   {meetings.length === 0 ? (
                     <p className="text-xs text-[#616f89]">No meetings scheduled yet</p>
                   ) : (
-                    meetings.map((meeting) => (
-                      <button
-                        key={meeting.id}
-                        onClick={() => setViewMeetingId(meeting.id)}
-                        className="w-full text-left p-3 bg-blue-50 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <span className="material-symbols-outlined text-blue-600 text-lg">
-                            {meeting.type === "virtual" ? "videocam" : "groups"}
-                          </span>
-                          <div>
-                            <p className="text-[11px] font-bold text-[#111318]">{meeting.title}</p>
-                            <p className="text-[9px] text-[#616f89]">
-                              {meeting.date} at {meeting.time}
-                            </p>
+                    meetings.map((meeting) => {
+                      const isConcluded = meeting.status === "concluded";
+                      return (
+                        <button
+                          key={meeting.id}
+                          onClick={() => setViewMeetingId(meeting.id)}
+                          className={`w-full text-left p-3 rounded-lg border transition-colors flex items-center justify-between ${
+                            isConcluded
+                              ? "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                              : "bg-blue-50 border-blue-100 hover:bg-blue-100"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <span className={`material-symbols-outlined text-lg ${isConcluded ? "text-gray-500" : "text-blue-600"}`}>
+                              {meeting.type === "virtual" ? "videocam" : "groups"}
+                            </span>
+                            <div>
+                              <p className={`text-[11px] font-bold ${isConcluded ? "text-gray-700" : "text-[#111318]"}`}>{meeting.title}</p>
+                              <p className="text-[9px] text-[#616f89]">
+                                {meeting.date} at {meeting.time}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-blue-600 text-white uppercase">
-                          {meeting.isUpcoming ? "Upcoming" : "Past"}
-                        </span>
-                      </button>
-                    ))
+                          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase ${
+                            isConcluded
+                              ? "bg-gray-200 text-gray-700"
+                              : meeting.isUpcoming
+                                ? "bg-blue-600 text-white"
+                                : "bg-slate-200 text-slate-700"
+                          }`}>
+                            {isConcluded ? "Completed" : meeting.isUpcoming ? "Upcoming" : "Past"}
+                          </span>
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -1575,6 +1757,13 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                 <div className="p-6 border-b border-[#e5e7eb] flex justify-between items-center">
                   <h2 className="text-lg font-bold text-[#111318]">Your Group Roster</h2>
                 </div>
+                <div className="px-6 py-2 border-b border-[#e5e7eb] bg-[#f9fafb]">
+                  <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-[#616f89]">
+                    <span>Member</span>
+                    <span className="text-center min-w-20">Deliverables</span>
+                    <span className="text-center min-w-20">Meetings</span>
+                  </div>
+                </div>
                 <div className="divide-y divide-[#e5e7eb]">
                   {myGroup?.members.map((member) => {
                     let status = getActivityStatus(member.last_active);
@@ -1589,23 +1778,28 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                     return (
                       <div 
                         key={member.id} 
-                        className={`px-6 py-3 flex items-center justify-between hover:${memberColor.bg} transition-colors`}
+                        className={`px-6 py-3 grid grid-cols-[1fr_auto_auto] items-center gap-3 hover:${memberColor.bg} transition-colors`}
                       >
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                          <div className="relative flex-shrink-0">
-                            <div className={`h-10 w-10 rounded-full ${memberColor.bg} border-2 ${memberColor.text} flex items-center justify-center font-bold text-sm`}>
-                              {member.name.split(" ").map(n => n.charAt(0)).join("").toUpperCase()}
-                            </div>
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="relative shrink-0">
+                            <Avatar
+                              name={member.name}
+                              src={member.avatar_url}
+                              size="h-10 w-10"
+                            />
                             <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ${status.dot} border-2 border-white`} title={status.text}></div>
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => {
-                                  setSelectedMember(member);
-                                  setShowMemberDeliverables(true);
+                                  if (isCurrentUser) {
+                                    setShowAddTaskModal(true);
+                                  } else {
+                                    setChatMember({ id: member.id, name: member.name, email: member.email });
+                                  }
                                 }}
-                                title={`View ${member.name}'s deliverables`}
+                                title={isCurrentUser ? "Add a task" : `Message ${member.name}`}
                                 className={`text-left text-sm font-semibold ${memberColor.text} cursor-pointer focus:outline-none`}
                               >
                                 {member.name}
@@ -1618,35 +1812,29 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                           </div>
                         </div>
                         {/* Deliverable counts column */}
-                        <div className="flex items-center gap-4 mr-4">
-                          {(() => {
-                            const assignedCount = deliverables.filter(d => d.assignedTo?.email === member.email).length;
-                            const completedCount = deliverables.filter(d => d.assignedTo?.email === member.email && d.status === 'submitted').length;
-                            return (
-                              <button
-                                onClick={() => {
-                                  setSelectedMember(member);
-                                  setShowMemberDeliverables(true);
-                                }}
-                                title={`View ${member.name}'s deliverables (${completedCount}/${assignedCount} complete)`}
-                                className="text-sm text-[#111318] hover:bg-[#f9fafb] px-3 py-1 rounded-lg border border-[#e5e7eb] transition-colors"
-                              >
-                                <span className="font-medium">{completedCount}</span>
-                                <span className="text-xs text-[#616f89] ml-1">/</span>
-                                <span className="text-xs text-[#616f89] ml-1">{assignedCount}</span>
-                              </button>
-                            );
-                          })()}
+                        {(() => {
+                          const assignedCount = deliverables.filter(d => d.assignedTo?.email === member.email).length;
+                          const completedCount = deliverables.filter(d => d.assignedTo?.email === member.email && d.status === 'submitted').length;
+                          return (
+                            <button
+                              onClick={() => {
+                                setSelectedMember(member);
+                                setShowMemberDeliverables(true);
+                              }}
+                              title={`View ${member.name}'s deliverables (${completedCount}/${assignedCount} complete)`}
+                              className="text-sm text-[#111318] hover:bg-[#f9fafb] px-3 py-1 rounded-lg border border-[#e5e7eb] transition-colors text-center min-w-20"
+                            >
+                              <span className="font-medium">{completedCount}</span>
+                              <span className="text-xs text-[#616f89] ml-1">/</span>
+                              <span className="text-xs text-[#616f89] ml-1">{assignedCount}</span>
+                            </button>
+                          );
+                        })()}
+                        <div className="text-sm text-[#111318] px-3 py-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] text-center min-w-20">
+                          <span className="font-medium">{meetingNotesByUser[member.id] || 0}</span>
+                          <span className="text-xs text-[#616f89] ml-1">/</span>
+                          <span className="text-xs text-[#616f89] ml-1">{totalPastMeetings}</span>
                         </div>
-                        {!isCurrentUser && (
-                          <button
-                            onClick={() => console.log('Message', member.name)}
-                            className="ml-4 flex-shrink-0 p-2 rounded-lg text-[#616f89] hover:bg-[#e5e7eb] hover:text-primary transition-colors"
-                            title={`Message ${member.name}`}
-                          >
-                            <span className="material-symbols-outlined text-xl">message</span>
-                          </button>
-                        )}
                       </div>
                     );
                   })}
@@ -1669,9 +1857,15 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                       return (
                         <div key={activity.id} className="flex gap-4 relative">
                           {index < activityLogs.length - 1 && (
-                            <div className="absolute left-[15px] top-8 bottom-[-1.5rem] w-[1px] bg-[#e5e7eb]"></div>
+                            <div className="absolute left-3.75 top-8 -bottom-6 w-px bg-[#e5e7eb]"></div>
                           )}
-                          {activityUserColor ? (
+                          {activity.user?.avatar_url ? (
+                            <Avatar
+                              name={activity.user?.name || "Unknown"}
+                              src={activity.user?.avatar_url}
+                              size="h-8 w-8"
+                            />
+                          ) : activityUserColor ? (
                             <div className={`h-8 w-8 rounded-full ${activityUserColor.bg} flex items-center justify-center font-bold text-xs ${activityUserColor.text} shrink-0 z-10`}>
                               {(activity.user?.name || "?").split(" ").map((n: string) => n.charAt(0)).join("").toUpperCase()}
                             </div>
@@ -1700,9 +1894,13 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
                               {activity.entityId ? (
                                 <button
                                   onClick={() => {
-                                    // If this activity references a deliverable, open it
-                                    if (activity.entityId && activity.actionType && activity.actionType.startsWith('deliverable')) {
-                                      setViewDeliverableId(activity.entityId);
+                                    if (activity.entityId && activity.actionType) {
+                                      if (activity.actionType.startsWith('deliverable')) {
+                                        setViewDeliverableId(activity.entityId);
+                                      }
+                                      if (activity.actionType === 'meeting_created') {
+                                        setViewMeetingId(activity.entityId);
+                                      }
                                     }
                                   }}
                                   className="text-primary font-semibold cursor-pointer focus:outline-none"
@@ -2018,7 +2216,7 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-lg max-w-lg w-full">
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb]">
-                <h2 className="text-lg font-bold text-[#111318]">{selectedMember.name}'s Deliverables</h2>
+                <h2 className="text-lg font-bold text-[#111318]">{selectedMember.name}&apos;s Deliverables</h2>
                 <button
                   onClick={() => { setShowMemberDeliverables(false); setSelectedMember(null); }}
                   className="text-[#616f89] hover:text-[#111318] text-lg leading-none"
@@ -2209,56 +2407,287 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
               </div>
               {(() => {
                 const m = meetings.find(me => me.id === viewMeetingId);
-                if (!m) return null;
-                const isCreator = m.creatorEmail === session?.user?.email;
+                const meetingData = meetingDetails || m;
+                if (!meetingData) return null;
+                const isCreator = m?.creatorEmail === session?.user?.email;
+                const isConcluded = meetingData.status === "concluded";
+                const isUpcoming = m?.isUpcoming ?? false;
+                const meetingLocation = meetingData.type === "virtual"
+                  ? (meetingData.meeting_url || meetingData.location || meetingData.meetingUrl || m?.location)
+                  : (meetingData.location || m?.location);
                 return (
                   <>
                     <div className="p-6 space-y-4">
-                      <div>
-                        <label className="block text-sm font-bold text-[#111318] mb-2">Title</label>
-                        <p className="text-sm text-[#616f89]">{m.title}</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-bold text-[#111318] mb-2">Date</label>
-                          <p className="text-sm text-[#616f89]">{m.date}</p>
+                      {meetingDetailsLoading ? (
+                        <p className="text-sm text-[#616f89]">Loading...</p>
+                      ) : isEditingMeeting ? (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-bold text-[#111318] mb-2">Title</label>
+                            <input
+                              className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm"
+                              value={editMeetingForm.title}
+                              onChange={(e) => setEditMeetingForm({ ...editMeetingForm, title: e.target.value })}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-bold text-[#111318] mb-2">Date</label>
+                              <input
+                                type="date"
+                                className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm"
+                                value={editMeetingForm.date}
+                                onChange={(e) => setEditMeetingForm({ ...editMeetingForm, date: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-bold text-[#111318] mb-2">Time</label>
+                              <input
+                                type="time"
+                                className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm"
+                                value={editMeetingForm.time}
+                                onChange={(e) => setEditMeetingForm({ ...editMeetingForm, time: e.target.value })}
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-bold text-[#111318] mb-2">Type</label>
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setEditMeetingForm({ ...editMeetingForm, type: 'virtual' })}
+                                className={`py-2 px-3 rounded-lg border text-sm font-medium ${editMeetingForm.type === 'virtual' ? 'bg-primary text-white border-primary' : 'border-[#e5e7eb] hover:border-primary'}`}>
+                                Online
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditMeetingForm({ ...editMeetingForm, type: 'in-person' })}
+                                className={`py-2 px-3 rounded-lg border text-sm font-medium ${editMeetingForm.type === 'in-person' ? 'bg-primary text-white border-primary' : 'border-[#e5e7eb] hover:border-primary'}`}>
+                                In-Person
+                              </button>
+                            </div>
+                          </div>
+
+                          {editMeetingForm.type === 'virtual' ? (
+                            <div>
+                              <label className="block text-sm font-bold text-[#111318] mb-2">Meeting Link</label>
+                              <input
+                                type="url"
+                                className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm"
+                                value={editMeetingForm.link}
+                                onChange={(e) => setEditMeetingForm({ ...editMeetingForm, link: e.target.value })}
+                              />
+                            </div>
+                          ) : (
+                            <div>
+                              <label className="block text-sm font-bold text-[#111318] mb-2">Location</label>
+                              <input
+                                type="text"
+                                className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm"
+                                value={editMeetingForm.location}
+                                onChange={(e) => setEditMeetingForm({ ...editMeetingForm, location: e.target.value })}
+                              />
+                            </div>
+                          )}
+
+                          <div>
+                            <label className="block text-sm font-bold text-[#111318] mb-2">Length (minutes)</label>
+                            <input
+                              type="number"
+                              min={5}
+                              className="w-28 px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm"
+                              value={editMeetingForm.lengthMinutes}
+                              onChange={(e) => setEditMeetingForm({ ...editMeetingForm, lengthMinutes: parseInt(e.target.value || '60', 10) })}
+                            />
+                          </div>
                         </div>
+                      ) : (
                         <div>
-                          <label className="block text-sm font-bold text-[#111318] mb-2">Time</label>
-                          <p className="text-sm text-[#616f89]">{m.time}</p>
+                          <div>
+                            <label className="block text-sm font-bold text-[#111318] mb-2">Title</label>
+                            <p className="text-sm text-[#616f89]">{meetingData.title}</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-bold text-[#111318] mb-2">Date</label>
+                              <p className="text-sm text-[#616f89]">{meetingData.date}</p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-bold text-[#111318] mb-2">Time</label>
+                              <p className="text-sm text-[#616f89]">{meetingData.time}</p>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-bold text-[#111318] mb-2">Type</label>
+                            <p className="text-sm text-[#616f89]">{meetingData.type === "virtual" ? "Online" : "In-Person"}</p>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-bold text-[#111318] mb-2">{meetingData.type === "virtual" ? "Meeting Link" : "Location"}</label>
+                            {meetingData.type === "virtual" ? (
+                              <a href={meetingLocation} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{meetingLocation}</a>
+                            ) : (
+                              <p className="text-sm text-[#616f89]">{meetingLocation}</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-bold text-[#111318] mb-2">Length</label>
+                            <p className="text-sm text-[#616f89]">{meetingData.length_minutes || meetingData.lengthMinutes || m?.lengthMinutes || 60} minutes</p>
+                          </div>
+                          {isConcluded && (
+                            <div className="pt-4 border-t border-[#e5e7eb] space-y-4">
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-[#111318]">Meeting Summary</h3>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 uppercase">Concluded</span>
+                              </div>
+                              {(() => {
+                                const mySummary = meetingSummaries.find(
+                                  (summary) => summary.user_id === session?.user?.id || summary.users?.email === session?.user?.email
+                                );
+                                if (mySummary) {
+                                  return (
+                                    <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                                      <p className="text-xs font-bold text-emerald-700">Your summary is submitted.</p>
+                                      {mySummary.attended === false && (
+                                        <span className="inline-block mt-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 uppercase">No-show</span>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <>
+                                    <div>
+                                      <label className="block text-xs font-bold text-[#111318] mb-2">Your Notes</label>
+                                      <textarea
+                                        value={summaryForm.notes}
+                                        onChange={(e) => setSummaryForm({ ...summaryForm, notes: e.target.value })}
+                                        placeholder="Add a short summary of what happened..."
+                                        rows={3}
+                                        className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-xs"
+                                      />
+                                    </div>
+                                    <label className="flex items-center gap-2 text-xs text-[#616f89]">
+                                      <input
+                                        type="checkbox"
+                                        checked={summaryForm.attended}
+                                        onChange={(e) => setSummaryForm({ ...summaryForm, attended: e.target.checked })}
+                                      />
+                                      I attended this meeting
+                                    </label>
+                                    <button
+                                      onClick={submitMeetingSummary}
+                                      disabled={summarySaving}
+                                      className="w-full px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-60"
+                                    >
+                                      {summarySaving ? "Saving..." : "Submit Summary"}
+                                    </button>
+                                  </>
+                                );
+                              })()}
+
+                              <div className="pt-2">
+                                <label className="block text-xs font-bold text-[#111318] mb-2">Team Notes</label>
+                                {meetingSummaries.length === 0 ? (
+                                  <p className="text-xs text-[#616f89]">No notes submitted yet.</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {meetingSummaries.map((summary) => {
+                                      const authorName = summary.users?.name || "Team member";
+                                      return (
+                                        <div key={summary.id} className="flex items-start gap-3 p-2 rounded-lg bg-[#f9fafb] border border-[#e5e7eb]">
+                                          <Avatar
+                                            name={authorName}
+                                            src={summary.users?.avatar_url}
+                                            size="h-7 w-7"
+                                          />
+                                          <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                              <p className="text-xs font-semibold text-[#111318]">{authorName}</p>
+                                              {summary.attended === false && (
+                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 uppercase">No-show</span>
+                                              )}
+                                            </div>
+                                            <p className="text-xs text-[#616f89] mt-0.5">
+                                              {summary.notes || "No notes provided."}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
+                      )}
+                    </div>
+                    <div className="px-6 py-4 border-t border-[#e5e7eb] flex justify-between items-center gap-3">
                       <div>
-                        <label className="block text-sm font-bold text-[#111318] mb-2">Type</label>
-                        <p className="text-sm text-[#616f89]">{m.type === "virtual" ? "Online" : "In-Person"}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-[#111318] mb-2">{m.type === "virtual" ? "Meeting Link" : "Location"}</label>
-                        {m.type === "virtual" ? (
-                          <a href={m.location} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline break-all">{m.location}</a>
-                        ) : (
-                          <p className="text-sm text-[#616f89]">{m.location}</p>
+                        {isCreator && isUpcoming && (
+                          <button
+                            onClick={() => {
+                              setViewMeetingId(null);
+                              confirmDeleteMeeting(meetingData.id);
+                            }}
+                            className="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-600 hover:text-white rounded-lg text-sm font-medium transition-all"
+                          >
+                            Cancel Meeting
+                          </button>
                         )}
                       </div>
-                    </div>
-                    <div className="px-6 py-4 border-t border-[#e5e7eb] flex justify-end gap-3">
-                      {isCreator && (
+                      <div className="flex items-center gap-3">
+                        {isCreator && isUpcoming && (
+                          <>
+                            {!isEditingMeeting ? (
+                              <button
+                                onClick={() => setIsEditingMeeting(true)}
+                                className="px-4 py-2 border border-[#e5e7eb] rounded-lg text-sm font-medium hover:bg-[#f9fafb] transition-all"
+                              >
+                                Edit
+                              </button>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={saveMeetingEdits}
+                                  className="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    // discard edits
+                                    setIsEditingMeeting(false);
+                                    const orig = meetings.find((me) => me.id === viewMeetingId);
+                                    if (orig) {
+                                      setEditMeetingForm({
+                                        id: orig.id,
+                                        title: orig.title || "",
+                                        date: orig.date || "",
+                                        time: orig.time || "",
+                                        type: orig.type || "virtual",
+                                        link: orig.type === "virtual" ? (orig.location || "") : "",
+                                        location: orig.type === "in-person" ? (orig.location || "") : "",
+                                        lengthMinutes: (orig as any).lengthMinutes || 60,
+                                      });
+                                    }
+                                  }}
+                                  className="px-4 py-2 border border-[#e5e7eb] rounded-lg text-sm font-medium hover:bg-[#f9fafb] transition-all"
+                                >
+                                  Discard
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
                         <button
-                          onClick={() => {
-                            setViewMeetingId(null);
-                            confirmDeleteMeeting(m.id);
-                          }}
-                          className="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-600 hover:text-white rounded-lg text-sm font-medium transition-all"
+                          onClick={() => setViewMeetingId(null)}
+                          className="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
                         >
-                          Delete
+                          Close
                         </button>
-                      )}
-                      <button
-                        onClick={() => setViewMeetingId(null)}
-                        className="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
-                      >
-                        Close
-                      </button>
+                      </div>
                     </div>
                   </>
                 );
@@ -2272,7 +2701,7 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb]">
-                <h2 className="text-lg font-bold text-[#111318]">Delete Meeting</h2>
+                <h2 className="text-lg font-bold text-[#111318]">Cancel Meeting</h2>
                 <button
                   onClick={cancelDeleteMeeting}
                   className="text-[#616f89] hover:text-[#111318] text-lg leading-none"
@@ -2282,26 +2711,71 @@ export default function StudentProjectDetail({ projectId }: { projectId: string 
               </div>
               <div className="p-6">
                 <p className="text-sm text-[#616f89] mb-6">
-                  Are you sure you want to delete this meeting? This action cannot be undone.
+                  Are you sure you want to cancel this meeting? This action cannot be undone.
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={cancelDeleteMeeting}
                     className="flex-1 px-4 py-2 border border-[#e5e7eb] rounded-lg text-sm font-medium text-[#111318] hover:bg-gray-50 transition-all"
                   >
-                    Cancel
+                    Close
                   </button>
                   <button
                     onClick={() => deleteMeeting(deleteMeetingId)}
                     className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-all"
                   >
-                    Delete
+                    Cancel Meeting
                   </button>
                 </div>
               </div>
             </div>
           </div>
         )}
+
+        {/* Mock Chat Modal */}
+        {chatMember && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb]">
+                <div>
+                  <h2 className="text-lg font-bold text-[#111318]">Chat with {chatMember.name}</h2>
+                  <p className="text-xs text-[#616f89]">Mock chat window</p>
+                </div>
+                <button
+                  onClick={() => setChatMember(null)}
+                  className="text-[#616f89] hover:text-[#111318] text-lg leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="bg-[#f9fafb] border border-[#e5e7eb] rounded-lg p-3">
+                  <p className="text-xs text-[#616f89]">
+                    This is a placeholder for chat. You can wire this to Team Chat later.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Type a message..."
+                    className="flex-1 px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm"
+                  />
+                  <button
+                    className="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <AddTaskModal
+          isOpen={showAddTaskModal}
+          onClose={() => setShowAddTaskModal(false)}
+          projectId={project?.id}
+        />
 
         {/* Project Overview Modal */}
         {showProjectOverviewModal && (
