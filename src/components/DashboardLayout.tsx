@@ -10,6 +10,7 @@ import StudentDashboard from './StudentDashboard';
 import { AvatarSelector } from './AvatarSelector';
 import { JoinClassModal } from './JoinClassModal';
 import { NotificationDropdown } from './NotificationDropdown';
+import { EditNameModal } from './EditNameModal';
 
 export default function Dashboard({
   initialRole,
@@ -26,6 +27,8 @@ export default function Dashboard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [showJoinClassModal, setShowJoinClassModal] = useState(false);
+  const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const handleSignOut = async () => {
@@ -43,8 +46,23 @@ export default function Dashboard({
       return () => document.removeEventListener('mousedown', handler);
     }, []);
   
-  // Get user name from session, fallback to default
-  const userName = session?.user?.name || 'User';
+  useEffect(() => {
+    const fetchUserName = async () => {
+      try {
+        const res = await fetch('/api/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user?.name) {
+            setCurrentUserName(data.user.name);
+          }
+        }
+      } catch (e) {
+      }
+    };
+    fetchUserName();
+  }, []);
+
+  const userName = currentUserName || session?.user?.name || 'User';
   const userAvatar = session?.user?.image || null;
   const displayName = isTeacher ? `Dr. ${userName}` : userName;
   const userTitle = isTeacher ? 'Senior Professor' : 'Student';
@@ -267,6 +285,17 @@ export default function Dashboard({
                       <div className="py-2">
                         <button
                           onClick={() => {
+                            setShowEditNameModal(true);
+                            setMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] hover:bg-background-light[#2d3748] transition-colors"
+                          role="menuitem"
+                        >
+                          <span className="material-symbols-outlined text-primary">edit</span>
+                          Edit Name
+                        </button>
+                        <button
+                          onClick={() => {
                             setShowAvatarSelector(true);
                             setMenuOpen(false);
                           }}
@@ -314,6 +343,17 @@ export default function Dashboard({
                           <span className="material-symbols-outlined text-primary">refresh</span>
                           Retake Survey
                         </a>
+                        <button
+                          onClick={() => {
+                            setShowEditNameModal(true);
+                            setMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] hover:bg-background-light[#2d3748] transition-colors"
+                          role="menuitem"
+                        >
+                          <span className="material-symbols-outlined text-primary">edit</span>
+                          Edit Name
+                        </button>
                         <button
                           onClick={() => {
                             setShowAvatarSelector(true);
@@ -375,6 +415,17 @@ export default function Dashboard({
         <AvatarSelector
           currentAvatar={userAvatar}
           onClose={() => setShowAvatarSelector(false)}
+        />
+      )}
+
+      {/* Edit Name Modal */}
+      {showEditNameModal && (
+        <EditNameModal
+          currentName={userName}
+          onClose={() => setShowEditNameModal(false)}
+          onSave={(newName) => {
+            setCurrentUserName(newName);
+          }}
         />
       )}
     </>

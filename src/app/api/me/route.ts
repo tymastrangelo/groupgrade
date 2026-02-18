@@ -16,7 +16,7 @@ export async function GET() {
 
   const { data: user, error } = await supabase
     .from('users')
-    .select('id, email, role')
+    .select('id, email, role, name')
     .eq('email', session.user.email)
     .maybeSingle();
 
@@ -27,4 +27,37 @@ export async function GET() {
   const normalizedRole = user?.role === 'professor' ? 'teacher' : user?.role;
 
   return NextResponse.json({ user: user ? { ...user, normalizedRole } : null });
+}
+
+export async function PATCH(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { name } = body;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return NextResponse.json({ error: 'Name is required and cannot be empty' }, { status: 400 });
+    }
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .update({ name: name.trim() })
+      .eq('email', session.user.email)
+      .select('id, email, role, name')
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    const normalizedRole = user?.role === 'professor' ? 'teacher' : user?.role;
+
+    return NextResponse.json({ user: { ...user, normalizedRole } });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 });
+  }
 }
