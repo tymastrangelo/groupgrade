@@ -247,6 +247,8 @@ export default function StudentProjectDetail({
   const [showMemberDeliverables, setShowMemberDeliverables] = useState(false);
   // When opening a deliverable from the member list, store the member so we can return to the list
   const [memberReturn, setMemberReturn] = useState<{ id: string; name: string; email: string; avatar_url?: string | null } | null>(null);
+  const [isEditingGroupName, setIsEditingGroupName] = useState(false);
+  const [editedGroupName, setEditedGroupName] = useState("");
 
   // Find the student's group
   const myGroup = previewGroupId
@@ -1395,7 +1397,78 @@ export default function StudentProjectDetail({
           <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 mb-8 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-[#111318] mb-1">{myGroup?.name || "Group"} Progress</h1>
+                <div className="flex items-center gap-2 mb-1">
+                  {isEditingGroupName ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={editedGroupName}
+                        onChange={(e) => setEditedGroupName(e.target.value)}
+                        onKeyDown={async (e) => {
+                          if (e.key === "Enter") {
+                            const finalName = editedGroupName.trim() || myGroup?.name || "Group";
+                            try {
+                              const res = await fetch(`/api/groups/${myGroup?.id}/name`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ name: finalName }),
+                              });
+                              if (res.ok) {
+                                setProject((prev) => prev ? {
+                                  ...prev,
+                                  groups: prev.groups.map((g) => g.id === myGroup?.id ? { ...g, name: finalName } : g)
+                                } : null);
+                              }
+                            } catch (err) {
+                              console.error("Failed to update group name", err);
+                            }
+                            setIsEditingGroupName(false);
+                          }
+                        }}
+                        className="text-2xl font-bold text-[#111318] border-b-2 border-primary focus:outline-none bg-transparent"
+                        autoFocus
+                      />
+                      <button
+                        onClick={async () => {
+                          const finalName = editedGroupName.trim() || myGroup?.name || "Group";
+                          try {
+                            const res = await fetch(`/api/groups/${myGroup?.id}/name`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ name: finalName }),
+                            });
+                            if (res.ok) {
+                              setProject((prev) => prev ? {
+                                ...prev,
+                                groups: prev.groups.map((g) => g.id === myGroup?.id ? { ...g, name: finalName } : g)
+                              } : null);
+                            }
+                          } catch (err) {
+                            console.error("Failed to update group name", err);
+                          }
+                          setIsEditingGroupName(false);
+                        }}
+                        className="text-primary hover:text-blue-700 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-xl">check</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <h1 className="text-2xl font-bold text-[#111318]">{myGroup?.name || "Group"} Progress</h1>
+                      <button
+                        onClick={() => {
+                          setEditedGroupName(myGroup?.name || "Group");
+                          setIsEditingGroupName(true);
+                        }}
+                        className="text-[#616f89] hover:text-primary transition-colors"
+                        title="Edit group name"
+                      >
+                        <span className="material-symbols-outlined text-lg">edit</span>
+                      </button>
+                    </>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 text-[#616f89] text-sm">
                   <span className="material-symbols-outlined text-sm">event</span>
                   Due: {formatDateTime(project?.due_date)}
