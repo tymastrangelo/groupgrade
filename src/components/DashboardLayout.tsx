@@ -28,6 +28,7 @@ export default function Dashboard({
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [showJoinClassModal, setShowJoinClassModal] = useState(false);
   const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -196,10 +197,10 @@ export default function Dashboard({
 
             {/* Sidebar Footer */}
             <div className="mt-auto pt-6 border-t border-[#e5e7eb] flex flex-col gap-1">
-              <a className="flex items-center gap-3 px-3 py-2 rounded-lg text-[#616f89] hover:bg-background-light transition-colors" href="#">
+              <button onClick={() => setShowSettingsModal(true)} className="flex items-center gap-3 px-3 py-2 rounded-lg text-[#616f89] hover:bg-background-light transition-colors">
                 <span className="material-symbols-outlined text-sm">settings</span>
                 <span className="text-sm font-medium">Settings</span>
-              </a>
+              </button>
               <button
                 onClick={handleSignOut}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-[#616f89] hover:bg-red-50 hover:text-red-600 transition-colors"
@@ -427,6 +428,40 @@ export default function Dashboard({
             setCurrentUserName(newName);
           }}
         />
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-start justify-between mb-6">
+              <h2 className="text-xl font-bold text-[#111318]">Settings</h2>
+              <button onClick={() => setShowSettingsModal(false)} className="text-[#616f89] hover:text-[#111318] transition-colors">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {!isTeacher && (
+                <a href="/survey" className="flex items-center gap-3 px-4 py-3 text-sm text-[#111318] hover:bg-background-light rounded-lg transition-colors">
+                  <span className="material-symbols-outlined text-primary">refresh</span>
+                  <span className="font-medium">Retake Survey</span>
+                </a>
+              )}
+              <button onClick={() => { setShowEditNameModal(true); setShowSettingsModal(false); }} className="flex items-center gap-3 px-4 py-3 text-sm text-[#111318] hover:bg-background-light rounded-lg transition-colors">
+                <span className="material-symbols-outlined text-primary">edit</span>
+                <span className="font-medium">Edit Name</span>
+              </button>
+              <button onClick={() => { setShowAvatarSelector(true); setShowSettingsModal(false); }} className="flex items-center gap-3 px-4 py-3 text-sm text-[#111318] hover:bg-background-light rounded-lg transition-colors">
+                <span className="material-symbols-outlined text-primary">face</span>
+                <span className="font-medium">Edit Avatar</span>
+              </button>
+              <button onClick={handleSignOut} className="flex items-center gap-3 px-4 py-3 text-sm text-[#111318] hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
+                <span className="material-symbols-outlined text-[#e11d48]">logout</span>
+                <span className="font-medium">Logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
