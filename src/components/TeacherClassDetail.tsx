@@ -83,58 +83,12 @@ function makeEmptyGroups(count: number) {
   }));
 }
 
-const GROUP_NAME_ADJECTIVES = [
-  "Brisk",
-  "Bright",
-  "Clever",
-  "Curious",
-  "Daring",
-  "Electric",
-  "Epic",
-  "Fearless",
-  "Golden",
-  "Happy",
-  "Lively",
-  "Mighty",
-  "Nimble",
-  "Quantum",
-  "Rapid",
-  "Stellar",
-  "Sunny",
-  "Swift",
-  "Vivid",
-  "Zen",
-];
-
-const GROUP_NAME_NOUNS = [
-  "Comets",
-  "Creators",
-  "Dragons",
-  "Explorers",
-  "Falcons",
-  "Foxes",
-  "Inventors",
-  "Knights",
-  "Lions",
-  "Pioneers",
-  "Rangers",
-  "Rockets",
-  "Scholars",
-  "Storm",
-  "Trailblazers",
-  "Voyagers",
-  "Wolves",
-  "Wizards",
-  "Zephyrs",
-];
-
 function generateGroupName(existing: Set<string>) {
-  const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
-  let name = `${pick(GROUP_NAME_ADJECTIVES)} ${pick(GROUP_NAME_NOUNS)}`;
-  let counter = 2;
+  let counter = 1;
+  let name = `Group ${counter}`;
   while (existing.has(name)) {
-    name = `${name} ${counter}`;
     counter += 1;
+    name = `Group ${counter}`;
   }
   existing.add(name);
   return name;
