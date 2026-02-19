@@ -1875,7 +1875,7 @@ export default function StudentProjectDetail({
                   }).map((member) => {
                     let status = getActivityStatus(member.last_active);
                     const isCurrentUser = member.email === session?.user?.email;
-                    const memberColor = getMemberColor(member.name);
+                    const memberColor = getMemberColor(member.name, myGroup?.members);
                     
                     // Show "Now" for current user if they're viewing this page
                     if (isCurrentUser && status.text === "Never") {
@@ -1960,7 +1960,7 @@ export default function StudentProjectDetail({
                   ) : (
                     activityLogs.map((activity, index) => {
                       const message = getActivityMessage(activity);
-                      const activityUserColor = activity.user ? getMemberColor(activity.user.name) : null;
+                      const activityUserColor = activity.user ? getMemberColor(activity.user.name, myGroup?.members) : null;
                       return (
                         <div key={activity.id} className="flex gap-4 relative">
                           {index < activityLogs.length - 1 && (
@@ -2156,7 +2156,7 @@ export default function StudentProjectDetail({
               {/* Legend */}
               <div className="flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-widest text-[#616f89] mt-4">
                 {myGroup?.members.map((member) => {
-                  const memberColor = getMemberColor(member.name);
+                  const memberColor = getMemberColor(member.name, myGroup?.members);
                   return (
                     <div key={member.id} className="flex items-center">
                       <div 
@@ -2226,7 +2226,7 @@ export default function StudentProjectDetail({
                         type: "deliverable",
                         description: d.status === 'submitted' ? 'Submitted' : d.status,
                         status: d.status,
-                        color: d.assignedTo ? getMemberColor(d.assignedTo.name).hex : undefined,
+                        color: d.assignedTo ? getMemberColor(d.assignedTo.name, myGroup?.members).hex : undefined,
                         memberName: d.assignedTo?.name,
                         viewButton: {
                           label: 'View Deliverable',
@@ -2241,7 +2241,7 @@ export default function StudentProjectDetail({
                         type: "deliverable",
                         description: d.status === 'submitted' ? 'Submitted' : d.status,
                         status: d.status,
-                        color: d.assignedTo ? getMemberColor(d.assignedTo.name).hex : undefined,
+                        color: d.assignedTo ? getMemberColor(d.assignedTo.name, myGroup?.members).hex : undefined,
                         memberName: d.assignedTo?.name,
                         viewButton: {
                           label: 'View Deliverable',
