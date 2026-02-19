@@ -1866,7 +1866,13 @@ export default function StudentProjectDetail({
                   </div>
                 </div>
                 <div className="divide-y divide-[#e5e7eb]">
-                  {myGroup?.members.map((member) => {
+                  {myGroup?.members.sort((a, b) => {
+                    const aIsCurrentUser = a.email === session?.user?.email;
+                    const bIsCurrentUser = b.email === session?.user?.email;
+                    if (aIsCurrentUser) return -1;
+                    if (bIsCurrentUser) return 1;
+                    return 0;
+                  }).map((member) => {
                     let status = getActivityStatus(member.last_active);
                     const isCurrentUser = member.email === session?.user?.email;
                     const memberColor = getMemberColor(member.name);
