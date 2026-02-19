@@ -250,6 +250,7 @@ export default function StudentProjectDetail({
   const [isEditingGroupName, setIsEditingGroupName] = useState(false);
   const [editedGroupName, setEditedGroupName] = useState("");
   const [groupNameError, setGroupNameError] = useState<string | null>(null);
+  const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
 
   // Find the student's group
   const myGroup = previewGroupId
@@ -1858,11 +1859,14 @@ export default function StudentProjectDetail({
                 <div className="p-6 border-b border-[#e5e7eb] flex justify-between items-center">
                   <h2 className="text-lg font-bold text-[#111318]">Your Group Roster</h2>
                 </div>
-                <div className="px-6 py-2 border-b border-[#e5e7eb] bg-[#f9fafb]">
-                  <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-[#616f89]">
-                    <span>Member</span>
-                    <span className="text-center min-w-20">Deliverables</span>
-                    <span className="text-center min-w-20">Meetings</span>
+                <div className="px-6 py-3 border-b border-[#e5e7eb] bg-[#f9fafb]">
+                  <div className="grid grid-cols-[2fr_1fr_1.5fr_1fr_1fr_1fr] gap-4 text-[10px] font-bold uppercase tracking-wider text-[#616f89]">
+                    <span>Student</span>
+                    <span>Last Active</span>
+                    <span>Activity Log</span>
+                    <span className="text-center">Deliverables</span>
+                    <span className="text-center">Meetings</span>
+                    <span className="text-center">Action</span>
                   </div>
                 </div>
                 <div className="divide-y divide-[#e5e7eb]">
@@ -1877,71 +1881,192 @@ export default function StudentProjectDetail({
                     const isCurrentUser = member.email === session?.user?.email;
                     const memberColor = getMemberColor(member.name, myGroup?.members);
                     
-                    // Show "Now" for current user if they're viewing this page
                     if (isCurrentUser && status.text === "Never") {
-                      status = { text: "Now", color: "text-green-600", dot: "bg-green-500" };
+                      status = { text: "Active Now", color: "text-green-600", dot: "bg-green-500" };
                     }
                     
+                    const assignedCount = deliverables.filter(d => d.assignedTo?.email === member.email).length;
+                    const completedCount = deliverables.filter(d => d.assignedTo?.email === member.email && d.status === 'submitted').length;
+                    const deliverablePercentage = assignedCount > 0 ? (completedCount / assignedCount) * 100 : 0;
+                    
+                    const attendedMeetings = meetingNotesByUser[member.id] || 0;
+                    const meetingPercentage = totalPastMeetings > 0 ? (attendedMeetings / totalPastMeetings) * 100 : 0;
+                    
+                    const getPercentageColor = (percentage: number) => {
+                      if (percentage === 100) return "text-green-600";
+                      if (percentage >= 75) return "text-yellow-600";
+                      return "text-red-600";
+                    };
+                    
+                    const recentActivity = activityLogs
+                      .filter(log => log.user?.email === member.email)
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+                    
+                    const getActivityText = () => {
+                      if (!recentActivity) return "No activity";
+                      const action = recentActivity.actionType;
+                      if (action === "deliverable_submitted") return "Submitted";
+                      if (action === "deliverable_created") return "Created";
+                      if (action === "deliverable_updated") return "Edited";
+                      if (action === "meeting_created") return "Scheduled meeting";
+                      if (action === "link_added") return "Added link";
+                      if (action === "meeting_summary_added") return "Added meeting notes";
+                      return "Updated";
+                    };
+                    
+                    const getActivityTitle = () => {
+                      if (!recentActivity) return "";
+                      
+                      // Try to get title from metadata first
+                      if (recentActivity.metadata?.title || recentActivity.metadata?.name) {
+                        return recentActivity.metadata.title || recentActivity.metadata.name;
+                      }
+                      
+                      // For deliverable actions, look up the deliverable by entityId
+                      if (recentActivity.entityId && recentActivity.actionType?.includes('deliverable')) {
+                        const deliverable = deliverables.find(d => d.id === recentActivity.entityId);
+                        if (deliverable) return deliverable.title;
+                      }
+                      
+                      return "";
+                    };
+                    
+                    const isExpanded = expandedMemberId === member.id;
+                    const memberDeliverables = deliverables.filter(d => d.assignedTo?.email === member.email);
+                    
                     return (
-                      <div 
-                        key={member.id} 
-                        className={`px-6 py-3 grid grid-cols-[1fr_auto_auto] items-center gap-3 hover:${memberColor.bg} transition-colors`}
-                      >
-                        <div className="flex items-center gap-4 min-w-0">
-                          <div className="relative shrink-0">
-                            <Avatar
-                              name={member.name}
-                              src={member.avatar_url}
-                              size="h-10 w-10"
-                            />
-                            <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ${status.dot} border-2 border-white`} title={status.text}></div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => {
-                                  if (isCurrentUser) {
-                                    setShowAddTaskModal(true);
-                                  } else {
-                                    setChatMember({ id: member.id, name: member.name, email: member.email });
-                                  }
-                                }}
-                                title={isCurrentUser ? "Add a task" : `Message ${member.name}`}
-                                className={`text-left text-sm font-semibold ${memberColor.text} cursor-pointer focus:outline-none`}
-                              >
-                                {member.name}
-                              </button>
-                              {isCurrentUser && (
-                                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded font-medium">You</span>
-                              )}
+                      <div key={member.id}>
+                        <div className="px-6 py-4 grid grid-cols-[2fr_1fr_1.5fr_1fr_1fr_1fr] gap-4 items-center">
+                          {/* Student */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-2 h-2 rounded-full ${memberColor.dot} shrink-0`}></div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-semibold text-[#111318] truncate">
+                                  {member.name}
+                                  {isCurrentUser && <span className="text-xs font-normal text-[#616f89]"> (Me)</span>}
+                                </p>
+                              </div>
                             </div>
-                            <p className={`text-xs mt-0.5 ${status.color}`}>{status.text}</p>
                           </div>
-                        </div>
-                        {/* Deliverable counts column */}
-                        {(() => {
-                          const assignedCount = deliverables.filter(d => d.assignedTo?.email === member.email).length;
-                          const completedCount = deliverables.filter(d => d.assignedTo?.email === member.email && d.status === 'submitted').length;
-                          return (
+                          
+                          {/* Last Active */}
+                          <div>
+                            <p className={`text-sm font-medium ${status.color}`}>{status.text}</p>
+                          </div>
+                          
+                          {/* Activity Log */}
+                          <div>
+                            <p className="text-xs text-[#616f89] truncate">{getActivityText()}</p>
+                            {getActivityTitle() && (
+                              <p className="text-[10px] text-[#9ca3af] italic truncate">
+                                "{getActivityTitle()}"
+                              </p>
+                            )}
+                          </div>
+                          
+                          {/* Deliverables */}
+                          <div className="text-center">
+                            <p className="text-sm font-bold text-[#111318]">
+                              {completedCount}/{assignedCount}
+                            </p>
+                            <p className={`text-xs font-semibold ${getPercentageColor(deliverablePercentage)}`}>
+                              ({Math.round(deliverablePercentage)}%)
+                            </p>
+                          </div>
+                          
+                          {/* Meetings */}
+                          <div className="text-center">
+                            <p className="text-sm font-bold text-[#111318]">
+                              {attendedMeetings}/{totalPastMeetings}
+                            </p>
+                            <p className={`text-xs font-semibold ${getPercentageColor(meetingPercentage)}`}>
+                              ({Math.round(meetingPercentage)}%)
+                            </p>
+                          </div>
+                          
+                          {/* Action */}
+                          <div className="text-center">
                             <button
                               onClick={() => {
-                                setSelectedMember(member);
-                                setShowMemberDeliverables(true);
+                                setExpandedMemberId(isExpanded ? null : member.id);
                               }}
-                              title={`View ${member.name}'s deliverables (${completedCount}/${assignedCount} complete)`}
-                              className="text-sm text-[#111318] hover:bg-[#f9fafb] px-3 py-1 rounded-lg border border-[#e5e7eb] transition-colors text-center min-w-20"
+                              className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                                isExpanded
+                                  ? `bg-red-600 text-white hover:bg-red-700`
+                                  : `border-2 ${memberColor.text} border-current hover:shadow-md hover:scale-105`
+                              }`}
                             >
-                              <span className="font-medium">{completedCount}</span>
-                              <span className="text-xs text-[#616f89] ml-1">/</span>
-                              <span className="text-xs text-[#616f89] ml-1">{assignedCount}</span>
+                              {isExpanded ? (
+                                <span className="flex items-center gap-1">
+                                  Hide Activity
+                                  <span className="material-symbols-outlined text-xs">expand_less</span>
+                                </span>
+                              ) : (
+                                "Activity"
+                              )}
                             </button>
-                          );
-                        })()}
-                        <div className="text-sm text-[#111318] px-3 py-1 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] text-center min-w-20">
-                          <span className="font-medium">{meetingNotesByUser[member.id] || 0}</span>
-                          <span className="text-xs text-[#616f89] ml-1">/</span>
-                          <span className="text-xs text-[#616f89] ml-1">{totalPastMeetings}</span>
+                          </div>
                         </div>
+                        
+                        {/* Expanded Activity Section */}
+                        {isExpanded && (
+                          <div className="bg-[#f9fafb] border-t border-[#e5e7eb]">
+                            <div className="px-6 py-4">
+                              <div className="flex items-center gap-2 mb-4">
+                                <div className={`w-2 h-2 rounded-full ${memberColor.dot}`}></div>
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-[#616f89]">
+                                  Recent Contributions: {member.name}
+                                </h4>
+                              </div>
+                              {memberDeliverables.length === 0 ? (
+                                <p className="text-sm text-[#616f89] pl-4">No deliverables assigned yet</p>
+                              ) : (
+                                <div className="space-y-3 border-l-2 border-[#e5e7eb] pl-6">
+                                  {memberDeliverables.map((deliverable) => {
+                                    const getStatusDisplay = () => {
+                                      if (deliverable.status === 'submitted') {
+                                        return {
+                                          text: deliverable.submittedAt 
+                                            ? `Completed: ${new Date(deliverable.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                                            : 'Completed',
+                                          color: 'text-green-600'
+                                        };
+                                      }
+                                      if (deliverable.status === 'in-progress') {
+                                        return { text: 'In Progress', color: 'text-blue-600' };
+                                      }
+                                      return { text: 'Not Started', color: 'text-[#616f89]' };
+                                    };
+                                    
+                                    const statusDisplay = getStatusDisplay();
+                                    
+                                    return (
+                                      <div key={deliverable.id} className="flex items-start justify-between group">
+                                        <div className="flex items-start gap-3 flex-1">
+                                          <div className={`w-2 h-2 rounded-full ${memberColor.dot} mt-1.5 shrink-0`}></div>
+                                          <div className="flex-1">
+                                            <p className="text-sm font-bold text-[#111318]">{deliverable.title}</p>
+                                            <p className={`text-xs ${statusDisplay.color} italic`}>
+                                              {statusDisplay.text}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <button
+                                          onClick={() => setViewDeliverableId(deliverable.id)}
+                                          className="text-red-600 hover:text-red-700 text-xs font-bold flex items-center gap-1 transition-opacity"
+                                        >
+                                          View
+                                          <span className="material-symbols-outlined text-sm">open_in_new</span>
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
