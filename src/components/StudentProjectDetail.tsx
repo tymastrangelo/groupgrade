@@ -249,6 +249,7 @@ export default function StudentProjectDetail({
   const [memberReturn, setMemberReturn] = useState<{ id: string; name: string; email: string; avatar_url?: string | null } | null>(null);
   const [isEditingGroupName, setIsEditingGroupName] = useState(false);
   const [editedGroupName, setEditedGroupName] = useState("");
+  const [groupNameError, setGroupNameError] = useState<string | null>(null);
 
   // Find the student's group
   const myGroup = previewGroupId
@@ -1407,6 +1408,7 @@ export default function StudentProjectDetail({
                         onKeyDown={async (e) => {
                           if (e.key === "Enter") {
                             const finalName = editedGroupName.trim() || myGroup?.name || "Group";
+                            setGroupNameError(null);
                             try {
                               const res = await fetch(`/api/groups/${myGroup?.id}/name`, {
                                 method: "PATCH",
@@ -1418,11 +1420,15 @@ export default function StudentProjectDetail({
                                   ...prev,
                                   groups: prev.groups.map((g) => g.id === myGroup?.id ? { ...g, name: finalName } : g)
                                 } : null);
+                                setIsEditingGroupName(false);
+                              } else {
+                                const data = await res.json();
+                                setGroupNameError(data.error || "Failed to update group name");
                               }
                             } catch (err) {
                               console.error("Failed to update group name", err);
+                              setGroupNameError("Failed to update group name");
                             }
-                            setIsEditingGroupName(false);
                           }
                         }}
                         className="text-2xl font-bold text-[#111318] border-b-2 border-primary focus:outline-none bg-transparent"
@@ -1431,6 +1437,7 @@ export default function StudentProjectDetail({
                       <button
                         onClick={async () => {
                           const finalName = editedGroupName.trim() || myGroup?.name || "Group";
+                          setGroupNameError(null);
                           try {
                             const res = await fetch(`/api/groups/${myGroup?.id}/name`, {
                               method: "PATCH",
@@ -1442,11 +1449,15 @@ export default function StudentProjectDetail({
                                 ...prev,
                                 groups: prev.groups.map((g) => g.id === myGroup?.id ? { ...g, name: finalName } : g)
                               } : null);
+                              setIsEditingGroupName(false);
+                            } else {
+                              const data = await res.json();
+                              setGroupNameError(data.error || "Failed to update group name");
                             }
                           } catch (err) {
                             console.error("Failed to update group name", err);
+                            setGroupNameError("Failed to update group name");
                           }
-                          setIsEditingGroupName(false);
                         }}
                         className="text-primary hover:text-blue-700 transition-colors"
                       >
@@ -1469,6 +1480,9 @@ export default function StudentProjectDetail({
                     </>
                   )}
                 </div>
+                {groupNameError && (
+                  <p className="text-sm text-red-600 mt-1">{groupNameError}</p>
+                )}
                 <div className="flex items-center gap-2 text-[#616f89] text-sm">
                   <span className="material-symbols-outlined text-sm">event</span>
                   Due: {formatDateTime(project?.due_date)}

@@ -643,11 +643,17 @@ export function TeacherClassDetail({
                     <input
                       className="text-sm font-semibold bg-transparent border-b border-dashed border-[#e5e7eb] focus:outline-none"
                       value={g.name}
-                      onChange={(e) =>
-                        setManualGroups((prev) =>
-                          prev.map((grp) => (grp.id === g.id ? { ...grp, name: e.target.value || `Group ${idx + 1}` } : grp))
-                        )
-                      }
+                      onChange={(e) => {
+                        const newName = e.target.value || `Group ${idx + 1}`;
+                        const isDuplicate = manualGroups.some(
+                          (grp) => grp.id !== g.id && grp.name.toLowerCase() === newName.toLowerCase()
+                        );
+                        if (!isDuplicate) {
+                          setManualGroups((prev) =>
+                            prev.map((grp) => (grp.id === g.id ? { ...grp, name: newName } : grp))
+                          );
+                        }
+                      }}
                     />
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-[#616f89]">{g.member_ids.length} members</span>

@@ -44,6 +44,30 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: 'Not a member of this group' }, { status: 403 });
     }
 
+    const { data: currentGroup } = await supabase
+      .from('groups')
+      .select('project_id')
+      .eq('id', groupId)
+      .single();
+
+    if (!currentGroup) {
+      return NextResponse.json({ error: 'Group not found' }, { status: 404 });
+    }
+
+    const { data: allGroups } = await supabase
+      .from('groups')
+      .select('id, name')
+      .eq('project_id', currentGroup.project_id)
+      .neq('id', groupId);
+
+    const duplicateExists = (allGroups || []).some(
+      (g) => g.name.toLowerCase() === name.trim().toLowerCase()
+    );
+
+    if (duplicateExists) {
+      return NextResponse.json({ error: 'A group with this name already exists in this project' }, { status: 400 });
+    }
+
     const { error: updateError } = await supabase
       .from('groups')
       .update({ name: name.trim() })
