@@ -1948,6 +1948,10 @@ export default function StudentProjectDetail({
                 </div>
               </div>
 
+            </div>
+
+            {/* Right Column */}
+            <div className="lg:col-span-1 space-y-8">
               {/* Group Activity */}
               <div className="bg-white rounded-xl border border-[#e5e7eb] shadow-sm p-6">
                 <h3 className="text-lg font-bold text-[#111318] mb-6 flex items-center">
@@ -2035,113 +2039,6 @@ export default function StudentProjectDetail({
                   </button>
                 )}
               </div>
-            </div>
-
-            {/* Right Column */}
-            <div className="lg:col-span-1 space-y-8">
-              {/* Your Contribution */}
-              <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-[#111318] mb-4">Your Contribution</h2>
-                {(() => {
-                  // Calculate user's stats
-                  const myDeliverables = deliverables.filter(d => d.assignedTo?.email === session?.user?.email);
-                  const mySubmitted = myDeliverables.filter(d => d.status === "submitted").length;
-                  const myInProgress = myDeliverables.filter(d => d.status === "in-progress").length;
-                  const myTotal = myDeliverables.length;
-
-                  // Calculate group stats
-                  const totalSubmitted = deliverables.filter(d => d.status === "submitted").length;
-                  const totalDeliverables = deliverables.length;
-
-                  if (totalDeliverables === 0) {
-                    return (
-                      <p className="text-sm text-[#616f89]">
-                        No deliverables yet. Create deliverables to track contributions.
-                      </p>
-                    );
-                  }
-
-                  return (
-                    <div className="space-y-4">
-                      {/* Stats grid */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="bg-[#f9fafb] rounded-lg p-3 text-center border border-[#e5e7eb]">
-                          <p className="text-xl font-bold text-[#111318]">{myTotal}</p>
-                          <p className="text-[9px] text-[#616f89] uppercase tracking-wider">Assigned</p>
-                        </div>
-                        <div className="bg-blue-50 rounded-lg p-3 text-center border border-blue-100">
-                          <p className="text-xl font-bold text-blue-600">{myInProgress}</p>
-                          <p className="text-[9px] text-blue-600 uppercase tracking-wider">In Progress</p>
-                        </div>
-                        <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-100">
-                          <p className="text-xl font-bold text-emerald-600">{mySubmitted}</p>
-                          <p className="text-[9px] text-emerald-600 uppercase tracking-wider">Submitted</p>
-                        </div>
-                      </div>
-
-                      {/* Group progress */}
-                      <div className="pt-2 border-t border-[#e5e7eb]">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-[#616f89]">Group Progress</span>
-                          <span className="text-xs font-bold text-[#111318]">{totalSubmitted}/{totalDeliverables}</span>
-                        </div>
-                        <div className="w-full h-1.5 bg-[#e5e7eb] rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-emerald-500 transition-all"
-                            style={{ width: totalDeliverables > 0 ? `${(totalSubmitted / totalDeliverables) * 100}%` : '0%' }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Recent Work Proof */}
-              <div className="bg-white rounded-xl border border-[#e5e7eb] p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-[#111318] mb-4">Recent Work Proof</h2>
-                <div className="space-y-2">
-                  {(() => {
-                    // Filter to show only the current user's submitted deliverables
-                    const mySubmissions = deliverables
-                      .filter(d => d.assignedTo?.email === session?.user?.email && d.status === "submitted")
-                      .sort((a, b) => {
-                        if (!a.submittedAt) return 1;
-                        if (!b.submittedAt) return -1;
-                        return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
-                      })
-                      .slice(0, 5); // Show up to 5 recent submissions
-
-                    if (mySubmissions.length === 0) {
-                      return (
-                        <p className="text-xs text-[#616f89] py-2">
-                          No submissions yet. Submit your first deliverable to see it here.
-                        </p>
-                      );
-                    }
-
-                    return mySubmissions.map((submission) => (
-                      <button
-                        key={submission.id}
-                        onClick={() => viewDeliverableDetails(submission.id)}
-                        className="w-full flex items-center gap-3 p-3 rounded-lg border border-[#e5e7eb] hover:bg-[#f9fafb] transition text-left"
-                      >
-                        <span className="material-symbols-outlined text-emerald-600">task_alt</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-[#111318] truncate">{submission.title}</p>
-                          <p className="text-[9px] text-[#616f89]">
-                            {submission.submittedAt ? formatActivityDate(submission.submittedAt) : "Submitted"}
-                          </p>
-                        </div>
-                        {submission.submissionUrl && (
-                          <span className="material-symbols-outlined text-[#616f89] text-sm">link</span>
-                        )}
-                      </button>
-                    ));
-                  })()}
-                </div>
-              </div>
-
             </div>
           </div>
 
