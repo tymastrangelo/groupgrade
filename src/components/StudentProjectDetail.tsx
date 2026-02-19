@@ -251,6 +251,7 @@ export default function StudentProjectDetail({
   const [editedGroupName, setEditedGroupName] = useState("");
   const [groupNameError, setGroupNameError] = useState<string | null>(null);
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
+  const [activityFilter, setActivityFilter] = useState<string>("all");
 
   // Find the student's group
   const myGroup = previewGroupId
@@ -1851,7 +1852,7 @@ export default function StudentProjectDetail({
           </section>
 
           {/* Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Left Column */}
             <div className="lg:col-span-2 space-y-8">
               {/* Group Roster */}
@@ -2078,90 +2079,109 @@ export default function StudentProjectDetail({
             {/* Right Column */}
             <div className="lg:col-span-1 space-y-8">
               {/* Group Activity */}
-              <div className="bg-white rounded-xl border border-[#e5e7eb] shadow-sm p-6">
-                <h3 className="text-lg font-bold text-[#111318] mb-6 flex items-center">
-                  <span className="material-symbols-outlined mr-2 text-primary">history</span>
-                  Group Activity
-                </h3>
+              <div className="bg-white rounded-xl border border-[#e5e7eb] shadow-sm overflow-hidden flex flex-col h-full">
+                <div className="p-6 pb-4 border-b border-[#e5e7eb]">
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="text-lg font-bold text-[#111318] flex items-center whitespace-nowrap">
+                    <span className="material-symbols-outlined mr-2 text-red-600">schedule</span>
+                    Group Activity
+                  </h2>
+                  <select
+                    value={activityFilter}
+                    onChange={(e) => setActivityFilter(e.target.value)}
+                    className="text-xs font-medium text-[#616f89] bg-[#f9fafb] border border-[#e5e7eb] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/20 flex-shrink-0"
+                  >
+                    <option value="all">All Students</option>
+                    {myGroup?.members.map((member) => (
+                      <option key={member.id} value={member.email}>
+                        {member.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                </div>
+                <div className="flex-1 overflow-y-auto px-6 py-4">
                 <div className="space-y-6">
-                  {activityLogs.length === 0 ? (
-                    <p className="text-sm text-[#616f89]">No recent activity</p>
-                  ) : (
-                    activityLogs.map((activity, index) => {
+                  {(() => {
+                    const filteredLogs = activityFilter === "all" 
+                      ? activityLogs 
+                      : activityLogs.filter(log => log.user?.email === activityFilter);
+                    
+                    if (filteredLogs.length === 0) {
+                      return <p className="text-sm text-[#616f89]">No recent activity</p>;
+                    }
+                    
+                    return filteredLogs.map((activity) => {
                       const message = getActivityMessage(activity);
                       const activityUserColor = activity.user ? getMemberColor(activity.user.name, myGroup?.members) : null;
+                      
+                      const getActionText = () => {
+                        const action = activity.actionType;
+                        if (action === "deliverable_submitted") return "submitted";
+                        if (action === "deliverable_created") return "created";
+                        if (action === "deliverable_updated") return "edited";
+                        if (action === "meeting_created") return "scheduled";
+                        if (action === "link_added") return "uploaded";
+                        if (action === "meeting_summary_added") return "completed";
+                        return "updated";
+                      };
+                      
                       return (
-                        <div key={activity.id} className="flex gap-4 relative">
-                          {index < activityLogs.length - 1 && (
-                            <div className="absolute left-3.75 top-8 -bottom-6 w-px bg-[#e5e7eb]"></div>
-                          )}
+                        <div key={activity.id} className="flex gap-3 items-start">
                           {activity.user?.avatar_url ? (
                             <Avatar
                               name={activity.user?.name || "Unknown"}
                               src={activity.user?.avatar_url}
-                              size="h-8 w-8"
+                              size="h-10 w-10"
                             />
-                          ) : activityUserColor ? (
-                            <div className={`h-8 w-8 rounded-full ${activityUserColor.bg} flex items-center justify-center font-bold text-xs ${activityUserColor.text} shrink-0 z-10`}>
+                          ) : (
+                            <div 
+                              className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm text-white shrink-0"
+                              style={{ backgroundColor: activityUserColor?.hex || '#6b7280' }}
+                            >
                               {(activity.user?.name || "?").split(" ").map((n: string) => n.charAt(0)).join("").toUpperCase()}
                             </div>
-                          ) : (
-                            <Avatar
-                              name={activity.user?.name || "Unknown"}
-                              src={activity.user?.avatar_url}
-                              size="h-8 w-8"
-                            />
                           )}
-                          <div>
-                            <p className="text-sm font-medium">
-                              <button
-                                onClick={() => {
-                                  if (activity.user && activity.user.email) {
-                                    setSelectedMember(activity.user);
-                                    setShowMemberDeliverables(true);
-                                  }
-                                }}
-                                className={activityUserColor ? `${activityUserColor.text} font-semibold cursor-pointer focus:outline-none` : "text-[#111318] cursor-pointer focus:outline-none"}
-                                title={`View ${activity.user?.name || 'User'}'s deliverables`}
-                              >
-                                {activity.user?.name || "Unknown"}
-                              </button>{" "}
-                              <span className="text-[#616f89] font-normal">{message.action}</span>{" "}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm leading-relaxed">
+                              <span className="font-semibold text-[#111318]">{activity.user?.name || "Unknown"} </span>
+                              <span className="text-[#616f89]">{getActionText()} </span>
                               {activity.entityId ? (
                                 <button
                                   onClick={() => {
-                                    if (activity.entityId && activity.actionType) {
-                                      if (activity.actionType.startsWith('deliverable')) {
-                                        setViewDeliverableId(activity.entityId);
-                                      }
-                                      if (activity.actionType === 'meeting_created') {
-                                        setViewMeetingId(activity.entityId);
-                                      }
+                                    if (activity.actionType?.startsWith('deliverable')) {
+                                      setViewDeliverableId(activity.entityId);
+                                    }
+                                    if (activity.actionType === 'meeting_created') {
+                                      setViewMeetingId(activity.entityId);
                                     }
                                   }}
-                                  className="text-primary font-semibold cursor-pointer focus:outline-none"
-                                  title={message.title}
+                                  className="font-semibold italic cursor-pointer focus:outline-none"
+                                  style={{ color: activityUserColor?.hex || '#0066cc' }}
                                 >
                                   {message.title}
                                 </button>
                               ) : (
-                                <span className="text-primary font-semibold">{message.title}</span>
+                                <span className="font-semibold italic" style={{ color: activityUserColor?.hex || '#0066cc' }}>{message.title}</span>
                               )}
                             </p>
-                            <p className="text-xs text-[#616f89] mt-0.5">{formatActivityDate(activity.createdAt)}</p>
+                            <p className="text-xs text-[#9ca3af] uppercase tracking-wide mt-1.5">{formatActivityDate(activity.createdAt)}</p>
                           </div>
                         </div>
                       );
-                    })
-                  )}
+                    });
+                  })()}
+                </div>
                 </div>
                 {activityLogs.length > 0 && (
-                  <button
-                    onClick={() => setShowAllActivities(!showAllActivities)}
-                    className="w-full mt-8 py-2 text-[10px] font-bold text-[#616f89] bg-[#f9fafb] hover:bg-[#e5e7eb] rounded-lg transition-all tracking-widest uppercase"
-                  >
-                    {showAllActivities ? "Show Less" : "View All Activity"}
-                  </button>
+                  <div className="px-6 py-8 border-t border-[#e5e7eb]">
+                    <button
+                      onClick={() => setShowAllActivities(!showAllActivities)}
+                      className="w-full py-2.5 text-xs font-bold text-[#616f89] bg-white border border-[#e5e7eb] hover:bg-[#f9fafb] rounded-lg transition-all tracking-widest uppercase"
+                    >
+                      {showAllActivities ? "View Comprehensive History" : "View Comprehensive History"}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
