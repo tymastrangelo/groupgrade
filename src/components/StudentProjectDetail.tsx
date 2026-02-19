@@ -2024,7 +2024,7 @@ export default function StudentProjectDetail({
                                 <p className="text-sm text-[#616f89] pl-4">No deliverables assigned yet</p>
                               ) : (
                                 <div className="space-y-3 border-l-2 border-[#e5e7eb] pl-6">
-                                  {memberDeliverables.map((deliverable) => {
+                                  {memberDeliverables.slice(0, 3).map((deliverable) => {
                                     const getStatusDisplay = () => {
                                       if (deliverable.status === 'submitted') {
                                         return {
