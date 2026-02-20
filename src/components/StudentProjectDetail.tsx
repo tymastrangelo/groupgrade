@@ -1468,7 +1468,7 @@ export default function StudentProjectDetail({
                     </div>
                   ) : (
                     <>
-                      <h1 className="text-2xl font-bold text-[#111318]">{myGroup?.name || "Group"} Progress</h1>
+                      <h1 className="text-2xl font-bold text-[#111318]">{myGroup?.name || "Group"}</h1>
                       <button
                         onClick={() => {
                           setEditedGroupName(myGroup?.name || "Group");
