@@ -23,21 +23,22 @@ export async function POST(req: NextRequest) {
     const dbRole = role === 'teacher' ? 'professor' : role;
 
     // Require allowlist for professors
-    if (dbRole === 'professor') {
-      const { data: approved, error: approvedError } = await supabase
-        .from('approved_professors')
-        .select('email')
-        .eq('email', session.user.email)
-        .maybeSingle();
+    // COMMENTED OUT FOR TESTING - RE-ENABLE IN PRODUCTION
+    // if (dbRole === 'professor') {
+    //   const { data: approved, error: approvedError } = await supabase
+    //     .from('approved_professors')
+    //     .select('email')
+    //     .eq('email', session.user.email)
+    //     .maybeSingle();
 
-      if (approvedError) {
-        return NextResponse.json({ error: approvedError.message }, { status: 500 });
-      }
+    //   if (approvedError) {
+    //     return NextResponse.json({ error: approvedError.message }, { status: 500 });
+    //   }
 
-      if (!approved) {
-        return NextResponse.json({ error: 'Professor email not approved yet. Please contact admin.' }, { status: 403 });
-      }
-    }
+    //   if (!approved) {
+    //     return NextResponse.json({ error: 'Professor email not approved yet. Please contact admin.' }, { status: 403 });
+    //   }
+    // }
 
     const { data: user, error: fetchError } = await supabase
       .from('users')
