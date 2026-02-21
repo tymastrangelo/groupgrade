@@ -2121,6 +2121,7 @@ export default function StudentProjectDetail({
                         if (action === "deliverable_created") return "created";
                         if (action === "deliverable_updated") return "edited";
                         if (action === "meeting_created") return "scheduled";
+                        if (action === "meeting_concluded") return "concluded";
                         if (action === "link_added") return "uploaded";
                         if (action === "meeting_summary_added") return "completed";
                         return "updated";
@@ -2152,7 +2153,7 @@ export default function StudentProjectDetail({
                                     if (activity.actionType?.startsWith('deliverable')) {
                                       setViewDeliverableId(activity.entityId);
                                     }
-                                    if (activity.actionType === 'meeting_created') {
+                                    if (activity.actionType === 'meeting_created' || activity.actionType === 'meeting_concluded') {
                                       setViewMeetingId(activity.entityId);
                                     }
                                   }}

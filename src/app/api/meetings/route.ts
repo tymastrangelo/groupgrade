@@ -44,6 +44,22 @@ export async function GET(request: NextRequest) {
           // mark concluded
           await supabase.from("group_meetings").update({ status: "concluded" }).eq("id", m.id);
 
+          // Log activity for meeting conclusion
+          if (m.created_by && groupInfo?.project_id) {
+            try {
+              await supabase.from("activity_logs").insert({
+                group_id: groupId,
+                project_id: groupInfo.project_id,
+                user_id: m.created_by,
+                action_type: "meeting_concluded",
+                entity_id: m.id,
+                entity_title: m.title
+              });
+            } catch (logError) {
+              console.error("Failed to log meeting conclusion:", logError);
+            }
+          }
+
           // fetch group members
           const { data: members } = await supabase.from("group_members").select("user_id").eq("group_id", groupId);
           if (members && members.length > 0) {
