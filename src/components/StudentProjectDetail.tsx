@@ -2267,6 +2267,9 @@ export default function StudentProjectDetail({
                         type: "deliverable",
                         description: d.status === 'submitted' ? 'Submitted' : d.status,
                         status: d.status,
+                        assignedTo: d.assignedTo?.name,
+                        pendingTransferFrom: d.status === 'pending' && d.assignedTo ? d.assignedTo.name : undefined,
+                        pendingTransferTo: d.status === 'pending' && d.pendingAssignee ? d.pendingAssignee.name : undefined,
                         color: d.assignedTo ? getMemberColor(d.assignedTo.name, myGroup?.members).hex : undefined,
                         memberName: d.assignedTo?.name,
                         viewButton: {
@@ -2282,6 +2285,9 @@ export default function StudentProjectDetail({
                         type: "deliverable",
                         description: d.status === 'submitted' ? 'Submitted' : d.status,
                         status: d.status,
+                        assignedTo: d.assignedTo?.name,
+                        pendingTransferFrom: d.status === 'pending' && d.assignedTo ? d.assignedTo.name : undefined,
+                        pendingTransferTo: d.status === 'pending' && d.pendingAssignee ? d.pendingAssignee.name : undefined,
                         color: d.assignedTo ? getMemberColor(d.assignedTo.name, myGroup?.members).hex : undefined,
                         memberName: d.assignedTo?.name,
                         viewButton: {
@@ -2317,6 +2323,7 @@ export default function StudentProjectDetail({
                 })()}
                 projectStartDate={project?.created_at ? new Date(project.created_at).toISOString().split("T")[0] : undefined}
                 projectDueDate={project?.due_date ? new Date(project.due_date).toISOString().split("T")[0] : undefined}
+                members={myGroup?.members || []}
               />
             </div>
           </section>

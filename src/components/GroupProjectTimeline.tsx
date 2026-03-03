@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { getMemberColor } from "@/components/GroupMemberColors";
 
 export interface TimelineEvent {
@@ -12,6 +12,9 @@ export interface TimelineEvent {
   type: "member-update" | "meeting" | "deliverable" | "milestone";
   memberName?: string;
   color?: string;
+  assignedTo?: string;
+  pendingTransferFrom?: string;
+  pendingTransferTo?: string;
   viewButton?: {
     label: string;
     onClick: () => void;
@@ -23,6 +26,7 @@ interface GroupProjectTimelineProps {
   projectStartDate?: string;
   projectDueDate?: string;
   today?: string;
+  members?: Array<{ name: string; email: string; id: string }>;
 }
 
 export function GroupProjectTimeline({
@@ -30,7 +34,10 @@ export function GroupProjectTimeline({
   projectStartDate,
   projectDueDate,
   today = new Date().toISOString().split("T")[0],
+  members = [],
 }: GroupProjectTimelineProps) {
+  const [selectedFilters, setSelectedFilters] = useState<string[]>(['all']);
+  
   const parseDate = (dateStr: string) => new Date(dateStr);
   const startDate = projectStartDate ? parseDate(projectStartDate) : null;
   const dueDate = projectDueDate ? parseDate(projectDueDate) : null;
@@ -84,37 +91,103 @@ export function GroupProjectTimeline({
     return type.split('-').join(' ');
   };
 
+  const toggleFilter = (filter: string) => {
+    if (filter === 'all') {
+      setSelectedFilters(['all']);
+    } else if (filter === 'meetings') {
+      setSelectedFilters(prev => {
+        const withoutAll = prev.filter(f => f !== 'all');
+        if (withoutAll.includes('meetings')) {
+          const result = withoutAll.filter(f => f !== 'meetings');
+          return result.length === 0 ? ['all'] : result;
+        }
+        return [...withoutAll, 'meetings'];
+      });
+    } else {
+      // Student filter
+      setSelectedFilters(prev => {
+        const withoutAll = prev.filter(f => f !== 'all');
+        if (withoutAll.includes(filter)) {
+          const result = withoutAll.filter(f => f !== filter);
+          return result.length === 0 ? ['all'] : result;
+        }
+        return [...withoutAll, filter];
+      });
+    }
+  };
+
+  const filteredEvents = sortedEvents.filter(event => {
+    if (selectedFilters.includes('all')) return true;
+    
+    if (selectedFilters.includes('meetings') && event.type === 'meeting') return true;
+    
+    const memberMatch = selectedFilters.some(filter => {
+      if (filter === 'meetings' || filter === 'all') return false;
+      return event.memberName === filter || event.assignedTo === filter;
+    });
+    
+    return memberMatch;
+  });
+
   return (
     <div className="w-full">
-      <div className="relative w-full py-12">
-        <div className="absolute top-1/2 left-0 right-0 h-1.5 bg-slate-100 dark:bg-zinc-800 transform -translate-y-1/2 rounded-full overflow-hidden">
-          <div
-            className="h-full transition-all duration-300"
-            style={{ 
-              width: `${todayPosition}%`,
-              background: `linear-gradient(90deg, #2563eb 0%, #3b82f6 100%)`
-            }}
-          />
-        </div>
+      {/* Filter Buttons */}
+      <div className="flex items-center gap-2 mb-8 flex-wrap">
+        <button
+          onClick={() => toggleFilter('all')}
+          className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all ${
+            selectedFilters.includes('all')
+              ? 'bg-[#8b1f1f] text-white'
+              : 'bg-white text-[#616f89] border border-[#e5e7eb] hover:bg-[#f9fafb]'
+          }`}
+        >
+          All Students
+        </button>
+        <button
+          onClick={() => toggleFilter('meetings')}
+          className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all ${
+            selectedFilters.includes('meetings')
+              ? 'bg-[#616f89] text-white'
+              : 'bg-white text-[#616f89] border border-[#e5e7eb] hover:bg-[#f9fafb]'
+          }`}
+        >
+          Meetings
+        </button>
+        {members.map(member => {
+          const memberColor = getMemberColor(member.name, members);
+          const isSelected = selectedFilters.includes(member.name);
+          return (
+            <button
+              key={member.id}
+              onClick={() => toggleFilter(member.name)}
+              className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-all`}
+              style={{
+                backgroundColor: isSelected ? memberColor.hex : 'white',
+                color: isSelected ? 'white' : '#616f89',
+                border: isSelected ? 'none' : '1px solid #e5e7eb',
+              }}
+            >
+              {getFirstName(member.name)}
+            </button>
+          );
+        })}
+      </div>
 
-        {startDate && (
-          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 z-5">
-            <div className="w-3 h-3 rounded-full bg-slate-300 dark:bg-zinc-700" />
-          </div>
-        )}
+      <div className="relative w-full py-12">
+        <div className="absolute top-1/2 left-0 right-0 h-1 bg-[#8b1f1f] transform -translate-y-1/2"></div>
+
 
         <div
-          className="absolute top-0 bottom-0 flex flex-col items-center pointer-events-none z-10"
-          style={{ left: `${todayPosition}%` }}
+          className="absolute flex flex-col items-center pointer-events-none z-40"
+          style={{ left: `${todayPosition}%`, top: '0', height: '50%' }}
         >
-          <div className="h-full w-px bg-primary border-r border-dashed border-primary" />
-          <div className="absolute -top-6 bg-primary text-white px-2 py-0.5 rounded text-[10px] font-bold shadow-sm whitespace-nowrap">
+          <div className="absolute -top-8 bg-[#8b1f1f] text-white px-3 py-1 rounded text-[10px] font-bold shadow-sm whitespace-nowrap">
             TODAY
           </div>
+          <div className="w-0.5 bg-[#8b1f1f] mt-6" style={{ height: 'calc(100% - 24px)' }} />
         </div>
 
         {dueDate && (
-          // If a final event is represented at the due date, make the flag clickable and keyboard-accessible
           <div
             className={`absolute right-0 top-1/2 transform -translate-y-1/2 flex flex-col items-center z-10 ${finalEventAtDue && finalEventAtDue.viewButton ? 'cursor-pointer' : ''}`}
             onClick={(e) => {
@@ -133,89 +206,121 @@ export function GroupProjectTimeline({
             tabIndex={finalEventAtDue?.viewButton ? 0 : -1}
           >
             <div className="relative flex flex-col items-center">
-              <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center ring-4 ring-primary/20 shadow-lg">
-                <span className="material-symbols-outlined text-white text-base">flag</span>
+              <div className="w-6 h-6 rounded-full bg-[#8b1f1f] flex items-center justify-center shadow-lg">
+                <span className="material-symbols-outlined text-white text-sm">flag</span>
               </div>
               <div className="absolute top-10 right-0 whitespace-nowrap text-right">
-                <span className="text-[10px] font-bold text-primary block uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-[#8b1f1f] block uppercase tracking-widest">
                   {dueDate.toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
-                  })}
+                  })} Deadline
                 </span>
-                <span className="text-[9px] text-slate-500">{finalEventAtDue ? `Final: ${finalEventAtDue.title.replace('[FINAL] ', '')}` : 'Deadline'}</span>
               </div>
             </div>
           </div>
         )}
 
-        {sortedEvents.map((event) => {
+        {filteredEvents.map((event, index) => {
           const isFinal = typeof event.title === 'string' && event.title.startsWith('[FINAL]');
-          // Always skip rendering per-event markers for final deliverables; they are represented by the deadline flag
           if (isFinal) return null;
-          // If this final event is represented by the project due-date flag, skip rendering a separate marker
           if (finalEventAtDue && event.id === finalEventAtDue.id) return null;
+          
           const position = calculatePosition(event.date);
-          const eventColor = event.color || (event.memberName ? getMemberColor(event.memberName).hex : "#8b5cf6");
-          const isPast = isEventInPast(event.date);
           const isMeeting = event.type === "meeting";
-          const displayName = isMeeting ? "Meeting" : (event.memberName ? getFirstName(event.memberName) : formatEventType(event.type));
           const isPending = event.status === 'pending';
+          const isSubmitted = event.status === 'submitted';
+          
+          const assignedMember = event.assignedTo || event.memberName;
+          const eventColor = assignedMember ? getMemberColor(assignedMember, members).hex : "#6b7280";
+          
+          const transferFromColor = event.pendingTransferFrom ? getMemberColor(event.pendingTransferFrom, members).hex : "#9ca3af";
+          const transferToColor = event.pendingTransferTo ? getMemberColor(event.pendingTransferTo, members).hex : "#6b7280";
+
+          // Calculate label offset to prevent overlap with better staggering
+          let labelOffset = 32; // Default top offset in pixels
+          
+          // Check proximity to previous events and stagger more aggressively
+          let stackLevel = 0;
+          for (let i = Math.max(0, index - 3); i < index; i++) {
+            const prevPosition = calculatePosition(filteredEvents[i].date);
+            const positionDiff = Math.abs(position - prevPosition);
+            // If events are within 8% of each other, increase stack level
+            if (positionDiff < 8) {
+              stackLevel++;
+            }
+          }
+          
+          // Apply staggering based on stack level
+          const offsets = [32, 48, 64, 80];
+          labelOffset = offsets[Math.min(stackLevel, offsets.length - 1)];
 
           return (
             <div
               key={event.id}
-              className={`timeline-group absolute top-1/2 transform -translate-y-1/2 cursor-pointer ${isPast ? "historical-glow" : ""}`}
-              style={{ left: `${position}%`, color: eventColor, zIndex: 30 }}
+              className="absolute top-1/2 transform -translate-y-1/2 cursor-pointer group"
+              style={{ left: `${position}%`, zIndex: 30 }}
               onClick={(e) => {
                 e.stopPropagation();
                 event.viewButton?.onClick();
               }}
+              title={isPending && event.pendingTransferFrom && event.pendingTransferTo ? 
+                `Transfer from ${event.pendingTransferFrom} to ${event.pendingTransferTo}` : 
+                undefined
+              }
             >
-                <div className="relative flex flex-col items-center transform -translate-x-1/2 transition-all duration-300">
-                <div
-                  className={`timeline-marker ${isFinal ? "w-5 h-5" : (isMeeting ? "w-3.5 h-3.5" : "w-4 h-4")} rounded-full shadow-md transition-all duration-300 hover:scale-125 relative z-50`}
-                  style={isPending ? {
-                    background: 'transparent',
-                    border: '2px dashed #f59e0b',
-                    width: isFinal ? 40 : (isMeeting ? 14 : 16),
-                    height: isFinal ? 40 : (isMeeting ? 14 : 16),
-                    borderRadius: '9999px'
-                  } : { backgroundColor: isFinal ? '#ef4444' : (isMeeting ? '#6b7280' : eventColor), boxShadow: '0 2px 6px rgba(0,0,0,0.06)'}}
-                >
-                  {isFinal && (
-                    <span className="material-symbols-outlined text-white text-sm">flag</span>
-                  )}
-                </div>
+              <div className="relative flex flex-col items-center transform -translate-x-1/2 transition-all duration-200">
+                {isPending && event.pendingTransferFrom && event.pendingTransferTo ? (
+                  <div className="relative w-5 h-5">
+                    <div 
+                      className="absolute inset-0 rounded-full border-[3px] border-dashed"
+                      style={{ borderColor: transferFromColor }}
+                    ></div>
+                    <div 
+                      className="absolute inset-1 rounded-full border-[1.5px] border-dashed"
+                      style={{ borderColor: transferToColor }}
+                    ></div>
+                  </div>
+                ) : (
+                  <div
+                    className={`rounded-full transition-all duration-200 group-hover:scale-125 ${
+                      isMeeting ? 'w-3.5 h-3.5' : 'w-4 h-4'
+                    }`}
+                    style={{
+                      backgroundColor: isSubmitted ? eventColor : 'white',
+                      border: isSubmitted ? 'none' : `2px solid ${eventColor}`,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }}
+                  />
+                )}
 
-                <div className="timeline-label absolute top-8 left-1/2 whitespace-nowrap text-center pointer-events-none z-10 max-w-[120px]">
-                  {event.memberName ? (
-                    <>
-                      <span className="text-[10px] font-bold block uppercase tracking-tight truncate" style={{ color: eventColor }}>
-                        {getFirstName(event.memberName)}
-                      </span>
-                      <span className="text-[9px] text-slate-500 block truncate" style={{ color: eventColor }}>
-                        {isFinal ? event.title.replace('[FINAL] ', '') : event.title}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-[10px] font-bold block uppercase tracking-tight truncate" style={{ color: isFinal ? '#ef4444' : eventColor }}>
-                        {isFinal ? event.title.replace('[FINAL] ', '') : event.title}
-                      </span>
-                      <span className="text-[8px] text-slate-400 font-medium">
-                        {new Date(event.date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
-                    </>
-                  )}
-                </div>
               </div>
             </div>
           );
         })}
+      </div>
+
+      {/* Legend - Below Timeline */}
+      <div className="flex items-center justify-center gap-6 mt-8 text-xs text-[#616f89] flex-wrap">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full border-2 border-[#616f89] bg-white"></div>
+          <span className="uppercase tracking-wide font-medium">Unsubmitted</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-[#616f89]"></div>
+          <span className="uppercase tracking-wide font-medium">Submitted</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative w-5 h-5">
+            <div className="absolute inset-0 rounded-full border-2 border-dashed border-[#9ca3af]"></div>
+            <div className="absolute inset-1 rounded-full border border-dashed border-[#6b7280]"></div>
+          </div>
+          <span className="uppercase tracking-wide font-medium">Pending Transfer (Sender to Receiver)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-0.5 bg-[#616f89]"></div>
+          <span className="uppercase tracking-wide font-medium">Project Path</span>
+        </div>
       </div>
     </div>
   );
