@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const groupId = searchParams.get("groupId");
     const projectId = searchParams.get("projectId");
+    const userEmail = searchParams.get("userEmail");
     const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : 5;
 
     if (!groupId || !projectId) {
@@ -20,11 +21,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabase
+    // If filtering by user email, get the user ID first
+    let filterUserId: string | null = null;
+    if (userEmail) {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", userEmail)
+        .single();
+      
+      if (userData) {
+        filterUserId = userData.id;
+      }
+    }
+
+    // Build query with optional user filter
+    let query = supabase
       .from("activity_logs")
       .select("*")
       .eq("group_id", groupId)
-      .eq("project_id", projectId)
+      .eq("project_id", projectId);
+    
+    if (filterUserId) {
+      query = query.eq("user_id", filterUserId);
+    }
+    
+    const { data, error } = await query
       .order("created_at", { ascending: false })
       .limit(limit);
 

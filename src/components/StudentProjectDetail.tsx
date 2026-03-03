@@ -298,7 +298,8 @@ export default function StudentProjectDetail({
     if (!myGroup || !project) return;
     try {
       const limit = showAllActivities ? 50 : 5;
-      const res = await fetch(`/api/activity?groupId=${myGroup.id}&projectId=${project.id}&limit=${limit}`);
+      const userFilter = activityFilter !== "all" ? `&userEmail=${encodeURIComponent(activityFilter)}` : "";
+      const res = await fetch(`/api/activity?groupId=${myGroup.id}&projectId=${project.id}&limit=${limit}${userFilter}`);
       if (!res.ok) return;
       const data = await res.json();
       setActivityLogs(data || []);
@@ -390,7 +391,7 @@ export default function StudentProjectDetail({
       fetchActivityLogs();
       fetchMeetingNotesCounts();
     }
-  }, [myGroup?.id, project?.id, showAllActivities]);
+  }, [myGroup?.id, project?.id, showAllActivities, activityFilter]);
 
   useEffect(() => {
     const meetingId = searchParams?.get("meetingId");
@@ -2103,15 +2104,11 @@ export default function StudentProjectDetail({
                 <div className="flex-1 overflow-y-auto px-6 py-4">
                 <div className="space-y-6">
                   {(() => {
-                    const filteredLogs = activityFilter === "all" 
-                      ? activityLogs 
-                      : activityLogs.filter(log => log.user?.email === activityFilter);
-                    
-                    if (filteredLogs.length === 0) {
+                    if (activityLogs.length === 0) {
                       return <p className="text-sm text-[#616f89]">No recent activity</p>;
                     }
                     
-                    return filteredLogs.map((activity) => {
+                    return activityLogs.map((activity) => {
                       const message = getActivityMessage(activity);
                       const activityUserColor = activity.user ? getMemberColor(activity.user.name, myGroup?.members) : null;
                       
