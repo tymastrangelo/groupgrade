@@ -216,7 +216,7 @@ export default function StudentCalendarPage() {
                               course: cls.name,
                               projectId: p.id,
                               groupId: g.id,
-                              tone: 'purple',
+                              tone: d.status === 'submitted' ? 'green' : 'purple',
                             });
                           });
                         } catch (delErr) {
