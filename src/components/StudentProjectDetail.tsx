@@ -2120,6 +2120,7 @@ export default function StudentProjectDetail({
                         if (action === "deliverable_submitted") return "submitted";
                         if (action === "deliverable_created") return "created";
                         if (action === "deliverable_updated") return "edited";
+                        if (action === "deliverable_deleted") return "deleted";
                         if (action === "meeting_created") return "scheduled";
                         if (action === "meeting_concluded") return "concluded";
                         if (action === "link_added") return "uploaded";
