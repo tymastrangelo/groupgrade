@@ -155,6 +155,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid meeting type" }, { status: 400 });
     }
 
+    // Rate limiting: Check existing meeting count for this group
+    const { data: existingMeetings, error: countError } = await supabase
+      .from("group_meetings")
+      .select("id", { count: "exact", head: true })
+      .eq("group_id", groupId);
+
+    if (countError) {
+      console.error("Error checking meeting count:", countError);
+    } else {
+      const count = (existingMeetings as any)?.length || 0;
+      if (count >= 50) {
+        return NextResponse.json(
+          { error: "Maximum limit of 50 meetings per group has been reached" },
+          { status: 429 }
+        );
+      }
+    }
+
     // Get user ID from email
     const { data: userData } = await supabase
       .from("users")

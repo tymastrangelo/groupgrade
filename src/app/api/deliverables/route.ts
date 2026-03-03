@@ -137,6 +137,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "description and dueDate are required" }, { status: 400 });
     }
 
+    // Rate limiting: Check existing deliverable count for this group/project
+    const { data: existingDeliverables, error: countError } = await supabase
+      .from("deliverables")
+      .select("id", { count: "exact", head: true })
+      .eq("group_id", groupId)
+      .eq("project_id", projectId);
+
+    if (countError) {
+      console.error("Error checking deliverable count:", countError);
+    } else {
+      const count = (existingDeliverables as any)?.length || 0;
+      if (count >= 100) {
+        return NextResponse.json(
+          { error: "Maximum limit of 100 deliverables per group has been reached" },
+          { status: 429 }
+        );
+      }
+    }
+
     // Fetch project to validate project due date
     const { data: projectData, error: projErr } = await supabase
       .from('projects')
