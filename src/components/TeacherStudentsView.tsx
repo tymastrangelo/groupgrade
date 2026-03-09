@@ -292,10 +292,18 @@ export default function TeacherStudentsView() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <span className={`text-sm font-bold ${risk.color}`}>{student.engagementScore}/100</span>
+                          <span className={`text-sm font-bold ${
+                            student.engagementScore === 100 ? 'text-green-600' :
+                            student.engagementScore >= 75 ? 'text-orange-600' : 
+                            'text-red-600'
+                          }`}>{student.engagementScore}/100</span>
                           <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
                             <div
-                              className={`h-full ${student.riskLevel === 'healthy' ? 'bg-green-500' : student.riskLevel === 'watch' ? 'bg-orange-500' : 'bg-red-500'}`}
+                              className={`h-full ${
+                                student.engagementScore === 100 ? 'bg-green-500' :
+                                student.engagementScore >= 75 ? 'bg-orange-500' : 
+                                'bg-red-500'
+                              }`}
                               style={{ width: `${student.engagementScore}%` }}
                             />
                           </div>
