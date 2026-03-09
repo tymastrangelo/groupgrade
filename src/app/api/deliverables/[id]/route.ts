@@ -19,11 +19,12 @@ export async function PATCH(
     const params = await context.params;
     const deliverableId = params.id;
     const body = await request.json();
-    const { status, assignedTo, description, dueDate, submissionUrl, submissionNotes, submittedAt } = body;
+    const { status, assignedTo, title, description, dueDate, submissionUrl, submissionNotes, submittedAt } = body;
 
     const updateData: any = {};
     if (status) updateData.status = status;
     if (assignedTo) updateData.assigned_to = assignedTo;
+    if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (dueDate !== undefined) updateData.due_date = dueDate;
     if (submissionUrl !== undefined) updateData.submission_url = submissionUrl || null;

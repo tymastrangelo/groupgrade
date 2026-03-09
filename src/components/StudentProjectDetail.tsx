@@ -230,6 +230,7 @@ export default function StudentProjectDetail({
   // Flag for creating a final deliverable
   const [isFinalDeliverable, setIsFinalDeliverable] = useState(false);
   const [viewDeliverableId, setViewDeliverableId] = useState<string | null>(null);
+  const [editingDeliverable, setEditingDeliverable] = useState<{ title: string; description: string; dueDate: string } | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [submitWorkId, setSubmitWorkId] = useState<string | null>(null);
   const [submitWorkForm, setSubmitWorkForm] = useState({
@@ -780,6 +781,42 @@ export default function StudentProjectDetail({
     setViewDeliverableId(null);
     setViewedDeliverableFilesCount(null);
     setMemberReturn(null);
+    setEditingDeliverable(null);
+  };
+
+  const handleRemoveSubmission = async (deliverableId: string) => {
+    try {
+      const res = await fetch(`/api/deliverables/${deliverableId}/remove-submission`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        await fetchDeliverables();
+        await fetchActivityLogs();
+      }
+    } catch (err) {
+      console.error('Failed to remove submission', err);
+    }
+  };
+
+  const saveDeliverableEdits = async (deliverableId: string) => {
+    if (!editingDeliverable) return;
+    try {
+      const res = await fetch(`/api/deliverables/${deliverableId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editingDeliverable.title,
+          description: editingDeliverable.description,
+          dueDate: editingDeliverable.dueDate,
+        }),
+      });
+      if (res.ok) {
+        await fetchDeliverables();
+        setEditingDeliverable(null);
+      }
+    } catch (err) {
+      console.error('Failed to update deliverable', err);
+    }
   };
 
   const viewedDeliverable = deliverables.find(d => d.id === viewDeliverableId);
@@ -2424,8 +2461,8 @@ export default function StudentProjectDetail({
 
         {viewDeliverableId && viewedDeliverable && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb]">
+            <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb] flex-shrink-0">
                 <h2 className="text-lg font-bold text-[#111318]">Deliverable Details</h2>
                 <button
                   onClick={closeDeliverableView}
@@ -2434,35 +2471,88 @@ export default function StudentProjectDetail({
                   &times;
                 </button>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="p-6 space-y-4 overflow-y-auto flex-1" id="deliverable-modal-content">
                 <div>
-                  <label className="block text-sm font-bold text-[#111318] mb-2">Title</label>
-                  <p className="text-sm text-[#616f89]">{viewedDeliverable.title}</p>
-                </div>
-                {viewedDeliverable.description && (
-                  <div>
-                    <label className="block text-sm font-bold text-[#111318] mb-2">Description</label>
-                    <p className="text-sm text-[#616f89]">{viewedDeliverable.description}</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-bold text-[#111318]">Title</label>
+                    {!editingDeliverable && viewedDeliverable.assignedTo?.email === session?.user?.email && (
+                      <button
+                        onClick={() => {
+                          setEditingDeliverable({
+                            title: viewedDeliverable.title,
+                            description: viewedDeliverable.description || '',
+                            dueDate: viewedDeliverable.dueDate || '',
+                          });
+                          // Scroll to top of modal
+                          setTimeout(() => {
+                            document.getElementById('deliverable-modal-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }, 0);
+                        }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Edit
+                      </button>
+                    )}
                   </div>
-                )}
+                  {editingDeliverable ? (
+                    <input
+                      type="text"
+                      value={editingDeliverable.title}
+                      onChange={(e) => setEditingDeliverable({ ...editingDeliverable, title: e.target.value })}
+                      className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  ) : (
+                    <p className="text-sm text-[#616f89]">{viewedDeliverable.title}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-[#111318] mb-2">Description</label>
+                  {editingDeliverable ? (
+                    <textarea
+                      value={editingDeliverable.description}
+                      onChange={(e) => setEditingDeliverable({ ...editingDeliverable, description: e.target.value })}
+                      className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      rows={3}
+                    />
+                  ) : (
+                    <p className="text-sm text-[#616f89]">{viewedDeliverable.description || 'No description'}</p>
+                  )}
+                </div>
                 <div>
                   <label className="block text-sm font-bold text-[#111318] mb-2">Status</label>
-                  <select
-                    value={viewedDeliverable.status}
-                    onChange={(e) => updateDeliverableStatus(viewedDeliverable.id, e.target.value as Deliverable["status"])}
-                    className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="not-started">New</option>
-                    <option value="in-progress">Started</option>
-                    <option value="submitted">Submitted</option>
-                  </select>
+                  {viewedDeliverable.status === 'submitted' ? (
+                    <select
+                      value="submitted"
+                      onChange={async (e) => {
+                        if (e.target.value === 'remove-submission') {
+                          await handleRemoveSubmission(viewedDeliverable.id);
+                          e.target.value = 'submitted'; // Reset dropdown
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                    >
+                      <option value="submitted">Submitted</option>
+                      <option value="remove-submission">Remove Submission / Resubmit</option>
+                    </select>
+                  ) : (
+                    <div className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm bg-gray-50 text-[#616f89]">
+                      In Progress
+                    </div>
+                  )}
                 </div>
-                {viewedDeliverable.dueDate && (
-                  <div>
-                    <label className="block text-sm font-bold text-[#111318] mb-2">Due Date</label>
-                    <p className="text-sm text-[#616f89]">{formatDate(viewedDeliverable.dueDate)}</p>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-sm font-bold text-[#111318] mb-2">Due Date</label>
+                  {editingDeliverable ? (
+                    <input
+                      type="date"
+                      value={editingDeliverable.dueDate}
+                      onChange={(e) => setEditingDeliverable({ ...editingDeliverable, dueDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  ) : (
+                    <p className="text-sm text-[#616f89]">{viewedDeliverable.dueDate ? formatDate(viewedDeliverable.dueDate) : 'No due date'}</p>
+                  )}
+                </div>
                 {viewedDeliverable.assignedTo && (
                   <div>
                     <label className="block text-sm font-bold text-[#111318] mb-2">Assigned To</label>
@@ -2511,13 +2601,29 @@ export default function StudentProjectDetail({
                 )}
 
               </div>
-              <div className="px-6 py-4 border-t border-[#e5e7eb] flex justify-end gap-3">
-                {viewedDeliverable.assignedTo?.email === session?.user?.email && viewedDeliverable.status !== "submitted" && (
+              <div className="px-6 py-4 border-t border-[#e5e7eb] flex justify-end gap-3 flex-shrink-0">
+                {editingDeliverable && (
+                  <>
+                    <button
+                      onClick={() => setEditingDeliverable(null)}
+                      className="px-4 py-2 border border-[#e5e7eb] rounded-lg text-sm font-medium hover:bg-[#f9fafb] transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => saveDeliverableEdits(viewedDeliverable.id)}
+                      className="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
+                    >
+                      Save Changes
+                    </button>
+                  </>
+                )}
+                {!editingDeliverable && viewedDeliverable.assignedTo?.email === session?.user?.email && viewedDeliverable.status !== "submitted" && (
                   <button
                     onClick={() => openSubmitWorkModal(viewedDeliverable.id)}
                     className="px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary hover:text-white transition-all"
                   >
-                    Submit Work
+                    Upload File
                   </button>
                 )}
                 {memberReturn && (
@@ -2536,12 +2642,14 @@ export default function StudentProjectDetail({
                     Back to list
                   </button>
                 )}
-                <button
-                  onClick={closeDeliverableView}
-                  className="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
-                >
-                  Close
-                </button>
+                {!editingDeliverable && (
+                  <button
+                    onClick={closeDeliverableView}
+                    className="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
+                  >
+                    Close
+                  </button>
+                )}
               </div>
             </div>
           </div>
