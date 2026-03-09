@@ -135,6 +135,8 @@ export default function StudentCalendarPage() {
   const [viewMeetingId, setViewMeetingId] = useState<string | null>(null);
   const [viewMeeting, setViewMeeting] = useState<any>(null);
   const [meetingLoading, setMeetingLoading] = useState(false);
+  const [sortByDate, setSortByDate] = useState<'asc' | 'desc'>('asc');
+  const [filterCourse, setFilterCourse] = useState<string>('all');
 
   const today = useMemo(() => {
     const t = new Date();
@@ -346,10 +348,23 @@ export default function StudentCalendarPage() {
       return format(parseEventDate(date), 'MMM d');
     };
 
+    // Filter events by course if a filter is active
+    let filteredEvents = events;
+    if (filterCourse !== 'all') {
+      filteredEvents = events.filter(ev => ev.course === filterCourse);
+    }
+
+    // Sort events by date
+    const sortedEvents = [...filteredEvents].sort((a, b) => {
+      const aTime = parseEventDate(a.date).getTime();
+      const bTime = parseEventDate(b.date).getTime();
+      return sortByDate === 'asc' ? aTime - bTime : bTime - aTime;
+    });
+
     if (viewMode === 'month') {
       const monthStart = startOfMonth(viewDate);
       const nextMonthStart = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1);
-      const inMonth = events.filter((ev) => {
+      const inMonth = sortedEvents.filter((ev) => {
         const t = parseEventDate(ev.date);
         return t >= monthStart && t < nextMonthStart;
       });
@@ -368,7 +383,7 @@ export default function StudentCalendarPage() {
     const thisWeekEnd = addDays(weekStart, 7).getTime();
     const nextWeekEnd = addDays(weekStart, 14).getTime();
 
-    const upcoming = events.filter((ev) => parseEventDate(ev.date) >= weekStart);
+    const upcoming = sortedEvents.filter((ev) => parseEventDate(ev.date) >= weekStart);
 
     const thisWeek = upcoming.filter((ev) => {
       const t = parseEventDate(ev.date).getTime();
@@ -395,7 +410,7 @@ export default function StudentCalendarPage() {
         })),
       },
     ];
-  }, [events, viewMode, viewDate]);
+  }, [events, viewMode, viewDate, sortByDate, filterCourse]);
 
   const monthLabel = useMemo(() => format(viewDate, 'MMMM yyyy'), [viewDate]);
 
@@ -649,8 +664,25 @@ export default function StudentCalendarPage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-[#111318]">All Upcoming Items</h3>
               <div className="flex gap-2">
-                <button className="text-sm text-[#8d5e5e] hover:text-primary px-3 py-1 rounded-full border border-[#f5f0f0]">Sort by Date</button>
-                <button className="text-sm text-[#8d5e5e] hover:text-primary px-3 py-1 rounded-full border border-[#f5f0f0]">Filter Course</button>
+                <button 
+                  onClick={() => setSortByDate(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  className="text-sm text-[#8d5e5e] hover:text-primary px-3 py-1 rounded-full border border-[#f5f0f0] flex items-center gap-1"
+                >
+                  Sort by Date
+                  <span className="material-symbols-outlined text-sm">
+                    {sortByDate === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                  </span>
+                </button>
+                <select
+                  value={filterCourse}
+                  onChange={(e) => setFilterCourse(e.target.value)}
+                  className="text-sm text-[#8d5e5e] hover:text-primary px-3 py-1 rounded-full border border-[#f5f0f0] bg-white cursor-pointer"
+                >
+                  <option value="all">All Courses</option>
+                  {Array.from(new Set(events.map(e => e.course))).sort().map(course => (
+                    <option key={course} value={course}>{course}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
