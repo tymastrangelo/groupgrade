@@ -254,6 +254,8 @@ export default function StudentProjectDetail({
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [activityFilter, setActivityFilter] = useState<string>("all");
   const [memberActivity, setMemberActivity] = useState<Record<string, string | null>>({});
+  const [showComprehensiveHistory, setShowComprehensiveHistory] = useState(false);
+  const [allActivityLogs, setAllActivityLogs] = useState<any[]>([]);
 
   // Find the student's group
   const myGroup = previewGroupId
@@ -307,6 +309,18 @@ export default function StudentProjectDetail({
       setActivityLogs(data || []);
     } catch (err) {
       console.error("Failed to fetch activity logs", err);
+    }
+  };
+
+  const fetchAllActivityLogs = async () => {
+    if (!myGroup || !project) return;
+    try {
+      const res = await fetch(`/api/activity?groupId=${myGroup.id}&projectId=${project.id}&limit=1000`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setAllActivityLogs(data || []);
+    } catch (err) {
+      console.error("Failed to fetch all activity logs", err);
     }
   };
 
@@ -394,6 +408,13 @@ export default function StudentProjectDetail({
       fetchMeetingNotesCounts();
     }
   }, [myGroup?.id, project?.id, showAllActivities, activityFilter]);
+
+  // Fetch all activity logs when comprehensive history modal opens
+  useEffect(() => {
+    if (showComprehensiveHistory) {
+      fetchAllActivityLogs();
+    }
+  }, [showComprehensiveHistory]);
 
   useEffect(() => {
     const meetingId = searchParams?.get("meetingId");
@@ -2249,10 +2270,10 @@ export default function StudentProjectDetail({
                 {activityLogs.length > 0 && (
                   <div className="px-6 py-8 border-t border-[#e5e7eb]">
                     <button
-                      onClick={() => setShowAllActivities(!showAllActivities)}
+                      onClick={() => setShowComprehensiveHistory(true)}
                       className="w-full py-2.5 text-xs font-bold text-[#616f89] bg-white border border-[#e5e7eb] hover:bg-[#f9fafb] rounded-lg transition-all tracking-widest uppercase"
                     >
-                      {showAllActivities ? "View Comprehensive History" : "View Comprehensive History"}
+                      View Comprehensive History
                     </button>
                   </div>
                 )}
@@ -3293,6 +3314,107 @@ export default function StudentProjectDetail({
             </div>
           </div>
         )}
+
+      {/* Comprehensive History Modal */}
+      {showComprehensiveHistory && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb] flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-red-600">schedule</span>
+                <h2 className="text-lg font-bold text-[#111318]">Group Activity</h2>
+              </div>
+              <button
+                onClick={() => setShowComprehensiveHistory(false)}
+                className="text-[#616f89] hover:text-[#111318] text-lg leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto px-6 py-4 max-h-[60vh]">
+              <div className="space-y-6">
+                {allActivityLogs.length === 0 ? (
+                  <p className="text-sm text-[#616f89] text-center py-8">No activity history</p>
+                ) : (
+                  allActivityLogs.map((activity) => {
+                    const message = getActivityMessage(activity);
+                    const activityUserColor = activity.user ? getMemberColor(activity.user.name, myGroup?.members) : null;
+                    
+                    const getActionText = () => {
+                      const action = activity.actionType;
+                      if (action === "deliverable_submitted") return "submitted";
+                      if (action === "deliverable_created") return "created";
+                      if (action === "deliverable_updated") return "edited";
+                      if (action === "deliverable_deleted") return "deleted";
+                      if (action === "meeting_created") return "scheduled";
+                      if (action === "meeting_concluded") return "concluded";
+                      if (action === "link_added") return "uploaded";
+                      if (action === "meeting_summary_added") return "completed";
+                      return "updated";
+                    };
+                    
+                    return (
+                      <div key={activity.id} className="flex gap-3 items-start">
+                        {activity.user?.avatar_url ? (
+                          <Avatar
+                            name={activity.user?.name || "Unknown"}
+                            src={activity.user?.avatar_url}
+                            size="h-10 w-10"
+                          />
+                        ) : (
+                          <div 
+                            className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm text-white shrink-0"
+                            style={{ backgroundColor: activityUserColor?.hex || '#6b7280' }}
+                          >
+                            {(activity.user?.name || "?").split(" ").map((n: string) => n.charAt(0)).join("").toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm leading-relaxed">
+                            <span className="font-semibold text-[#111318]">{activity.user?.name || "Unknown"} </span>
+                            <span className="text-[#616f89]">{getActionText()} </span>
+                            {activity.entityId ? (
+                              <button
+                                onClick={() => {
+                                  if (activity.actionType?.startsWith('deliverable')) {
+                                    setViewDeliverableId(activity.entityId);
+                                    setShowComprehensiveHistory(false);
+                                  }
+                                  if (activity.actionType === 'meeting_created' || activity.actionType === 'meeting_concluded') {
+                                    setViewMeetingId(activity.entityId);
+                                    setShowComprehensiveHistory(false);
+                                  }
+                                }}
+                                className="font-semibold italic cursor-pointer focus:outline-none hover:underline"
+                                style={{ color: activityUserColor?.hex || '#0066cc' }}
+                              >
+                                {message.title}
+                              </button>
+                            ) : (
+                              <span className="font-semibold italic" style={{ color: activityUserColor?.hex || '#0066cc' }}>{message.title}</span>
+                            )}
+                          </p>
+                          <p className="text-xs text-[#9ca3af] uppercase tracking-wide mt-1.5">{formatActivityDate(activity.createdAt)}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 border-t border-[#e5e7eb] flex justify-end flex-shrink-0">
+              <button
+                onClick={() => setShowComprehensiveHistory(false)}
+                className="px-4 py-2 bg-primary hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
