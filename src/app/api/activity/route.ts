@@ -82,6 +82,7 @@ export async function GET(request: NextRequest) {
         entityId: activity.entity_id,
         entityTitle: activity.entity_title,
         createdAt: activity.created_at,
+        metadata: activity.metadata || null,
         user: {
           id: activity.user_id,
           name: user.name || 'Unknown',

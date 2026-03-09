@@ -306,6 +306,7 @@ export default function StudentProjectDetail({
       const res = await fetch(`/api/activity?groupId=${myGroup.id}&projectId=${project.id}&limit=${limit}${userFilter}`);
       if (!res.ok) return;
       const data = await res.json();
+      console.log('[Activity Logs] Fetched:', data);
       setActivityLogs(data || []);
     } catch (err) {
       console.error("Failed to fetch activity logs", err);
@@ -357,6 +358,8 @@ export default function StudentProjectDetail({
       deliverable_created: { action: "created", entity: "deliverable" },
       deliverable_submitted: { action: "submitted", entity: "deliverable" },
       deliverable_reassigned: { action: "reassigned", entity: "deliverable" },
+      deliverable_reassign_pending: { action: "requested reassignment of", entity: "deliverable" },
+      deliverable_reassign_accepted: { action: "accepted reassignment of", entity: "deliverable" },
       deliverable_deleted: { action: "deleted", entity: "deliverable" },
       meeting_created: { action: "scheduled", entity: "meeting" },
       link_created: { action: "added", entity: "collaboration link" },
@@ -2008,6 +2011,9 @@ export default function StudentProjectDetail({
                       if (action === "deliverable_submitted") return "Submitted";
                       if (action === "deliverable_created") return "Created";
                       if (action === "deliverable_updated") return "Edited";
+                      if (action === "deliverable_reassigned") return "Reassigned";
+                      if (action === "deliverable_reassign_pending") return "Requested reassignment";
+                      if (action === "deliverable_reassign_accepted") return "Accepted reassignment";
                       if (action === "meeting_created") return "Scheduled meeting";
                       if (action === "link_added") return "Added link";
                       if (action === "meeting_summary_added") return "Added meeting notes";
@@ -2215,6 +2221,15 @@ export default function StudentProjectDetail({
                         if (action === "deliverable_submitted") return "submitted";
                         if (action === "deliverable_created") return "created";
                         if (action === "deliverable_updated") return "edited";
+                        if (action === "deliverable_reassigned") return "reassigned";
+                        if (action === "deliverable_reassign_pending") {
+                          const pendingName = activity.metadata?.pending_assignee_name;
+                          return pendingName ? `requested reassignment to ${pendingName} (pending)` : "requested reassignment (pending)";
+                        }
+                        if (action === "deliverable_reassign_accepted") {
+                          const originalName = activity.metadata?.original_assignee_name;
+                          return originalName ? `accepted reassignment from ${originalName}` : "accepted reassignment";
+                        }
                         if (action === "deliverable_deleted") return "deleted";
                         if (action === "meeting_created") return "scheduled";
                         if (action === "meeting_concluded") return "concluded";
@@ -3349,6 +3364,15 @@ export default function StudentProjectDetail({
                       if (action === "deliverable_submitted") return "submitted";
                       if (action === "deliverable_created") return "created";
                       if (action === "deliverable_updated") return "edited";
+                      if (action === "deliverable_reassigned") return "reassigned";
+                      if (action === "deliverable_reassign_pending") {
+                        const pendingName = activity.metadata?.pending_assignee_name;
+                        return pendingName ? `requested reassignment to ${pendingName} (pending)` : "requested reassignment (pending)";
+                      }
+                      if (action === "deliverable_reassign_accepted") {
+                        const originalName = activity.metadata?.original_assignee_name;
+                        return originalName ? `accepted reassignment from ${originalName}` : "accepted reassignment";
+                      }
                       if (action === "deliverable_deleted") return "deleted";
                       if (action === "meeting_created") return "scheduled";
                       if (action === "meeting_concluded") return "concluded";

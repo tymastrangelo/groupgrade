@@ -57,7 +57,10 @@ export async function PATCH(
       .eq("id", assignedTo)
       .single();
 
+    console.log('[Reassign] Target user lookup:', { assignedTo, targetUser, error: targetUserError });
+
     if (targetUserError || !targetUser) {
+      console.error('[Reassign] Target user not found - likely a mock student');
       return NextResponse.json({ error: "Target user not found" }, { status: 404 });
     }
 
@@ -145,6 +148,24 @@ export async function PATCH(
         projectId: data.project_id,
         createdAt: data.created_at
       };
+
+      // Log activity for pending assignment
+      try {
+        await supabase.from("activity_logs").insert({
+          group_id: data.group_id,
+          project_id: data.project_id,
+          user_id: currentUser.id,
+          action_type: "deliverable_reassign_pending",
+          entity_id: data.id,
+          entity_title: data.title,
+          metadata: {
+            pending_assignee_name: targetUser.name,
+            pending_assignee_email: targetUser.email
+          }
+        });
+      } catch (logError) {
+        console.error("Failed to log activity:", logError);
+      }
 
       return NextResponse.json({
         ...transformed,

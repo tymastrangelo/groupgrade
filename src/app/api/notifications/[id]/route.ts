@@ -142,7 +142,7 @@ export async function PATCH(
         return NextResponse.json({ error: updateNotifError.message }, { status: 500 });
       }
 
-      // Create activity log
+      // Create activity log for accepted reassignment
       const { data: deliverable } = await supabase
         .from("deliverables")
         .select("group_id, project_id, title")
@@ -150,13 +150,32 @@ export async function PATCH(
         .single();
 
       if (deliverable) {
+        // Get the original assignee info from notification metadata
+        const originalAssigneeId = notification.metadata?.original_assignee_id;
+        let originalAssigneeName = "a team member";
+        
+        if (originalAssigneeId) {
+          const { data: originalUser } = await supabase
+            .from("users")
+            .select("name")
+            .eq("id", originalAssigneeId)
+            .single();
+          if (originalUser) {
+            originalAssigneeName = originalUser.name;
+          }
+        }
+
         await supabase.from("activity_logs").insert({
           group_id: deliverable.group_id,
           project_id: deliverable.project_id,
           user_id: userData.id,
-          action_type: "deliverable_reassigned",
+          action_type: "deliverable_reassign_accepted",
           entity_id: deliverableIdNonFinal,
-          entity_title: deliverable.title
+          entity_title: deliverable.title,
+          metadata: {
+            original_assignee_name: originalAssigneeName,
+            original_assignee_id: originalAssigneeId
+          }
         });
       }
 
