@@ -25,6 +25,11 @@ type ProjectRow = {
   class_name?: string | null;
 };
 
+type EngagementData = {
+  students: any[];
+  groups: any[];
+};
+
 function formatDate(value?: string | null) {
   if (!value) return "";
   return new Date(value).toLocaleDateString();
@@ -40,6 +45,7 @@ function isWithinDays(dateValue: string | null | undefined, days: number) {
 export default function TeacherDashboardOverview() {
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [projects, setProjects] = useState<ProjectRow[]>([]);
+  const [engagementData, setEngagementData] = useState<EngagementData>({ students: [], groups: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,12 +64,14 @@ export default function TeacherDashboardOverview() {
       setError(null);
       setLoading(true);
       try {
-        const [classData, projectData] = await Promise.all([
+        const [classData, projectData, engagementRes] = await Promise.all([
           tasksCache.fetch<{ classes: ClassRow[] }>(classesUrl),
           tasksCache.fetch<{ projects: ProjectRow[] }>(projectsUrl),
+          fetch('/api/teacher/engagement').then(r => r.ok ? r.json() : { students: [], groups: [] })
         ]);
         setClasses(classData?.classes || []);
         setProjects(projectData?.projects || []);
+        setEngagementData(engagementRes || { students: [], groups: [] });
       } catch (e: any) {
         setError(e.message || "Failed to load dashboard data");
       } finally {
@@ -189,24 +197,54 @@ export default function TeacherDashboardOverview() {
             <h3 className="text-xl font-bold text-[#111318]">Needs attention</h3>
             <p className="text-sm text-[#475569]">Quick signals to review.</p>
           </div>
-          <div className="space-y-3">
-            <div className="p-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
-              <p className="text-xs uppercase tracking-wider text-[#475569]">Join codes expiring</p>
-              <p className="text-lg font-bold text-[#111318]">{loading ? "—" : totals.codesExpiringCount}</p>
-              <p className="text-xs text-[#616f89]">Refresh codes to keep onboarding smooth.</p>
+          
+          <div className="space-y-4">
+            {/* Students at Risk */}
+            <div className="p-5 rounded-lg border border-[#e5e7eb] bg-white">
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-xs uppercase tracking-wider text-[#64748b] font-semibold">STUDENTS AT RISK</p>
+                <div className="group relative">
+                  <span className="material-symbols-outlined text-[#94a3b8] text-base cursor-help">info</span>
+                  <div className="absolute left-0 top-6 hidden group-hover:block bg-[#1e293b] text-white text-xs rounded-lg px-3 py-2 w-48 z-10">
+                    Engagement &lt;50 or auto-red
+                  </div>
+                </div>
+              </div>
+              <p className="text-4xl font-black text-[#dc2626] mb-3">
+                {loading ? "—" : engagementData.students.filter(s => s.riskLevel === 'needs-attention').length}
+              </p>
+              <Link
+                href="/teacher/students"
+                className="inline-flex items-center gap-1 text-sm font-bold text-[#dc2626] hover:underline"
+              >
+                View students
+                <span className="material-symbols-outlined text-base">arrow_forward</span>
+              </Link>
             </div>
-            <div className="p-4 rounded-lg border border-[#e5e7eb] bg-[#f9fafb]">
-              <p className="text-xs uppercase tracking-wider text-[#475569]">Overdue projects</p>
-              <p className="text-lg font-bold text-[#111318]">{loading ? "—" : totals.overdueCount}</p>
-              <p className="text-xs text-[#616f89]">Follow up with teams behind schedule.</p>
+
+            {/* Groups at Risk */}
+            <div className="p-5 rounded-lg border border-[#e5e7eb] bg-white">
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-xs uppercase tracking-wider text-[#64748b] font-semibold">GROUPS AT RISK</p>
+                <div className="group relative">
+                  <span className="material-symbols-outlined text-[#94a3b8] text-base cursor-help">info</span>
+                  <div className="absolute left-0 top-6 hidden group-hover:block bg-[#1e293b] text-white text-xs rounded-lg px-3 py-2 w-56 z-10">
+                    2+ red students or avg engagement &lt;60
+                  </div>
+                </div>
+              </div>
+              <p className="text-4xl font-black text-[#dc2626] mb-3">
+                {loading ? "—" : engagementData.groups.filter(g => g.riskLevel === 'needs-attention').length}
+              </p>
+              <Link
+                href="/teacher/analytics"
+                className="inline-flex items-center gap-1 text-sm font-bold text-[#dc2626] hover:underline"
+              >
+                View groups
+                <span className="material-symbols-outlined text-base">arrow_forward</span>
+              </Link>
             </div>
           </div>
-          <Link
-            href="/teacher/classes"
-            className="mt-auto px-4 py-2 rounded-lg border border-[#e5e7eb] text-sm font-bold text-[#111318] hover:bg-[#f9fafb]"
-          >
-            Review classes
-          </Link>
         </div>
       </div>
 
