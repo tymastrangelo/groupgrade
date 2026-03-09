@@ -1658,8 +1658,11 @@ export default function StudentProjectDetail({
                       return <p className="text-xs text-[#616f89]">No deliverables added yet</p>;
                     }
 
-                    // Sort deliverables: mine first (not submitted), then by due date, then submitted, then others
-                    const sortedDeliverables = [...deliverables].sort((a, b) => {
+                    // Filter to only show deliverables assigned to current user
+                    const myDeliverables = deliverables.filter(d => d.assignedTo?.email === session?.user?.email);
+                    
+                    // Sort deliverables: active (not submitted) first, then by due date, then submitted
+                    const sortedDeliverables = [...myDeliverables].sort((a, b) => {
                       const aIsMine = a.assignedTo?.email === session?.user?.email;
                       const bIsMine = b.assignedTo?.email === session?.user?.email;
                       const aIsSubmitted = a.status === "submitted";
