@@ -253,6 +253,7 @@ export default function StudentProjectDetail({
   const [groupNameError, setGroupNameError] = useState<string | null>(null);
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
   const [activityFilter, setActivityFilter] = useState<string>("all");
+  const [memberActivity, setMemberActivity] = useState<Record<string, string | null>>({});
 
   // Find the student's group
   const myGroup = previewGroupId
@@ -414,11 +415,45 @@ export default function StudentProjectDetail({
     // Track on component mount
     trackActivity();
 
-    // Track every 5 minutes of activity
-    const interval = setInterval(trackActivity, 5 * 60 * 1000);
+    // Track every 2 minutes of activity
+    const interval = setInterval(trackActivity, 2 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
+
+  // Refresh member activity status periodically
+  useEffect(() => {
+    if (!myGroup?.id) return;
+
+    const refreshMemberActivity = async () => {
+      try {
+        const res = await fetch(`/api/groups/${myGroup.id}/members-activity`);
+        if (res.ok) {
+          const data = await res.json();
+          const activityMap: Record<string, string | null> = {};
+          data.members?.forEach((member: any) => {
+            if (member.email) {
+              activityMap[member.email] = member.last_active;
+            }
+          });
+          console.log('Refreshed member activity:', activityMap);
+          setMemberActivity(activityMap);
+        } else {
+          console.error('Failed to fetch member activity:', res.status);
+        }
+      } catch (err) {
+        console.error('Failed to refresh member activity:', err);
+      }
+    };
+
+    // Refresh immediately on mount
+    refreshMemberActivity();
+
+    // Refresh every 30 seconds to show real-time activity
+    const interval = setInterval(refreshMemberActivity, 30 * 1000);
+
+    return () => clearInterval(interval);
+  }, [myGroup?.id]);
 
   // Update countdown every minute
   useEffect(() => {
@@ -1916,7 +1951,9 @@ export default function StudentProjectDetail({
                     if (bIsCurrentUser) return 1;
                     return 0;
                   }).map((member) => {
-                    let status = getActivityStatus(member.last_active);
+                    // Use refreshed activity data if available, otherwise fall back to initial data
+                    const lastActive = memberActivity[member.email] ?? member.last_active;
+                    let status = getActivityStatus(lastActive);
                     const isCurrentUser = member.email === session?.user?.email;
                     const memberColor = getMemberColor(member.name, myGroup?.members);
                     

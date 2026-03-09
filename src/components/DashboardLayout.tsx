@@ -63,6 +63,54 @@ export default function Dashboard({
     fetchUserName();
   }, []);
 
+  // Track user activity (last_active timestamp) across all pages
+  useEffect(() => {
+    if (!session?.user?.email) return;
+
+    let lastUpdate = 0;
+
+    const updateLastActive = async () => {
+      const now = Date.now();
+      // Only update if at least 2 minutes have passed since last update
+      if (now - lastUpdate < 2 * 60 * 1000) return;
+
+      try {
+        await fetch('/api/user/last-active', { method: 'POST' });
+        lastUpdate = now;
+      } catch (err) {
+        console.error('Failed to update last_active:', err);
+      }
+    };
+
+    // Update on mount
+    updateLastActive();
+
+    // Set up interval to update every 2 minutes
+    const interval = setInterval(updateLastActive, 2 * 60 * 1000);
+
+    // Track user interactions with debouncing
+    let activityTimeout: NodeJS.Timeout;
+    const handleActivity = () => {
+      clearTimeout(activityTimeout);
+      activityTimeout = setTimeout(updateLastActive, 1000); // Debounce by 1 second
+    };
+
+    // Listen for user activity
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('click', handleActivity);
+    window.addEventListener('scroll', handleActivity);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(activityTimeout);
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('click', handleActivity);
+      window.removeEventListener('scroll', handleActivity);
+    };
+  }, [session?.user?.email]);
+
   const userName = currentUserName || session?.user?.name || 'User';
   const userAvatar = session?.user?.image || null;
   const displayName = isTeacher ? `Dr. ${userName}` : userName;
