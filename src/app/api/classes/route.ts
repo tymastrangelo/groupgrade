@@ -24,13 +24,29 @@ export async function GET() {
   try {
     const user = await getCurrentUser(session.user.email);
     if (user.normalizedRole === 'teacher') {
-      const { data, error } = await supabase
+      // Get classes where user is the professor
+      const { data: ownedClasses, error: ownedError } = await supabase
         .from('classes')
         .select('id, name, code, join_code_expires_at, created_at, term, location, meeting_days, start_time, end_time, auto_generate_code')
-        .eq('professor_id', user.id)
-        .order('created_at', { ascending: false });
-      if (error) throw new Error(error.message);
-      return NextResponse.json({ classes: data || [] });
+        .eq('professor_id', user.id);
+      if (ownedError) throw new Error(ownedError.message);
+
+      // Get classes where user is a member (teaching team)
+      const { data: memberClasses, error: memberError } = await supabase
+        .from('class_members')
+        .select('classes(id, name, code, join_code_expires_at, created_at, term, location, meeting_days, start_time, end_time, auto_generate_code)')
+        .eq('user_id', user.id);
+      if (memberError) throw new Error(memberError.message);
+
+      // Combine and deduplicate classes
+      const memberClassesData = (memberClasses || []).map((d: any) => d.classes).filter(Boolean);
+      const allClasses = [...(ownedClasses || []), ...memberClassesData];
+      const uniqueClasses = Array.from(new Map(allClasses.map(c => [c.id, c])).values());
+      
+      // Sort by created_at descending
+      uniqueClasses.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+      return NextResponse.json({ classes: uniqueClasses });
     }
 
     if (user.normalizedRole === 'student') {

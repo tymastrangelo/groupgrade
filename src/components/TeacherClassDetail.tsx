@@ -24,6 +24,7 @@ type Member = {
   email: string;
   userRole: string | null;
   classRole: string;
+  staffRole?: string | null;
   avatar_url?: string | null;
   joined_at?: string | null;
 };
@@ -921,7 +922,9 @@ export function TeacherClassDetail({
                 </div>
                 <div className="flex items-center gap-3">
                   <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${badgeColor(m.classRole)}`}>
-                    {m.classRole === "professor" ? "Professor" : "Student"}
+                    {m.classRole === "professor" 
+                      ? (m.staffRole === "ta" ? "TA" : "Professor")
+                      : "Student"}
                   </span>
                   <p className="text-xs text-[#616f89]">Joined {formatDate(m.joined_at)}</p>
                   {m.classRole === "student" && (

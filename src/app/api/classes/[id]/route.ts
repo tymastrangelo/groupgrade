@@ -74,7 +74,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
     const { data: memberRows, error: membersError } = await supabase
       .from('class_members')
-      .select('role, created_at, users(id, name, email, role, avatar_url)')
+      .select('role, staff_role, created_at, users(id, name, email, role, avatar_url)')
       .eq('class_id', classId)
       .order('created_at', { ascending: true });
 
@@ -86,6 +86,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       email: m.users?.email ?? '',
       userRole: m.users?.role ?? null,
       classRole: m.role,
+      staffRole: m.staff_role || (m.role === 'professor' ? 'professor' : null),
       avatar_url: (m as any)?.users?.avatar_url ?? null,
       joined_at: m.created_at,
     }));

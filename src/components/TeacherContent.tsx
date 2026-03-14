@@ -33,6 +33,12 @@ export function TeacherContent() {
   const [endTime, setEndTime] = useState('11:15');
   const [autoGenerateCode, setAutoGenerateCode] = useState(true);
   const [previewCode, setPreviewCode] = useState('');
+  const [staffEmail, setStaffEmail] = useState('');
+  const [staffRole, setStaffRole] = useState<'professor' | 'ta'>('ta');
+  const [lookingUpStaff, setLookingUpStaff] = useState(false);
+  const [staffPreview, setStaffPreview] = useState<any>(null);
+  const [invitedStaff, setInvitedStaff] = useState<any[]>([]);
+  const [sendingInvite, setSendingInvite] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -75,6 +81,10 @@ export function TeacherContent() {
     setEndTime('11:15');
     setAutoGenerateCode(true);
     setPreviewCode(generateCode());
+    setStaffEmail('');
+    setStaffRole('ta');
+    setStaffPreview(null);
+    setInvitedStaff([]);
   };
 
   const handleCreate = async () => {
@@ -100,12 +110,33 @@ export function TeacherContent() {
       setCreating(false);
       return;
     }
-    resetForm();
-    setShowCreate(false);
-    // Optionally optimistic update cache if API returns created class
+    
+    // Send invitations to staff members
     try {
       const j = await res.json();
       const created = (j && (j.class || j.created || j.newClass)) as ClassRow | undefined;
+      
+      console.log('[Create Class] Class created:', created?.id, 'Invited staff count:', invitedStaff.length);
+      
+      if (created && invitedStaff.length > 0) {
+        for (const staff of invitedStaff) {
+          console.log('[Create Class] Sending invitation to:', staff.educator.email, 'Role:', staff.role);
+          const inviteRes = await fetch(`/api/classes/${created.id}/invite-staff`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              educatorId: staff.educator.id,
+              role: staff.role,
+            }),
+          });
+          const inviteData = await inviteRes.json();
+          console.log('[Create Class] Invitation response:', inviteData);
+        }
+      }
+      
+      resetForm();
+      setShowCreate(false);
+      
       if (created) {
         tasksCache.mutate<{ classes: ClassRow[] }>(url, (prev) => {
           const cur = (prev && (prev as any).classes) || [];
@@ -118,6 +149,58 @@ export function TeacherContent() {
       await fetchClasses();
     }
     setCreating(false);
+  };
+
+  const lookupEducator = async () => {
+    if (!staffEmail.trim()) return;
+    setLookingUpStaff(true);
+    setStaffPreview(null);
+    try {
+      console.log('[Frontend] Looking up educator:', staffEmail.trim());
+      const res = await fetch('/api/educators/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: staffEmail.trim() }),
+      });
+      console.log('[Frontend] Response status:', res.status);
+      const data = await res.json();
+      console.log('[Frontend] Response data:', data);
+      if (data.found) {
+        setStaffPreview(data);
+      } else {
+        setStaffPreview({ found: false, message: data.message });
+      }
+    } catch (e) {
+      console.error('Error looking up educator:', e);
+      setStaffPreview({ found: false, message: 'Error looking up educator' });
+    } finally {
+      setLookingUpStaff(false);
+    }
+  };
+
+  const addStaffToInviteList = () => {
+    console.log('[Add Staff] staffPreview:', staffPreview);
+    console.log('[Add Staff] Current invitedStaff:', invitedStaff);
+    
+    if (!staffPreview?.found || !staffPreview.educator) {
+      console.log('[Add Staff] Preview not found or no educator');
+      return;
+    }
+    
+    // Check if already in list
+    if (invitedStaff.some(s => s.educator.id === staffPreview.educator.id)) {
+      console.log('[Add Staff] Educator already in list');
+      return;
+    }
+    
+    console.log('[Add Staff] Adding educator to list');
+    setInvitedStaff([...invitedStaff, { educator: staffPreview.educator, role: staffRole }]);
+    setStaffEmail('');
+    setStaffPreview(null);
+  };
+
+  const removeStaffFromInviteList = (educatorId: string) => {
+    setInvitedStaff(invitedStaff.filter(s => s.educator.id !== educatorId));
   };
 
   const copyCode = async (code: string) => {
@@ -289,6 +372,106 @@ export function TeacherContent() {
                   </div>
                 </div>
               </div>
+              
+              {/* Teaching Team Section */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-2 border-b border-[#eef2f7] pb-2">
+                  <span className="material-symbols-outlined text-[#616f89] text-xl">group</span>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-[#616f89]">Teaching Team</h3>
+                </div>
+                <p className="text-xs text-[#616f89]">Only users with an Educator account can be added to the Teaching Team.</p>
+                
+                <div className="flex gap-2">
+                  <input
+                    className="flex-1 px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Enter email address"
+                    type="email"
+                    value={staffEmail}
+                    onChange={(e) => {
+                      setStaffEmail(e.target.value);
+                      if (staffPreview) setStaffPreview(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        lookupEducator();
+                      }
+                    }}
+                  />
+                  <select
+                    className="px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={staffRole}
+                    onChange={(e) => setStaffRole(e.target.value as 'professor' | 'ta')}
+                  >
+                    <option value="professor">Professor</option>
+                    <option value="ta">TA</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={lookupEducator}
+                    disabled={lookingUpStaff || !staffEmail.trim()}
+                    className="px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {lookingUpStaff ? 'Looking up...' : 'Lookup'}
+                  </button>
+                </div>
+
+                {/* Staff Preview */}
+                {staffPreview && (
+                  <div className={`p-3 rounded-lg border ${staffPreview.found ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    {staffPreview.found ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                            {staffPreview.educator.name?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-[#111318]">Ready to invite {staffPreview.educator.name}?</p>
+                            <p className="text-xs text-[#616f89]">(Educator account found)</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={addStaffToInviteList}
+                          className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                          Send Invitation
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-red-600">{staffPreview.message}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Invited Staff List */}
+                {invitedStaff.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-[#616f89] uppercase">Pending Invitations</p>
+                    {invitedStaff.map((staff) => (
+                      <div key={staff.educator.id} className="flex items-center justify-between p-3 bg-white border border-[#e5e7eb] rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
+                            {staff.educator.name?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[#111318]">{staff.educator.name}</p>
+                            <p className="text-xs text-[#616f89]">{staff.educator.email} • {staff.role === 'professor' ? 'Professor' : 'TA'}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeStaffFromInviteList(staff.educator.id)}
+                          className="text-red-600 hover:text-red-700 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm">close</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="p-4 bg-background-light rounded-xl border border-[#eef2f7] mt-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">

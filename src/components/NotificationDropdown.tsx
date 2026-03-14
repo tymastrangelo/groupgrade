@@ -14,6 +14,12 @@ type Notification = {
   metadata?: {
     meetingId?: string | null;
     projectId?: string | null;
+    classId?: string;
+    className?: string;
+    inviterId?: string;
+    inviterName?: string;
+    role?: string;
+    invitationType?: string;
   } | null;
   from_user?: {
     id: string;
@@ -71,7 +77,10 @@ export function NotificationDropdown() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter(n => !n.read).length;
-  const pendingCount = notifications.filter(n => n.status === 'pending' && n.type === 'deliverable_assignment').length;
+  const pendingCount = notifications.filter(n => 
+    (n.status === 'pending' && n.type === 'deliverable_assignment') || 
+    (n.metadata?.invitationType === 'teaching_team' && !n.read)
+  ).length;
 
   const fetchNotifications = async () => {
     setLoading(true);
@@ -132,6 +141,30 @@ export function NotificationDropdown() {
     }
   };
 
+  const handleTeamInviteAction = async (notificationId: string, action: 'accept' | 'decline') => {
+    setActionLoading(notificationId);
+    try {
+      const res = await fetch(`/api/notifications/${notificationId}/respond-team-invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+      });
+
+      if (res.ok) {
+        // Refresh notifications
+        await fetchNotifications();
+        // Reload page to show new class
+        if (action === 'accept') {
+          window.location.reload();
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to ${action} team invitation:`, error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const markAsRead = async (notificationId: string) => {
     try {
       await fetch(`/api/notifications/${notificationId}`, {
@@ -174,7 +207,10 @@ export function NotificationDropdown() {
     }
   };
 
-  const getNotificationIcon = (type: string, status: string) => {
+  const getNotificationIcon = (type: string, status: string, metadata?: any) => {
+    if (metadata?.invitationType === 'teaching_team') {
+      return { icon: 'group_add', color: 'text-blue-600', bg: 'bg-blue-50' };
+    }
     if (type === 'deliverable_assignment' && status === 'pending') {
       return { icon: 'assignment_ind', color: 'text-amber-600', bg: 'bg-amber-50' };
     }
@@ -229,8 +265,9 @@ export function NotificationDropdown() {
             ) : (
               <div className="divide-y divide-[#e5e7eb]">
                 {notifications.map((notification) => {
-                  const iconConfig = getNotificationIcon(notification.type, notification.status);
+                  const iconConfig = getNotificationIcon(notification.type, notification.status, notification.metadata);
                   const isPending = notification.type === 'deliverable_assignment' && notification.status === 'pending';
+                  const isTeamInvite = notification.metadata?.invitationType === 'teaching_team' && !notification.read;
 
                   return (
                     <div
@@ -295,6 +332,40 @@ export function NotificationDropdown() {
                                 }}
                                 disabled={actionLoading === notification.id}
                                 className="flex-1 py-1.5 px-3 border border-red-300 text-red-600 hover:bg-red-50 text-xs font-bold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                              >
+                                <span className="material-symbols-outlined text-sm">close</span>
+                                Decline
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Action buttons for teaching team invitations */}
+                          {isTeamInvite && (
+                            <div className="flex gap-2 mt-3">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTeamInviteAction(notification.id, 'accept');
+                                }}
+                                disabled={actionLoading === notification.id}
+                                className="flex-1 py-1.5 px-3 bg-primary hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                              >
+                                {actionLoading === notification.id ? (
+                                  <span className="animate-spin">...</span>
+                                ) : (
+                                  <>
+                                    <span className="material-symbols-outlined text-sm">check</span>
+                                    Accept
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleTeamInviteAction(notification.id, 'decline');
+                                }}
+                                disabled={actionLoading === notification.id}
+                                className="flex-1 py-1.5 px-3 border border-gray-300 text-gray-600 hover:bg-gray-50 text-xs font-bold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
                               >
                                 <span className="material-symbols-outlined text-sm">close</span>
                                 Decline
