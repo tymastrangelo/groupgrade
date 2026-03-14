@@ -151,6 +151,11 @@ export function TeacherClassDetail({
   const [editStartTime, setEditStartTime] = useState("10:00");
   const [editEndTime, setEditEndTime] = useState("11:15");
   const [editAutoGenerateCode, setEditAutoGenerateCode] = useState(true);
+  const [staffEmail, setStaffEmail] = useState("");
+  const [staffRole, setStaffRole] = useState<"professor" | "ta">("ta");
+  const [staffPreview, setStaffPreview] = useState<any>(null);
+  const [lookingUpStaff, setLookingUpStaff] = useState(false);
+  const [invitingStaff, setInvitingStaff] = useState(false);
 
   const stats = useMemo(() => {
     const professors = members.filter((m) => m.classRole === "professor").length;
@@ -236,6 +241,58 @@ export function TeacherClassDetail({
     setEditMeetingDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
     );
+  };
+
+  const lookupEducator = async () => {
+    if (!staffEmail.trim()) return;
+    setLookingUpStaff(true);
+    setStaffPreview(null);
+    try {
+      const res = await fetch('/api/educators/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: staffEmail.trim() }),
+      });
+      const data = await res.json();
+      if (data.found) {
+        setStaffPreview(data);
+      } else {
+        setStaffPreview({ found: false, message: data.message });
+      }
+    } catch (e) {
+      console.error('Error looking up educator:', e);
+      setStaffPreview({ found: false, message: 'Error looking up educator' });
+    } finally {
+      setLookingUpStaff(false);
+    }
+  };
+
+  const inviteStaff = async () => {
+    if (!staffPreview?.found || !staffPreview.educator) return;
+    setInvitingStaff(true);
+    try {
+      const res = await fetch(`/api/classes/${classId}/invite-staff`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          educatorId: staffPreview.educator.id,
+          role: staffRole,
+        }),
+      });
+      if (res.ok) {
+        setStaffEmail('');
+        setStaffPreview(null);
+        await fetchData(); // Refresh members list
+      } else {
+        const data = await res.json();
+        setEditError(data.error || 'Failed to send invitation');
+      }
+    } catch (e) {
+      console.error('Error inviting staff:', e);
+      setEditError('Error inviting staff');
+    } finally {
+      setInvitingStaff(false);
+    }
   };
 
   const saveClassEdits = async () => {
@@ -1249,14 +1306,105 @@ export function TeacherClassDetail({
                 </div>
               </div>
               <div className="p-4 bg-background-light rounded-xl border border-[#eef2f7] mt-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[#616f89]">vpn_key</span>
-                    <div>
-                      <p className="text-sm font-bold text-[#111318]">Auto-generate Class Code</p>
-                      <p className="text-xs text-[#616f89]">Students will use this to join</p>
+                <div className="space-y-4">
+                  {/* Teaching Team Section */}
+                  <div className="border-t border-[#eef2f7] pt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="material-symbols-outlined text-[#616f89]">group_add</span>
+                      <h3 className="text-sm font-bold text-[#111318]">TEACHING TEAM</h3>
+                    </div>
+                    <p className="text-xs text-[#616f89] mb-4">Only users with an Educator account can be added to the Teaching Team.</p>
+                    
+                    {/* Current Teaching Team Members */}
+                    {members.filter(m => m.classRole === 'professor').length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-semibold text-[#616f89] mb-2">CURRENT TEAM</p>
+                        <div className="space-y-2">
+                          {members.filter(m => m.classRole === 'professor').map(m => (
+                            <div key={m.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <Avatar name={m.name} src={m.avatar_url} />
+                                <div>
+                                  <p className="text-sm font-semibold text-[#111318]">{m.name}</p>
+                                  <p className="text-xs text-[#616f89]">{m.email}</p>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-purple-100 text-purple-700">
+                                {m.staffRole === 'ta' ? 'TA' : 'Professor'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Add New Staff Member */}
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <input
+                          type="email"
+                          placeholder="Enter email address"
+                          className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          value={staffEmail}
+                          onChange={(e) => setStaffEmail(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), lookupEducator())}
+                        />
+                        <select
+                          className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          value={staffRole}
+                          onChange={(e) => setStaffRole(e.target.value as 'professor' | 'ta')}
+                        >
+                          <option value="ta">TA</option>
+                          <option value="professor">Professor</option>
+                        </select>
+                        <button
+                          type="button"
+                          className="px-4 py-2 text-sm font-bold text-white bg-primary hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+                          onClick={lookupEducator}
+                          disabled={lookingUpStaff || !staffEmail.trim()}
+                        >
+                          {lookingUpStaff ? 'Looking up...' : 'Lookup'}
+                        </button>
+                      </div>
+
+                      {/* Staff Preview */}
+                      {staffPreview && (
+                        <div className={`p-3 rounded-lg ${staffPreview.found ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                          {staffPreview.found ? (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Avatar name={staffPreview.educator.name} src={staffPreview.educator.profileImage} />
+                                <div>
+                                  <p className="text-sm font-semibold text-[#111318]">{staffPreview.educator.name}</p>
+                                  <p className="text-xs text-[#616f89]">{staffPreview.educator.email}</p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className="px-3 py-1.5 text-xs font-bold text-white bg-primary hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+                                onClick={inviteStaff}
+                                disabled={invitingStaff}
+                              >
+                                {invitingStaff ? 'Sending...' : 'Send Invitation'}
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-red-700">{staffPreview.message}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Auto-generate Class Code Section */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#616f89]">vpn_key</span>
+                      <div>
+                        <p className="text-sm font-bold text-[#111318]">Auto-generate Class Code</p>
+                        <p className="text-xs text-[#616f89]">Students will use this to join</p>
+                      </div>
+                    </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       checked={editAutoGenerateCode}
@@ -1266,6 +1414,7 @@ export function TeacherClassDetail({
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
+                  </div>
                 </div>
                 <div className="mt-4 flex items-center justify-center bg-white border-2 border-dashed border-gray-200 rounded-lg py-3">
                   <span className="text-2xl font-black tracking-widest text-primary">{classData.code}</span>
