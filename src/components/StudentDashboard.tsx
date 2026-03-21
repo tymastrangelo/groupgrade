@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { tasksCache } from '@/lib/tasksCache';
+import DeliverableFileUpload from '@/components/DeliverableFileUpload';
 
 type ClassRow = {
   id: string;
@@ -72,6 +73,9 @@ export default function StudentDashboard() {
   const [groupFilter, setGroupFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [submitWorkId, setSubmitWorkId] = useState<string | null>(null);
+  const [submitWorkForm, setSubmitWorkForm] = useState({ url: '', notes: '' });
+  const [submitting, setSubmitting] = useState(false);
 
   const userName = session?.user?.name || 'User';
   const firstName = userName.split(' ')[0] || userName;
@@ -351,7 +355,7 @@ export default function StudentDashboard() {
   });
 
   const handleSubmitDeliverable = async (deliverableId: string) => {
-    router.push(`/student/projects/${deliverables.find(d => d.id === deliverableId)?.projectId}`);
+    setSubmitWorkId(deliverableId);
   };
 
   // Count projects due this week
@@ -612,9 +616,100 @@ export default function StudentDashboard() {
             ))}
           </div>
         </div>
-        </div>
+      </div>
       </div>
 
+      {/* Submit Work Modal */}
+      {submitWorkId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb]">
+              <h3 className="text-lg font-bold text-[#111318]">Submit Work</h3>
+              <button onClick={() => { setSubmitWorkId(null); setSubmitWorkForm({ url: '', notes: '' }); }} className="text-[#616f89] hover:text-[#111318]">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#111318] mb-2">
+                  Attach Files <span className="text-xs text-[#616f89]">(optional)</span>
+                </label>
+                {submitWorkId && (
+                  <DeliverableFileUpload 
+                    deliverableId={submitWorkId}
+                    onFilesUploaded={(files) => {
+                      console.log('Files uploaded:', files);
+                    }}
+                  />
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#111318] mb-2">
+                  Submission URL <span className="text-xs text-[#616f89]">(optional)</span>
+                </label>
+                <input
+                  type="url"
+                  value={submitWorkForm.url}
+                  onChange={(e) => setSubmitWorkForm({ ...submitWorkForm, url: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#111318] mb-2">
+                  Notes <span className="text-xs text-[#616f89]">(optional)</span>
+                </label>
+                <textarea
+                  value={submitWorkForm.notes}
+                  onChange={(e) => setSubmitWorkForm({ ...submitWorkForm, notes: e.target.value })}
+                  placeholder="Add any notes about your submission..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 py-4 border-t border-[#e5e7eb]">
+              <button
+                onClick={() => { setSubmitWorkId(null); setSubmitWorkForm({ url: '', notes: '' }); }}
+                className="flex-1 py-2 px-4 border border-[#e5e7eb] rounded-lg text-[#111318] font-medium text-sm hover:bg-[#f9fafb] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!submitWorkId) return;
+                  setSubmitting(true);
+                  try {
+                    const updatedDeliverable = {
+                      status: 'submitted' as const,
+                      submittedAt: new Date().toISOString(),
+                      submissionUrl: submitWorkForm.url || null,
+                      submissionNotes: submitWorkForm.notes || null,
+                    };
+                    await fetch(`/api/deliverables/${submitWorkId}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(updatedDeliverable),
+                    });
+                    // Refresh deliverables
+                    await fetchDeliverables();
+                    setSubmitWorkId(null);
+                    setSubmitWorkForm({ url: '', notes: '' });
+                  } catch (error) {
+                    console.error('Failed to submit work:', error);
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+                disabled={submitting}
+                className="flex-1 py-2 px-4 bg-primary hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Submitting...' : 'Submit Work'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

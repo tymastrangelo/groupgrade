@@ -426,7 +426,15 @@ export default function StudentProjectDetail({
     if (meetingId) {
       setViewMeetingId(meetingId);
     }
-  }, [searchParams]);
+    
+    const deliverableId = searchParams?.get("deliverableId");
+    if (deliverableId && deliverables.length > 0) {
+      const deliverable = deliverables.find(d => d.id === deliverableId);
+      if (deliverable) {
+        setSubmitWorkId(deliverableId);
+      }
+    }
+  }, [searchParams, deliverables]);
 
   // Track user activity (last_active timestamp)
   useEffect(() => {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import DeliverableFileUpload from '@/components/DeliverableFileUpload';
 
 type PendingNotification = {
   id: string;
@@ -83,6 +84,9 @@ export function SubmissionCompletionCard() {
   const [pendingNotifications, setPendingNotifications] = useState<PendingNotification[]>([]);
   const [activeDeliverables, setActiveDeliverables] = useState<ActiveDeliverable[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitWorkId, setSubmitWorkId] = useState<string | null>(null);
+  const [submitWorkForm, setSubmitWorkForm] = useState({ url: '', notes: '' });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -236,10 +240,9 @@ export function SubmissionCompletionCard() {
         {activeDeliverables.map((deliverable) => {
           const dueInfo = formatDueDate(deliverable.dueDate);
           return (
-            <Link
+            <div
               key={`del-${deliverable.id}`}
-              href={`/student/projects/${deliverable.projectId}`}
-              className="block p-4 border-b border-[#e5e7eb] last:border-b-0 hover:bg-gray-50 transition-colors"
+              className="p-4 border-b border-[#e5e7eb] last:border-b-0"
             >
               <div className="flex items-center gap-3">
                 <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
@@ -261,18 +264,116 @@ export function SubmissionCompletionCard() {
                     </p>
                   )}
                 </div>
-                <span className={`text-[9px] font-bold px-2 py-1 rounded uppercase ${
-                  deliverable.status === 'in-progress'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-600'
-                }`}>
-                  {deliverable.status === 'in-progress' ? 'Started' : 'New'}
-                </span>
+                <button
+                  onClick={() => setSubmitWorkId(deliverable.id)}
+                  className="px-4 py-1.5 bg-primary hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors"
+                >
+                  Submit
+                </button>
               </div>
-            </Link>
+            </div>
           );
         })}
       </div>
+
+      {/* Submit Work Modal */}
+      {submitWorkId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb]">
+              <h3 className="text-lg font-bold text-[#111318]">Submit Work</h3>
+              <button onClick={() => { setSubmitWorkId(null); setSubmitWorkForm({ url: '', notes: '' }); }} className="text-[#616f89] hover:text-[#111318]">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#111318] mb-2">
+                  Attach Files <span className="text-xs text-[#616f89]">(optional)</span>
+                </label>
+                {submitWorkId && (
+                  <DeliverableFileUpload 
+                    deliverableId={submitWorkId}
+                    onFilesUploaded={(files) => {
+                      console.log('Files uploaded:', files);
+                    }}
+                  />
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#111318] mb-2">
+                  Submission URL <span className="text-xs text-[#616f89]">(optional)</span>
+                </label>
+                <input
+                  type="url"
+                  value={submitWorkForm.url}
+                  onChange={(e) => setSubmitWorkForm({ ...submitWorkForm, url: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#111318] mb-2">
+                  Notes <span className="text-xs text-[#616f89]">(optional)</span>
+                </label>
+                <textarea
+                  value={submitWorkForm.notes}
+                  onChange={(e) => setSubmitWorkForm({ ...submitWorkForm, notes: e.target.value })}
+                  placeholder="Add any notes about your submission..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-[#e5e7eb] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 py-4 border-t border-[#e5e7eb]">
+              <button
+                onClick={() => { setSubmitWorkId(null); setSubmitWorkForm({ url: '', notes: '' }); }}
+                className="flex-1 py-2 px-4 border border-[#e5e7eb] rounded-lg text-[#111318] font-medium text-sm hover:bg-[#f9fafb] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!submitWorkId) return;
+                  setSubmitting(true);
+                  try {
+                    const updatedDeliverable = {
+                      status: 'submitted' as const,
+                      submittedAt: new Date().toISOString(),
+                      submissionUrl: submitWorkForm.url || null,
+                      submissionNotes: submitWorkForm.notes || null,
+                    };
+                    await fetch(`/api/deliverables/${submitWorkId}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(updatedDeliverable),
+                    });
+                    // Refresh deliverables
+                    const deliverablesRes = await fetch('/api/user/activity');
+                    if (deliverablesRes.ok) {
+                      const data = await deliverablesRes.json();
+                      const active = (data.deliverables || [])
+                        .filter((d: any) => d.status !== 'submitted' && d.status !== 'pending')
+                        .slice(0, 5);
+                      setActiveDeliverables(active);
+                    }
+                    setSubmitWorkId(null);
+                    setSubmitWorkForm({ url: '', notes: '' });
+                  } catch (error) {
+                    console.error('Failed to submit work:', error);
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+                disabled={submitting}
+                className="flex-1 py-2 px-4 bg-primary hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Submitting...' : 'Submit Work'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
