@@ -2351,6 +2351,8 @@ export default function StudentProjectDetail({
                   activityLogs.forEach((activity) => {
                     // Skip deleted deliverable activity from timeline
                     if (activity.actionType === 'deliverable_deleted') return;
+                    // Skip link_created activities - we handle collaboration links separately
+                    if (activity.actionType === 'link_created') return;
                     // If this is a submission for a final deliverable, skip it (represented by the deadline flag)
                     if (activity.actionType === 'deliverable_submitted' && activity.entityId && finalDeliverableIds.has(activity.entityId)) return;
                     if (activity.user && activity.createdAt && activity.entityTitle) {
@@ -2439,6 +2441,30 @@ export default function StudentProjectDetail({
                         viewButton: {
                           label: "View Details",
                           onClick: () => setViewMeetingId(meeting.id),
+                        },
+                      });
+                    }
+                  });
+
+                  // Add collaboration link events
+                  collaborationLinks.forEach((link) => {
+                    // Find the activity log entry for this link to get the creation date and creator
+                    const linkActivity = activityLogs.find(
+                      (activity) => activity.actionType === 'link_created' && activity.entityId === link.id
+                    );
+                    
+                    if (linkActivity && linkActivity.createdAt) {
+                      timelineEvents.push({
+                        id: `link-${link.id}`,
+                        date: linkActivity.createdAt.split("T")[0],
+                        title: link.title,
+                        type: "collaboration-hub",
+                        color: "#8b5cf6",
+                        description: "Collaboration Hub",
+                        memberName: linkActivity.user?.name,
+                        viewButton: {
+                          label: "Open Link",
+                          onClick: () => window.open(link.url, '_blank'),
                         },
                       });
                     }
