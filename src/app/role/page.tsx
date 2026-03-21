@@ -10,6 +10,9 @@ export default function RolePage() {
   const [role, setRole] = useState<'teacher' | 'student' | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const [acceptedPilot, setAcceptedPilot] = useState(false);
 
   if (status === 'loading') {
     return (
@@ -77,9 +80,75 @@ export default function RolePage() {
 
           {error && <div className="mt-4 text-sm text-red-600">{error}</div>}
 
+          {/* Terms and Privacy Policy Checkboxes */}
+          <div className="mt-6 space-y-3 border-t border-[#e5e7eb] pt-4">
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-[#dbdfe6] text-primary focus:ring-2 focus:ring-primary cursor-pointer"
+              />
+              <span className="text-sm text-[#616f89] group-hover:text-[#111318] transition">
+                I agree to the{' '}
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Terms of Service
+                </a>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={acceptedPrivacy}
+                onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-[#dbdfe6] text-primary focus:ring-2 focus:ring-primary cursor-pointer"
+              />
+              <span className="text-sm text-[#616f89] group-hover:text-[#111318] transition">
+                I agree to the{' '}
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Privacy Policy
+                </a>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={acceptedPilot}
+                onChange={(e) => setAcceptedPilot(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-[#dbdfe6] text-primary focus:ring-2 focus:ring-primary cursor-pointer"
+              />
+              <span className="text-sm text-[#616f89] group-hover:text-[#111318] transition">
+                I agree to the{' '}
+                <a
+                  href="/pilot-agreement"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Pilot Participation Agreement & Confidentiality Waiver
+                </a>
+              </span>
+            </label>
+          </div>
+
           <div className="mt-6 flex justify-end">
             <button
-              disabled={!role || saving}
+              disabled={!role || saving || !acceptedTerms || !acceptedPrivacy || !acceptedPilot}
               onClick={handleSubmit}
               className="rounded-lg h-11 px-6 bg-primary text-white font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
             >
