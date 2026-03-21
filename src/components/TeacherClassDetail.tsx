@@ -43,6 +43,12 @@ function formatDate(value?: string | null) {
   return d.toLocaleDateString();
 }
 
+function formatDateTime(value?: string | null) {
+  if (!value) return "";
+  const d = new Date(value);
+  return d.toLocaleString();
+}
+
 function Avatar({ name, src, size = "h-8 w-8" }: { name: string; src?: string | null; size?: string }) {
   const letter = (name || "?").charAt(0).toUpperCase();
   if (src) {
@@ -376,12 +382,31 @@ export function TeacherClassDetail({
     if (!projectName.trim()) return;
     setProjectBusy(true);
     setProjectError(null);
+    
+    // Convert datetime-local to ISO string to preserve timezone
+    let dueDateISO = null;
+    if (projectDue) {
+      console.log('[Create Project] Raw projectDue value:', projectDue);
+      // Parse datetime-local format: "2026-04-10T23:59"
+      const [datePart, timePart] = projectDue.split('T');
+      if (datePart && timePart) {
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hours, minutes] = timePart.split(':').map(Number);
+        console.log('[Create Project] Parsed components:', { year, month, day, hours, minutes });
+        // Create date in local timezone
+        const localDate = new Date(year, month - 1, day, hours, minutes || 0);
+        dueDateISO = localDate.toISOString();
+        console.log('[Create Project] Local date:', localDate);
+        console.log('[Create Project] ISO string to send:', dueDateISO);
+      }
+    }
+    
     const res = await fetch(`/api/classes/${classId}/projects`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: projectName.trim(),
-        due_date: projectDue || null,
+        due_date: dueDateISO,
         assignment_mode: assignmentMode,
         grouping_strategy: groupingStrategy,
         description: projectDescription.trim() || undefined,
@@ -396,6 +421,10 @@ export function TeacherClassDetail({
       setProjectBusy(false);
       return;
     }
+    const responseData = await res.json();
+    console.log('[Create Project] API response:', responseData);
+    console.log('[Create Project] Returned due_date:', responseData?.project?.due_date);
+    
     setProjectName("");
     setProjectDue("");
     setProjectDescription("");
@@ -892,7 +921,7 @@ export function TeacherClassDetail({
                       <a href={`/teacher/projects/${p.id}`} className="text-lg font-bold text-[#111318] hover:text-primary">
                         {p.name}
                       </a>
-                      {p.due_date && <p className="text-xs text-[#616f89]">Due {formatDate(p.due_date)}</p>}
+                      {p.due_date && <p className="text-xs text-[#616f89]">Due {formatDateTime(p.due_date)}</p>}
                       <div className="flex gap-2 mt-2 flex-wrap">
                         <span className="text-[11px] px-2 py-1 rounded-full bg-primary/10 text-primary font-bold">
                           {parsed.assignment_mode === "students_self_assign" ? "Students assign" : "Teacher assigns"}
@@ -1027,7 +1056,7 @@ export function TeacherClassDetail({
               <label className="text-sm font-semibold text-[#111318]">
                 Due date (optional)
                 <input
-                  type="date"
+                  type="datetime-local"
                   className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   value={projectDue}
                   onChange={(e) => setProjectDue(e.target.value)}

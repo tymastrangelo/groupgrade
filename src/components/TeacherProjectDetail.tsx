@@ -57,7 +57,17 @@ function toLocalInput(value?: string | null): string {
 }
 function fromLocalInput(value?: string | null): string | null {
   if (!value) return null;
-  const d = new Date(value);
+  // datetime-local format: "2026-04-10T23:59"
+  // We need to ensure this is interpreted as local time, not UTC
+  // Create date by parsing the components to avoid timezone issues
+  const [datePart, timePart] = value.split('T');
+  if (!datePart || !timePart) return null;
+  
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hours, minutes] = timePart.split(':').map(Number);
+  
+  // Create date in local timezone
+  const d = new Date(year, month - 1, day, hours, minutes);
   return d.toISOString();
 }
 

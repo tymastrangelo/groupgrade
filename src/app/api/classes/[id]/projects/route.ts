@@ -95,6 +95,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       deliverablesStr = deliverables.filter((d: any) => typeof d === 'string' && d.trim()).join('\n');
     }
 
+    console.log('[Projects API] Inserting due_date:', due_date);
+    
     const { data, error } = await supabase
       .from('projects')
       .insert({
@@ -108,6 +110,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       })
       .select('id, name, rubric, due_date, description, expectations, deliverables')
       .single();
+    
+    console.log('[Projects API] Supabase returned due_date:', data?.due_date);
+    console.log('[Projects API] Full data:', data);
+    
     if (error) throw new Error(error.message);
 
     return NextResponse.json({ project: data });
