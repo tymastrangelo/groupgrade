@@ -17,6 +17,7 @@ type ProjectData = {
   description: string | null;
   expectations: string | null;
   deliverables: string | null;
+  rubric_file_url: string | null;
   created_at: string | null;
   updated_at: string | null;
   is_professor: boolean;
@@ -105,6 +106,7 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
   const [editExpectations, setEditExpectations] = useState("");
   const [editDeliverables, setEditDeliverables] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
+  const [editRubricFile, setEditRubricFile] = useState<File | null>(null);
 
   const url = `/api/projects/${projectId}`;
 
@@ -159,16 +161,20 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
     if (!project) return;
     setSaving(true);
     setError(null);
+    
+    // Use FormData if there's a file to upload
+    const formData = new FormData();
+    formData.append('name', editName.trim());
+    formData.append('description', editDescription.trim());
+    formData.append('expectations', editExpectations.trim());
+    formData.append('deliverables', editDeliverables.trim());
+    const dueDate = fromLocalInput(editDueDate);
+    if (dueDate) formData.append('due_date', dueDate);
+    if (editRubricFile) formData.append('rubric_file', editRubricFile);
+    
     const res = await fetch(`/api/projects/${projectId}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: editName.trim(),
-        description: editDescription.trim(),
-        expectations: editExpectations.trim(),
-        deliverables: editDeliverables.trim(),
-        due_date: fromLocalInput(editDueDate),
-      }),
+      body: formData,
     });
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
@@ -178,6 +184,7 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
     }
     await fetchProject();
     setEditMode(false);
+    setEditRubricFile(null);
     setSaving(false);
   };
 
@@ -457,6 +464,63 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
                         placeholder="Final report&#10;Presentation slides&#10;Source code"
                       />
                     </label>
+                    
+                    <div className="flex flex-col gap-3">
+                      <label className="text-sm font-semibold text-[#111318]">
+                        Grading Rubric (PDF)
+                        {project?.rubric_file_url && !editRubricFile && (
+                          <div className="mt-2 flex items-center gap-2 text-sm">
+                            <a
+                              href={project.rubric_file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-[#e5e7eb] rounded-lg text-sm font-medium text-[#111318] hover:bg-[#f9fafb] transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-base text-red-600">picture_as_pdf</span>
+                              Current Rubric
+                            </a>
+                          </div>
+                        )}
+                        <div className="mt-2">
+                          <input
+                            type="file"
+                            accept=".pdf"
+                            className="hidden"
+                            id="edit-rubric-file-input"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file && file.type === 'application/pdf') {
+                                setEditRubricFile(file);
+                              } else if (file) {
+                                alert('Please select a PDF file');
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor="edit-rubric-file-input"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#e5e7eb] rounded-lg text-sm font-medium text-[#111318] hover:bg-[#f9fafb] cursor-pointer transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-base">upload_file</span>
+                            {editRubricFile ? 'Change PDF' : (project?.rubric_file_url ? 'Replace PDF' : 'Upload PDF')}
+                          </label>
+                          {editRubricFile && (
+                            <div className="mt-2 flex items-center gap-2 text-sm text-[#616f89]">
+                              <span className="material-symbols-outlined text-base text-red-600">picture_as_pdf</span>
+                              <span className="flex-1 truncate">{editRubricFile.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => setEditRubricFile(null)}
+                                className="text-red-500 hover:text-red-600"
+                              >
+                                <span className="material-symbols-outlined text-base">close</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+                    
                     {error && <p className="text-sm text-red-600">{error}</p>}
                     <div className="flex items-center justify-end gap-2">
                       <button

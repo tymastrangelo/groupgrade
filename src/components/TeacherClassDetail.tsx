@@ -130,6 +130,7 @@ export function TeacherClassDetail({
   const [projectExpectations, setProjectExpectations] = useState("");
   const [deliverables, setDeliverables] = useState<string[]>(["Final project report (PDF)", "Peer review form"]);
   const [deliverableInput, setDeliverableInput] = useState("");
+  const [rubricFile, setRubricFile] = useState<File | null>(null);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [mockBusy, setMockBusy] = useState(false);
   const [mockError, setMockError] = useState<string | null>(null);
@@ -401,19 +402,21 @@ export function TeacherClassDetail({
       }
     }
     
+    // Use FormData if there's a file to upload
+    const formData = new FormData();
+    formData.append('name', projectName.trim());
+    if (dueDateISO) formData.append('due_date', dueDateISO);
+    formData.append('assignment_mode', assignmentMode);
+    formData.append('grouping_strategy', groupingStrategy);
+    if (projectDescription.trim()) formData.append('description', projectDescription.trim());
+    if (projectRubric.trim()) formData.append('rubric_text', projectRubric.trim());
+    if (projectExpectations.trim()) formData.append('expectations', projectExpectations.trim());
+    formData.append('deliverables', JSON.stringify(deliverables));
+    if (rubricFile) formData.append('rubric_file', rubricFile);
+    
     const res = await fetch(`/api/classes/${classId}/projects`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: projectName.trim(),
-        due_date: dueDateISO,
-        assignment_mode: assignmentMode,
-        grouping_strategy: groupingStrategy,
-        description: projectDescription.trim() || undefined,
-        rubric_text: projectRubric.trim() || undefined,
-        expectations: projectExpectations.trim() || undefined,
-        deliverables,
-      }),
+      body: formData,
     });
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
@@ -432,6 +435,7 @@ export function TeacherClassDetail({
     setProjectExpectations("");
     setDeliverables(["Final project report (PDF)", "Peer review form"]);
     setDeliverableInput("");
+    setRubricFile(null);
     setShowProjectModal(false);
     // Refresh class data via cache-backed fetch
     await fetchData();
@@ -1100,16 +1104,59 @@ export function TeacherClassDetail({
                 />
               </label>
 
-              <label className="text-sm font-semibold text-[#111318]">
-                Grading rubric
-                <textarea
-                  className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
-                  rows={3}
-                  placeholder="Criteria 1: ..."
-                  value={projectRubric}
-                  onChange={(e) => setProjectRubric(e.target.value)}
-                />
-              </label>
+              <div className="flex flex-col gap-3">
+                <label className="text-sm font-semibold text-[#111318]">
+                  Grading rubric (text)
+                  <textarea
+                    className="mt-1 w-full bg-white border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary font-mono"
+                    rows={3}
+                    placeholder="Criteria 1: ..."
+                    value={projectRubric}
+                    onChange={(e) => setProjectRubric(e.target.value)}
+                  />
+                </label>
+
+                <label className="text-sm font-semibold text-[#111318]">
+                  Upload grading rubric (PDF)
+                  <div className="mt-1">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      id="rubric-file-input"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file && file.type === 'application/pdf') {
+                          setRubricFile(file);
+                        } else if (file) {
+                          alert('Please select a PDF file');
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="rubric-file-input"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#e5e7eb] rounded-lg text-sm font-medium text-[#111318] hover:bg-[#f9fafb] cursor-pointer transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-base">upload_file</span>
+                      {rubricFile ? 'Change PDF' : 'Choose PDF'}
+                    </label>
+                    {rubricFile && (
+                      <div className="mt-2 flex items-center gap-2 text-sm text-[#616f89]">
+                        <span className="material-symbols-outlined text-base text-red-600">picture_as_pdf</span>
+                        <span className="flex-1 truncate">{rubricFile.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setRubricFile(null)}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          <span className="material-symbols-outlined text-base">close</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </label>
+              </div>
 
               <label className="text-sm font-semibold text-[#111318]">
                 Expectations / notes

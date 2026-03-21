@@ -21,6 +21,7 @@ type ProjectData = {
   description: string | null;
   expectations: string | null;
   deliverables: string | null;
+  rubric_file_url: string | null;
   created_at: string | null;
   updated_at: string | null;
   groups: { id: string; name: string; members: { id: string; name: string; email: string; avatar_url?: string | null; last_active?: string | null }[] }[];
@@ -3188,6 +3189,25 @@ export default function StudentProjectDetail({
                     <p className="text-sm text-[#616f89]">No instructor-defined deliverables.</p>
                   )}
                 </div>
+
+                {/* Grading Rubric PDF */}
+                {project?.rubric_file_url && (
+                  <div>
+                    <h4 className="text-sm font-bold text-[#111318] mb-2 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#616f89] text-lg">grading</span>
+                      Grading Rubric
+                    </h4>
+                    <a
+                      href={project.rubric_file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#e5e7eb] rounded-lg text-sm font-medium text-[#111318] hover:bg-[#f9fafb] transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-base text-red-600">picture_as_pdf</span>
+                      Download Rubric PDF
+                    </a>
+                  </div>
+                )}
 
                 {/* View Project Brief Button */}
                 <button className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-3 rounded-lg text-sm transition-all flex items-center justify-center gap-2 shadow-sm">

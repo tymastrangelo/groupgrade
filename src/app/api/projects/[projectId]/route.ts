@@ -35,7 +35,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
     const { data: project, error: projErr } = await supabase
       .from('projects')
       .select(
-        `id, name, rubric, due_date, class_id, description, expectations, deliverables, created_at, updated_at,
+        `id, name, rubric, due_date, class_id, description, expectations, deliverables, rubric_file_url, created_at, updated_at,
          classes:class_id(id, name, professor_id),
          groups(id, name, group_members(user_id, users(name, email, avatar_url)))`
       )
@@ -79,6 +79,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
         description: project.description,
         expectations: project.expectations,
         deliverables: project.deliverables,
+        rubric_file_url: project.rubric_file_url,
         created_at: project.created_at,
         updated_at: project.updated_at,
         is_professor: professorId === user.id,
@@ -123,21 +124,54 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pr
       return NextResponse.json({ error: 'Only the professor can edit this project' }, { status: 403 });
     }
 
-    const body = await req.json();
+    // Parse FormData
+    const formData = await req.formData();
     const updates: any = { updated_at: new Date().toISOString() };
 
-    if (body.name !== undefined) updates.name = body.name;
-    if (body.description !== undefined) updates.description = body.description;
-    if (body.expectations !== undefined) updates.expectations = body.expectations;
-    if (body.deliverables !== undefined) updates.deliverables = body.deliverables;
-    if (body.rubric !== undefined) updates.rubric = body.rubric;
-    if (body.due_date !== undefined) updates.due_date = body.due_date;
+    const name = formData.get('name') as string | null;
+    const description = formData.get('description') as string | null;
+    const expectations = formData.get('expectations') as string | null;
+    const deliverables = formData.get('deliverables') as string | null;
+    const due_date = formData.get('due_date') as string | null;
+    const rubric_file = formData.get('rubric_file') as File | null;
+
+    if (name !== null) updates.name = name;
+    if (description !== null) updates.description = description;
+    if (expectations !== null) updates.expectations = expectations;
+    if (deliverables !== null) updates.deliverables = deliverables;
+    if (due_date !== null) updates.due_date = due_date;
+    
+    // Upload new rubric file if provided
+    if (rubric_file && rubric_file.size > 0) {
+      const fileExt = rubric_file.name.split('.').pop();
+      const fileName = `${project.class_id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      
+      const fileBuffer = await rubric_file.arrayBuffer();
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('rubric')
+        .upload(fileName, fileBuffer, {
+          contentType: rubric_file.type,
+          upsert: false,
+        });
+      
+      if (uploadError) {
+        console.error('[Projects API] File upload error:', uploadError);
+        throw new Error('Failed to upload rubric file');
+      }
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('rubric')
+        .getPublicUrl(fileName);
+      
+      updates.rubric_file_url = urlData.publicUrl;
+    }
 
     const { data: updated, error: updateErr } = await supabase
       .from('projects')
       .update(updates)
       .eq('id', projectId)
-      .select('id, name, description, expectations, deliverables, rubric, due_date, updated_at')
+      .select('id, name, description, expectations, deliverables, rubric, due_date, rubric_file_url, updated_at')
       .single();
 
     if (updateErr) throw new Error(updateErr.message);

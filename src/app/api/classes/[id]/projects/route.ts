@@ -48,7 +48,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     const { data, error } = await supabase
       .from('projects')
-      .select('id, name, rubric, due_date')
+      .select('id, name, rubric, due_date, rubric_file_url')
       .eq('class_id', classId)
       .order('due_date', { ascending: true });
     if (error) throw new Error(error.message);
@@ -67,7 +67,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { id: classId } = await params;
     if (!classId || !isUuid(classId)) return NextResponse.json({ error: 'Invalid class id' }, { status: 400 });
 
-    const { name, due_date, assignment_mode, grouping_strategy, description, rubric_text, deliverables, expectations } = await req.json();
+    // Parse FormData
+    const formData = await req.formData();
+    const name = formData.get('name') as string;
+    const due_date = formData.get('due_date') as string | null;
+    const assignment_mode = formData.get('assignment_mode') as string;
+    const grouping_strategy = formData.get('grouping_strategy') as string;
+    const description = formData.get('description') as string | null;
+    const rubric_text = formData.get('rubric_text') as string | null;
+    const expectations = formData.get('expectations') as string | null;
+    const deliverablesJson = formData.get('deliverables') as string | null;
+    const rubric_file = formData.get('rubric_file') as File | null;
+    
+    const deliverables = deliverablesJson ? JSON.parse(deliverablesJson) : [];
+    
     if (!name || typeof name !== 'string') {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
@@ -97,6 +110,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     console.log('[Projects API] Inserting due_date:', due_date);
     
+    // Upload rubric file to Supabase Storage if provided
+    let rubricFileUrl = null;
+    if (rubric_file && rubric_file.size > 0) {
+      const fileExt = rubric_file.name.split('.').pop();
+      const fileName = `${classId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      
+      const fileBuffer = await rubric_file.arrayBuffer();
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('rubric')
+        .upload(fileName, fileBuffer, {
+          contentType: rubric_file.type,
+          upsert: false,
+        });
+      
+      if (uploadError) {
+        console.error('[Projects API] File upload error:', uploadError);
+        throw new Error('Failed to upload rubric file');
+      }
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('rubric')
+        .getPublicUrl(fileName);
+      
+      rubricFileUrl = urlData.publicUrl;
+    }
+    
     const { data, error } = await supabase
       .from('projects')
       .insert({
@@ -107,8 +147,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         expectations: expectations || null,
         deliverables: deliverablesStr,
         rubric: JSON.stringify(rubricPayload),
+        rubric_file_url: rubricFileUrl,
       })
-      .select('id, name, rubric, due_date, description, expectations, deliverables')
+      .select('id, name, rubric, due_date, description, expectations, deliverables, rubric_file_url')
       .single();
     
     console.log('[Projects API] Supabase returned due_date:', data?.due_date);
