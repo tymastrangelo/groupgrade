@@ -26,11 +26,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
 
     const { data: user, error: userErr } = await supabase
       .from('users')
-      .select('id, email')
+      .select('id, email, role')
       .eq('email', session.user.email)
       .maybeSingle();
     if (userErr) throw new Error(userErr.message);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    const isAdmin = user.role === 'admin';
 
     const { data: project, error: projErr } = await supabase
       .from('projects')
@@ -53,7 +55,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
       .eq('class_id', classId)
       .eq('user_id', user.id)
       .maybeSingle();
-    if (professorId !== user.id && !membership) {
+    if (professorId !== user.id && !membership && !isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

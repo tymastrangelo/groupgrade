@@ -8,7 +8,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-type NormalizedRole = 'teacher' | 'student';
+type NormalizedRole = 'teacher' | 'student' | 'admin';
 
 type MemberRow = {
   role: string;
@@ -33,7 +33,7 @@ async function getCurrentUser(sessionEmail: string) {
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!user) throw new Error('User not found');
-  const normalizedRole: NormalizedRole = user.role === 'professor' ? 'teacher' : 'student';
+  const normalizedRole: NormalizedRole = user.role === 'admin' ? 'admin' : (user.role === 'professor' ? 'teacher' : 'student');
   return { ...user, normalizedRole };
 }
 
@@ -68,7 +68,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       .maybeSingle();
 
     const isOwner = cls.professor_id === user.id;
-    if (!isOwner && !membership) {
+    const isAdmin = user.normalizedRole === 'admin';
+    if (!isOwner && !membership && !isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

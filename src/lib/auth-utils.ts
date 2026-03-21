@@ -3,7 +3,7 @@ import { supabaseAdmin } from './supabase';
 export type UserWithRole = {
   id: string;
   role: string;
-  normalizedRole: 'teacher' | 'student';
+  normalizedRole: 'teacher' | 'student' | 'admin';
 };
 
 /**
@@ -24,6 +24,6 @@ export async function getCurrentUser(sessionEmail: string): Promise<UserWithRole
 
   return {
     ...user,
-    normalizedRole: user.role === 'professor' ? 'teacher' : 'student',
+    normalizedRole: user.role === 'admin' ? 'admin' : (user.role === 'professor' ? 'teacher' : 'student'),
   };
 }

@@ -37,11 +37,15 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     .eq('email', session.user.email)
     .maybeSingle();
 
-  const normalizedRole = user?.role === 'professor' ? 'teacher' : user?.role;
+  const normalizedRole = user?.role === 'admin' ? 'admin' : (user?.role === 'professor' ? 'teacher' : user?.role);
 
   // Role-based routing
   if (!user || !normalizedRole) {
     redirect('/role');
+  }
+
+  if (normalizedRole === 'admin') {
+    redirect('/admin');
   }
 
   if (normalizedRole === 'teacher') {

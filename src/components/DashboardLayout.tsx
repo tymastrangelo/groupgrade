@@ -17,13 +17,13 @@ export default function Dashboard({
   overrideHeaderLabel,
   children,
 }: {
-  initialRole?: 'teacher' | 'student';
+  initialRole?: 'teacher' | 'student' | 'admin';
   overrideHeaderLabel?: ReactNode;
   children?: ReactNode;
 }) {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const [userRole, setUserRole] = useState<'teacher' | 'student'>(initialRole ?? 'teacher');
+  const [userRole, setUserRole] = useState<'teacher' | 'student' | 'admin'>(initialRole ?? 'teacher');
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [showJoinClassModal, setShowJoinClassModal] = useState(false);
