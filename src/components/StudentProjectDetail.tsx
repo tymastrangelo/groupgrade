@@ -217,6 +217,8 @@ export default function StudentProjectDetail({
   const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
   const [deleteLinkId, setDeleteLinkId] = useState<string | null>(null);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [isSchedulingMeeting, setIsSchedulingMeeting] = useState(false);
+  const [isSavingLink, setIsSavingLink] = useState(false);
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [showDeliverableModal, setShowDeliverableModal] = useState(false);
   const [showProjectOverviewModal, setShowProjectOverviewModal] = useState(false);
@@ -588,6 +590,8 @@ export default function StudentProjectDetail({
     if (!newMeeting.title.trim() || !newMeeting.date || !newMeeting.time) return;
     if (newMeeting.type === "virtual" && !newMeeting.link.trim()) return;
     if (newMeeting.type === "in-person" && !newMeeting.location.trim()) return;
+    if (isSchedulingMeeting) return;
+    setIsSchedulingMeeting(true);
     try {
       const body = {
         groupId: myGroup?.id,
@@ -612,6 +616,8 @@ export default function StudentProjectDetail({
       }
     } catch (err) {
       console.error("Failed to create meeting", err);
+    } finally {
+      setIsSchedulingMeeting(false);
     }
   };
 
@@ -720,6 +726,8 @@ export default function StudentProjectDetail({
 
   const handleAddLink = async () => {
     if (!newLinkForm.title.trim() || !newLinkForm.url.trim() || !myGroup) return;
+    if (isSavingLink) return;
+    setIsSavingLink(true);
     try {
       const body = {
         groupId: myGroup.id,
@@ -758,6 +766,8 @@ export default function StudentProjectDetail({
       }
     } catch (err) {
       console.error("Failed to save collaboration link", err);
+    } finally {
+      setIsSavingLink(false);
     }
   };
 
@@ -1140,7 +1150,11 @@ export default function StudentProjectDetail({
                   {editingLinkId && (
                     <button
                       type="button"
-                      onClick={() => setDeleteLinkId(editingLinkId)}
+                      onClick={async () => {
+                        if (editingLinkId) {
+                          await deleteLink(editingLinkId);
+                        }
+                      }}
                       className="px-4 py-2 border border-red-300 text-red-600 hover:bg-red-600 hover:text-white rounded-lg text-sm font-medium transition-all"
                     >
                       Delete
@@ -1159,9 +1173,10 @@ export default function StudentProjectDetail({
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2 px-4 bg-primary hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors"
+                    disabled={isSavingLink}
+                    className="flex-1 py-2 px-4 bg-primary hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {editingLinkId ? "Save Changes" : "Add Link"}
+                    {isSavingLink ? 'Saving...' : (editingLinkId ? "Save Changes" : "Add Link")}
                   </button>
                 </div>
               </form>
@@ -1497,9 +1512,10 @@ export default function StudentProjectDetail({
                 <button
                   type="button"
                   onClick={handleAddMeeting}
-                  className="flex-1 py-2 px-4 bg-primary hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors"
+                  disabled={isSchedulingMeeting}
+                  className="flex-1 py-2 px-4 bg-primary hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Schedule Meeting
+                  {isSchedulingMeeting ? 'Scheduling...' : 'Schedule Meeting'}
                 </button>
               </div>
             </div>
@@ -2353,6 +2369,8 @@ export default function StudentProjectDetail({
                     if (activity.actionType === 'deliverable_deleted') return;
                     // Skip link_created activities - we handle collaboration links separately
                     if (activity.actionType === 'link_created') return;
+                    // Skip meeting_created activities - we handle meetings separately
+                    if (activity.actionType === 'meeting_created') return;
                     // If this is a submission for a final deliverable, skip it (represented by the deadline flag)
                     if (activity.actionType === 'deliverable_submitted' && activity.entityId && finalDeliverableIds.has(activity.entityId)) return;
                     if (activity.user && activity.createdAt && activity.entityTitle) {
@@ -2388,6 +2406,11 @@ export default function StudentProjectDetail({
 
                   // Add deliverable events (including final marker)
                   deliverables.forEach((d) => {
+                    // Find the creator from activity logs
+                    const deliverableActivity = activityLogs.find(
+                      (activity) => activity.actionType === 'deliverable_created' && activity.entityId === d.id
+                    );
+                    
                     if (d.dueDate) {
                       timelineEvents.push({
                         id: `deliverable-${d.id}`,
@@ -2401,6 +2424,7 @@ export default function StudentProjectDetail({
                         pendingTransferTo: d.status === 'pending' && d.pendingAssignee ? d.pendingAssignee.name : undefined,
                         color: d.assignedTo ? getMemberColor(d.assignedTo.name, myGroup?.members).hex : undefined,
                         memberName: d.assignedTo?.name,
+                        createdBy: deliverableActivity?.user?.name,
                         viewButton: {
                           label: 'View Deliverable',
                           onClick: () => setViewDeliverableId(d.id),
@@ -2419,6 +2443,7 @@ export default function StudentProjectDetail({
                         pendingTransferTo: d.status === 'pending' && d.pendingAssignee ? d.pendingAssignee.name : undefined,
                         color: d.assignedTo ? getMemberColor(d.assignedTo.name, myGroup?.members).hex : undefined,
                         memberName: d.assignedTo?.name,
+                        createdBy: deliverableActivity?.user?.name,
                         viewButton: {
                           label: 'View Deliverable',
                           onClick: () => setViewDeliverableId(d.id),
@@ -2431,6 +2456,11 @@ export default function StudentProjectDetail({
                   meetings.forEach((meeting) => {
                     const meetingDate = meeting.date;
                     if (meetingDate) {
+                      // Find the creator from activity logs
+                      const meetingActivity = activityLogs.find(
+                        (activity) => activity.actionType === 'meeting_created' && activity.entityId === meeting.id
+                      );
+                      
                       timelineEvents.push({
                         id: `meeting-${meeting.id}`,
                         date: meetingDate,
@@ -2438,6 +2468,7 @@ export default function StudentProjectDetail({
                         type: "meeting",
                         color: "#6b7280",
                         description: `${meeting.type === "virtual" ? "Online" : "In-person"} • ${meeting.time}`,
+                        memberName: meetingActivity?.user?.name || meeting.createdBy,
                         viewButton: {
                           label: "View Details",
                           onClick: () => setViewMeetingId(meeting.id),

@@ -9,12 +9,13 @@ export interface TimelineEvent {
   title: string;
   description?: string;
   status?: string;
-  type: "member-update" | "meeting" | "deliverable" | "milestone";
+  type: "member-update" | "meeting" | "deliverable" | "milestone" | "collaboration-hub";
   memberName?: string;
   color?: string;
   assignedTo?: string;
   pendingTransferFrom?: string;
   pendingTransferTo?: string;
+  createdBy?: string;
   viewButton?: {
     label: string;
     onClick: () => void;
