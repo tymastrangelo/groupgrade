@@ -3155,7 +3155,7 @@ export default function StudentProjectDetail({
                     <span className="material-symbols-outlined text-[#616f89] text-lg">description</span>
                     Description
                   </h4>
-                  <p className="text-sm text-[#616f89] leading-relaxed bg-[#f9fafb] p-4 rounded-lg border border-[#e5e7eb]">
+                  <p className="text-sm text-[#616f89] leading-relaxed bg-[#f9fafb] p-4 rounded-lg border border-[#e5e7eb] whitespace-pre-wrap">
                     {project?.description || "No description available"}
                   </p>
                 </div>
