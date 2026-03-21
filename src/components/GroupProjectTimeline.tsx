@@ -37,6 +37,7 @@ export function GroupProjectTimeline({
   members = [],
 }: GroupProjectTimelineProps) {
   const [selectedFilters, setSelectedFilters] = useState<string[]>(['all']);
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
   
   const parseDate = (dateStr: string) => new Date(dateStr);
   const startDate = projectStartDate ? parseDate(projectStartDate) : null;
@@ -128,6 +129,18 @@ export function GroupProjectTimeline({
     
     return memberMatch;
   });
+
+  // Group events by date to detect multiple items on same date
+  const eventsByDate = filteredEvents.reduce((acc, event) => {
+    const isFinal = typeof event.title === 'string' && event.title.startsWith('[FINAL]');
+    if (isFinal || (finalEventAtDue && event.id === finalEventAtDue.id)) return acc;
+    
+    const eventDate = new Date(event.date);
+    const dateKey = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push(event);
+    return acc;
+  }, {} as Record<string, TimelineEvent[]>);
 
   return (
     <div className="w-full">
@@ -221,79 +234,117 @@ export function GroupProjectTimeline({
           </div>
         )}
 
-        {filteredEvents.map((event, index) => {
-          const isFinal = typeof event.title === 'string' && event.title.startsWith('[FINAL]');
-          if (isFinal) return null;
-          if (finalEventAtDue && event.id === finalEventAtDue.id) return null;
-          
-          const position = calculatePosition(event.date);
-          const isMeeting = event.type === "meeting";
-          const isPending = event.status === 'pending';
-          const isSubmitted = event.status === 'submitted';
-          
-          const assignedMember = event.assignedTo || event.memberName;
-          const eventColor = assignedMember ? getMemberColor(assignedMember, members).hex : "#6b7280";
-          
-          const transferFromColor = event.pendingTransferFrom ? getMemberColor(event.pendingTransferFrom, members).hex : "#9ca3af";
-          const transferToColor = event.pendingTransferTo ? getMemberColor(event.pendingTransferTo, members).hex : "#6b7280";
+        {Object.entries(eventsByDate).map(([dateKey, eventsOnDate]) => {
+          const position = calculatePosition(eventsOnDate[0].date);
+          const hasMultiple = eventsOnDate.length > 1;
+          const isExpanded = expandedDate === dateKey;
 
-          // Calculate label offset to prevent overlap with better staggering
-          let labelOffset = 32; // Default top offset in pixels
-          
-          // Check proximity to previous events and stagger more aggressively
-          let stackLevel = 0;
-          for (let i = Math.max(0, index - 3); i < index; i++) {
-            const prevPosition = calculatePosition(filteredEvents[i].date);
-            const positionDiff = Math.abs(position - prevPosition);
-            // If events are within 8% of each other, increase stack level
-            if (positionDiff < 8) {
-              stackLevel++;
-            }
+          if (!hasMultiple) {
+            // Single event - render normally
+            const event = eventsOnDate[0];
+            const isMeeting = event.type === "meeting";
+            const isPending = event.status === 'pending';
+            const isSubmitted = event.status === 'submitted';
+            const assignedMember = event.assignedTo || event.memberName;
+            const eventColor = assignedMember ? getMemberColor(assignedMember, members).hex : "#6b7280";
+            const transferFromColor = event.pendingTransferFrom ? getMemberColor(event.pendingTransferFrom, members).hex : "#9ca3af";
+            const transferToColor = event.pendingTransferTo ? getMemberColor(event.pendingTransferTo, members).hex : "#6b7280";
+
+            return (
+              <div
+                key={dateKey}
+                className="absolute top-1/2 transform -translate-y-1/2 cursor-pointer group"
+                style={{ left: `${position}%`, zIndex: 30 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  event.viewButton?.onClick();
+                }}
+              >
+                <div className="relative flex flex-col items-center transform -translate-x-1/2 transition-all duration-200">
+                  {isPending && event.pendingTransferFrom && event.pendingTransferTo ? (
+                    <div className="relative w-5 h-5">
+                      <div className="absolute inset-0 rounded-full border-[3px] border-dashed" style={{ borderColor: transferFromColor }}></div>
+                      <div className="absolute inset-1 rounded-full border-[1.5px] border-dashed" style={{ borderColor: transferToColor }}></div>
+                    </div>
+                  ) : (
+                    <div
+                      className={`rounded-full transition-all duration-200 group-hover:scale-125 ${isMeeting ? 'w-3.5 h-3.5' : 'w-4 h-4'}`}
+                      style={{
+                        backgroundColor: isSubmitted ? eventColor : 'white',
+                        border: isSubmitted ? 'none' : `2px solid ${eventColor}`,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+            );
           }
-          
-          // Apply staggering based on stack level
-          const offsets = [32, 48, 64, 80];
-          labelOffset = offsets[Math.min(stackLevel, offsets.length - 1)];
 
+          // Multiple events - show black circle with number
           return (
             <div
-              key={event.id}
-              className="absolute top-1/2 transform -translate-y-1/2 cursor-pointer group"
-              style={{ left: `${position}%`, zIndex: 30 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                event.viewButton?.onClick();
-              }}
-              title={isPending && event.pendingTransferFrom && event.pendingTransferTo ? 
-                `Transfer from ${event.pendingTransferFrom} to ${event.pendingTransferTo}` : 
-                undefined
-              }
+              key={dateKey}
+              className="absolute top-1/2 transform -translate-y-1/2"
+              style={{ left: `${position}%`, zIndex: isExpanded ? 50 : 30 }}
             >
-              <div className="relative flex flex-col items-center transform -translate-x-1/2 transition-all duration-200">
-                {isPending && event.pendingTransferFrom && event.pendingTransferTo ? (
-                  <div className="relative w-5 h-5">
-                    <div 
-                      className="absolute inset-0 rounded-full border-[3px] border-dashed"
-                      style={{ borderColor: transferFromColor }}
-                    ></div>
-                    <div 
-                      className="absolute inset-1 rounded-full border-[1.5px] border-dashed"
-                      style={{ borderColor: transferToColor }}
-                    ></div>
+              <div className="relative flex flex-col items-center transform -translate-x-1/2">
+                {/* Stacked individual dots (shown when expanded) */}
+                {isExpanded && (
+                  <div className="absolute bottom-full mb-1 flex flex-col-reverse items-center gap-1">
+                    {eventsOnDate.map((event) => {
+                      const isMeeting = event.type === "meeting";
+                      const isPending = event.status === 'pending';
+                      const isSubmitted = event.status === 'submitted';
+                      const assignedMember = event.assignedTo || event.memberName;
+                      const eventColor = assignedMember ? getMemberColor(assignedMember, members).hex : "#6b7280";
+                      const transferFromColor = event.pendingTransferFrom ? getMemberColor(event.pendingTransferFrom, members).hex : "#9ca3af";
+                      const transferToColor = event.pendingTransferTo ? getMemberColor(event.pendingTransferTo, members).hex : "#6b7280";
+
+                      return (
+                        <div
+                          key={event.id}
+                          className="cursor-pointer group"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            event.viewButton?.onClick();
+                          }}
+                        >
+                          {isPending && event.pendingTransferFrom && event.pendingTransferTo ? (
+                            <div className="relative w-5 h-5">
+                              <div className="absolute inset-0 rounded-full border-[3px] border-dashed" style={{ borderColor: transferFromColor }}></div>
+                              <div className="absolute inset-1 rounded-full border-[1.5px] border-dashed" style={{ borderColor: transferToColor }}></div>
+                            </div>
+                          ) : (
+                            <div
+                              className={`rounded-full transition-all duration-200 group-hover:scale-125 ${isMeeting ? 'w-3.5 h-3.5' : 'w-4 h-4'}`}
+                              style={{
+                                backgroundColor: isSubmitted ? eventColor : 'white',
+                                border: isSubmitted ? 'none' : `2px solid ${eventColor}`,
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                              }}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                ) : (
-                  <div
-                    className={`rounded-full transition-all duration-200 group-hover:scale-125 ${
-                      isMeeting ? 'w-3.5 h-3.5' : 'w-4 h-4'
-                    }`}
-                    style={{
-                      backgroundColor: isSubmitted ? eventColor : 'white',
-                      border: isSubmitted ? 'none' : `2px solid ${eventColor}`,
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                    }}
-                  />
                 )}
 
+                {/* Outlined circle with brand color */}
+                <div
+                  className="w-5 h-5 rounded-full bg-white flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-110"
+                  style={{ 
+                    border: '2.5px solid #8b1f1f',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)' 
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpandedDate(isExpanded ? null : dateKey);
+                  }}
+                >
+                  <span className="text-[#8b1f1f] text-[10px] font-bold">{eventsOnDate.length}</span>
+                </div>
               </div>
             </div>
           );
