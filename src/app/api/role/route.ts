@@ -68,6 +68,29 @@ export async function POST(req: NextRequest) {
       }
       userId = inserted.id;
     } else {
+      // Before changing role, remove user from all classes and groups to prevent abuse
+      // (e.g., student switching to teacher to access student groups)
+      
+      // Remove from all group memberships
+      await supabase
+        .from('group_members')
+        .delete()
+        .eq('user_id', userId);
+      
+      // Remove from all class enrollments (students)
+      await supabase
+        .from('class_students')
+        .delete()
+        .eq('student_id', userId);
+      
+      // Remove from all class ownerships (teachers)
+      // Note: This will cascade delete projects, groups, etc. via foreign key constraints
+      await supabase
+        .from('classes')
+        .delete()
+        .eq('teacher_id', userId);
+      
+      // Update the user's role
       const { error } = await supabase
         .from('users')
         .update({ role: dbRole })

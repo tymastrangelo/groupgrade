@@ -29,6 +29,7 @@ export default function Dashboard({
   const [showJoinClassModal, setShowJoinClassModal] = useState(false);
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showRoleChangeWarning, setShowRoleChangeWarning] = useState(false);
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -334,6 +335,17 @@ export default function Dashboard({
                       <div className="py-2">
                         <button
                           onClick={() => {
+                            setShowRoleChangeWarning(true);
+                            setMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] hover:bg-background-light transition-colors"
+                          role="menuitem"
+                        >
+                          <span className="material-symbols-outlined text-primary">swap_horiz</span>
+                          Change Role
+                        </button>
+                        <button
+                          onClick={() => {
                             setShowEditNameModal(true);
                             setMenuOpen(false);
                           }}
@@ -388,10 +400,17 @@ export default function Dashboard({
                       role="menu"
                     >
                       <div className="py-2">
-                        <a href="/survey" className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] hover:bg-background-light transition-colors" role="menuitem">
-                          <span className="material-symbols-outlined text-primary">refresh</span>
-                          Retake Survey
-                        </a>
+                        <button
+                          onClick={() => {
+                            setShowRoleChangeWarning(true);
+                            setMenuOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[#111318] hover:bg-background-light transition-colors"
+                          role="menuitem"
+                        >
+                          <span className="material-symbols-outlined text-primary">swap_horiz</span>
+                          Change Role
+                        </button>
                         <button
                           onClick={() => {
                             setShowEditNameModal(true);
@@ -489,12 +508,16 @@ export default function Dashboard({
               </button>
             </div>
             <div className="flex flex-col gap-2">
-              {!isTeacher && (
-                <a href="/survey" className="flex items-center gap-3 px-4 py-3 text-sm text-[#111318] hover:bg-background-light rounded-lg transition-colors">
-                  <span className="material-symbols-outlined text-primary">refresh</span>
-                  <span className="font-medium">Retake Survey</span>
-                </a>
-              )}
+              <button
+                onClick={() => {
+                  setShowRoleChangeWarning(true);
+                  setShowSettingsModal(false);
+                }}
+                className="flex items-center gap-3 px-4 py-3 text-sm text-[#111318] hover:bg-background-light rounded-lg transition-colors w-full"
+              >
+                <span className="material-symbols-outlined text-primary">swap_horiz</span>
+                <span className="font-medium">Change Role</span>
+              </button>
               <button onClick={() => { setShowEditNameModal(true); setShowSettingsModal(false); }} className="flex items-center gap-3 px-4 py-3 text-sm text-[#111318] hover:bg-background-light rounded-lg transition-colors">
                 <span className="material-symbols-outlined text-primary">edit</span>
                 <span className="font-medium">Edit Name</span>
@@ -506,6 +529,44 @@ export default function Dashboard({
               <button onClick={handleSignOut} className="flex items-center gap-3 px-4 py-3 text-sm text-[#111318] hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
                 <span className="material-symbols-outlined text-[#e11d48]">logout</span>
                 <span className="font-medium">Logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role Change Warning Modal */}
+      {showRoleChangeWarning && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                <span className="material-symbols-outlined text-orange-600 text-2xl">warning</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-[#111318] mb-2">Change Your Role?</h2>
+                <p className="text-sm text-[#616f89]">
+                  Changing your role will remove you from all your current classes and groups. This action cannot be undone.
+                </p>
+                <p className="text-sm text-[#616f89] mt-2">
+                  You'll be redirected to select a new role and will need to rejoin or create classes.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowRoleChangeWarning(false)}
+                className="flex-1 py-2.5 px-4 border border-[#e5e7eb] rounded-lg text-[#111318] font-medium text-sm hover:bg-[#f9fafb] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  window.location.href = '/role';
+                }}
+                className="flex-1 py-2.5 px-4 bg-orange-600 hover:bg-orange-700 text-white font-medium text-sm rounded-lg transition-colors"
+              >
+                Continue
               </button>
             </div>
           </div>
