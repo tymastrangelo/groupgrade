@@ -227,6 +227,7 @@ export default function StudentProjectDetail({
   });
 
   const [deliverableErrors, setDeliverableErrors] = useState<{ title?: string; description?: string; dueDate?: string }>({});
+  const [isCreatingDeliverable, setIsCreatingDeliverable] = useState(false);
 
   // Flag for creating a final deliverable
   const [isFinalDeliverable, setIsFinalDeliverable] = useState(false);
@@ -490,7 +491,7 @@ export default function StudentProjectDetail({
   }, [project]);
 
   const handleAddDeliverable = async () => {
-    if (!myGroup || !project || !session?.user) return;
+    if (!myGroup || !project || !session?.user || isCreatingDeliverable) return;
 
     const errors: { title?: string; description?: string; dueDate?: string } = {};
 
@@ -519,6 +520,7 @@ export default function StudentProjectDetail({
     }
 
     setDeliverableErrors({});
+    setIsCreatingDeliverable(true);
 
     try {
       const response = await fetch("/api/deliverables", {
@@ -546,6 +548,8 @@ export default function StudentProjectDetail({
       }
     } catch (error) {
       console.error("Failed to create deliverable:", error);
+    } finally {
+      setIsCreatingDeliverable(false);
     }
   };
 
@@ -1263,9 +1267,10 @@ export default function StudentProjectDetail({
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2 px-4 bg-primary hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors"
+                    disabled={isCreatingDeliverable}
+                    className="flex-1 py-2 px-4 bg-primary hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Add Deliverable
+                    {isCreatingDeliverable ? 'Adding...' : 'Add Deliverable'}
                   </button>
                 </div>
               </form>
