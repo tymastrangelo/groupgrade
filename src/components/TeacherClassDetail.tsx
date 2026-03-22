@@ -105,10 +105,14 @@ export function TeacherClassDetail({
   classId,
   embeddedGroups = false,
   initialGroupProjectId,
+  onClose,
+  onGroupsSaved,
 }: {
   classId: string;
   embeddedGroups?: boolean;
   initialGroupProjectId?: string;
+  onClose?: () => void;
+  onGroupsSaved?: () => void | Promise<void>;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -147,6 +151,7 @@ export function TeacherClassDetail({
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [openedFromQuery, setOpenedFromQuery] = useState(false);
+  const [isSavingGroups, setIsSavingGroups] = useState(false);
   const [unassignedSearch, setUnassignedSearch] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [editBusy, setEditBusy] = useState(false);
@@ -513,6 +518,7 @@ export function TeacherClassDetail({
 
   useEffect(() => {
     if (openedFromQuery) return;
+    if (isSavingGroups) return; // Don't re-trigger during save operation
     if (initialGroupProjectId && projects.length > 0) {
       openGrouping(initialGroupProjectId);
       setOpenedFromQuery(true);
@@ -527,7 +533,7 @@ export function TeacherClassDetail({
         router.replace(`/teacher/classes/${classId}`);
       }
     }
-  }, [openedFromQuery, searchParams, projects, classId, router, embeddedGroups, initialGroupProjectId]);
+  }, [openedFromQuery, searchParams, projects, classId, router, embeddedGroups, initialGroupProjectId, isSavingGroups]);
 
   const adjustGroupCount = (count: number) => {
     const safeCount = Math.max(1, Math.min(12, count));
@@ -571,6 +577,7 @@ export function TeacherClassDetail({
     if (!groupProjectId) return;
     setGroupBusy(true);
     setGroupError(null);
+    setIsSavingGroups(true);
     const currentProjectId = groupProjectId; // capture before any state changes
     const payload =
       groupMode === "auto"
@@ -591,14 +598,37 @@ export function TeacherClassDetail({
     }
 
     tasksCache.invalidate(`/api/classes/${classId}`);
-    await fetchData();
-    setGroupBusy(false);
     
     if (embeddedGroups) {
-      // Re-populate with saved groups to avoid "Loading groups..." stuck state
-      openGrouping(currentProjectId);
+      // Re-fetch data and then re-open grouping with fresh data
+      const freshRes = await fetch(`/api/classes/${classId}`);
+      if (freshRes.ok) {
+        const freshData = await freshRes.json();
+        const freshProject = freshData.projects?.find((p: any) => p.id === currentProjectId);
+        
+        if (freshProject?.groups?.length) {
+          const mapped = freshProject.groups.map((g: any, idx: number) => ({
+            id: g.id || `group-${idx}`,
+            name: g.name,
+            member_ids: g.members?.map((m: any) => m.id) || [],
+          }));
+          setManualGroups(mapped);
+          setManualGroupCount(mapped.length || 3);
+        }
+      }
+      
+      // Notify parent component that groups were saved
+      if (onGroupsSaved) {
+        await onGroupsSaved();
+      }
+      
+      setGroupBusy(false);
+      setIsSavingGroups(false);
     } else {
+      await fetchData();
+      setGroupBusy(false);
       setGroupProjectId(null);
+      setIsSavingGroups(false);
     }
   };
 
@@ -618,7 +648,13 @@ export function TeacherClassDetail({
             <h4 className="text-xl font-bold text-[#111318]">Set groups</h4>
             <p className="text-sm text-[#616f89]">Choose a strategy and organize students into teams.</p>
           </div>
-          <button onClick={() => setGroupProjectId(null)} className="text-[#616f89] hover:text-[#111318]">
+          <button onClick={() => {
+            if (embeddedGroups && onClose) {
+              onClose();
+            } else {
+              setGroupProjectId(null);
+            }
+          }} className="text-[#616f89] hover:text-[#111318]">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
@@ -792,7 +828,13 @@ export function TeacherClassDetail({
 
       <div className="flex items-center justify-end gap-2">
         <button
-          onClick={() => setGroupProjectId(null)}
+          onClick={() => {
+            if (embeddedGroups && onClose) {
+              onClose();
+            } else {
+              setGroupProjectId(null);
+            }
+          }}
           className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] text-[#111318]"
         >
           Cancel

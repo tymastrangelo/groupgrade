@@ -570,6 +570,11 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
                   classId={project.class_id}
                   embeddedGroups={true}
                   initialGroupProjectId={project.id}
+                  onClose={() => setShowGroupsModal(false)}
+                  onGroupsSaved={async () => {
+                    tasksCache.invalidate(url);
+                    await fetchProject();
+                  }}
                 />
               </div>
             </div>
