@@ -571,12 +571,13 @@ export function TeacherClassDetail({
     if (!groupProjectId) return;
     setGroupBusy(true);
     setGroupError(null);
+    const currentProjectId = groupProjectId; // capture before any state changes
     const payload =
       groupMode === "auto"
         ? { mode: "auto", group_size: groupSize }
         : { mode: "manual", groups: manualGroups.map((g) => ({ id: g.id, name: g.name, member_ids: g.member_ids })) };
 
-    const res = await fetch(`/api/classes/${classId}/projects/${groupProjectId}/groups`, {
+    const res = await fetch(`/api/classes/${classId}/projects/${currentProjectId}/groups`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -592,7 +593,13 @@ export function TeacherClassDetail({
     tasksCache.invalidate(`/api/classes/${classId}`);
     await fetchData();
     setGroupBusy(false);
-    setGroupProjectId(null);
+    
+    if (embeddedGroups) {
+      // Re-populate with saved groups to avoid "Loading groups..." stuck state
+      openGrouping(currentProjectId);
+    } else {
+      setGroupProjectId(null);
+    }
   };
 
   if (loading) {
