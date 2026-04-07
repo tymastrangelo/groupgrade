@@ -37,7 +37,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
     const { data: project, error: projErr } = await supabase
       .from('projects')
       .select(
-        `id, name, rubric, due_date, class_id, description, expectations, deliverables, rubric_file_url, created_at, updated_at,
+        `id, name, rubric, due_date, class_id, description, expectations, deliverables, rubric_file_url, created_at, updated_at, disengagement_config,
          classes:class_id(id, name, professor_id),
          groups(id, name, group_members(user_id, users(name, email, avatar_url)))`
       )
@@ -70,6 +70,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
       })),
     }));
 
+    const classData = (project as any).classes;
+    const className = classData?.name ?? 'Class';
+
     return NextResponse.json({
       project: {
         id: project.id,
@@ -77,13 +80,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
         rubric: project.rubric,
         due_date: project.due_date,
         class_id: classId,
-        class_name: project.classes?.name ?? 'Class',
+        class_name: className,
         description: project.description,
         expectations: project.expectations,
         deliverables: project.deliverables,
         rubric_file_url: project.rubric_file_url,
         created_at: project.created_at,
         updated_at: project.updated_at,
+        disengagement_config: project.disengagement_config,
         is_professor: professorId === user.id,
         groups: shapedGroups,
       },
@@ -136,12 +140,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pr
     const deliverables = formData.get('deliverables') as string | null;
     const due_date = formData.get('due_date') as string | null;
     const rubric_file = formData.get('rubric_file') as File | null;
+    const disengagement_config_str = formData.get('disengagement_config') as string | null;
 
     if (name !== null) updates.name = name;
     if (description !== null) updates.description = description;
     if (expectations !== null) updates.expectations = expectations;
     if (deliverables !== null) updates.deliverables = deliverables;
     if (due_date !== null) updates.due_date = due_date;
+    if (disengagement_config_str !== null) {
+      try {
+        const config = JSON.parse(disengagement_config_str);
+        updates.disengagement_config = config;
+      } catch (e) {
+        console.error('[Projects API] Failed to parse disengagement_config:', e);
+      }
+    }
     
     // Upload new rubric file if provided
     if (rubric_file && rubric_file.size > 0) {
@@ -173,7 +186,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ pr
       .from('projects')
       .update(updates)
       .eq('id', projectId)
-      .select('id, name, description, expectations, deliverables, rubric, due_date, rubric_file_url, updated_at')
+      .select('id, name, description, expectations, deliverables, rubric, due_date, rubric_file_url, updated_at, disengagement_config')
       .single();
 
     if (updateErr) throw new Error(updateErr.message);

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { tasksCache } from "@/lib/tasksCache";
+import { DisengagementFlaggingConfig, DisengagementConfig, DEFAULT_DISENGAGEMENT_CONFIG } from "@/components/DisengagementFlaggingConfig";
 
 type ClassData = {
   id: string;
@@ -135,6 +136,7 @@ export function TeacherClassDetail({
   const [deliverables, setDeliverables] = useState<string[]>(["Final project report (PDF)", "Peer review form"]);
   const [deliverableInput, setDeliverableInput] = useState("");
   const [rubricFile, setRubricFile] = useState<File | null>(null);
+  const [disengagementConfig, setDisengagementConfig] = useState<DisengagementConfig>(DEFAULT_DISENGAGEMENT_CONFIG);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [mockBusy, setMockBusy] = useState(false);
   const [mockError, setMockError] = useState<string | null>(null);
@@ -417,6 +419,7 @@ export function TeacherClassDetail({
     if (projectRubric.trim()) formData.append('rubric_text', projectRubric.trim());
     if (projectExpectations.trim()) formData.append('expectations', projectExpectations.trim());
     formData.append('deliverables', JSON.stringify(deliverables));
+    formData.append('disengagement_config', JSON.stringify(disengagementConfig));
     if (rubricFile) formData.append('rubric_file', rubricFile);
     
     const res = await fetch(`/api/classes/${classId}/projects`, {
@@ -1084,7 +1087,7 @@ export function TeacherClassDetail({
 
       {showProjectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-          <div className="w-full max-w-3xl bg-white rounded-xl shadow-2xl border border-[#e5e7eb] p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl border border-[#e5e7eb] p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between">
               <div>
                 <h4 className="text-lg font-bold text-[#111318]">Create project</h4>
@@ -1095,7 +1098,8 @@ export function TeacherClassDetail({
               </button>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="flex flex-col gap-3">
               <label className="text-sm font-semibold text-[#111318]">
                 Project name
                 <input
@@ -1259,6 +1263,14 @@ export function TeacherClassDetail({
               </div>
 
               {projectError && <div className="text-sm text-red-600">{projectError}</div>}
+              </div>
+
+              <div>
+                <DisengagementFlaggingConfig
+                  value={disengagementConfig}
+                  onChange={setDisengagementConfig}
+                />
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2">

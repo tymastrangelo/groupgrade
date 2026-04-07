@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
+import { DisengagementFlaggingConfig, DisengagementConfig, DEFAULT_DISENGAGEMENT_CONFIG } from '@/components/DisengagementFlaggingConfig';
 
 type ClassRow = {
   id: string;
@@ -37,6 +38,7 @@ export function TeacherProjectCreate() {
   const [deleteTarget, setDeleteTarget] = useState<ProjectRow | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deliverables, setDeliverables] = useState<string[]>(['Final project report (PDF)', 'Peer review form']);
+  const [disengagementConfig, setDisengagementConfig] = useState<DisengagementConfig>(DEFAULT_DISENGAGEMENT_CONFIG);
   const [form, setForm] = useState<FormState>({
     classId: '',
     name: '',
@@ -106,6 +108,7 @@ export function TeacherProjectCreate() {
           rubric_text: form.rubricText.trim() || undefined,
           expectations: form.expectations.trim() || undefined,
           deliverables,
+          disengagement_config: disengagementConfig,
         }),
       });
 
@@ -125,6 +128,7 @@ export function TeacherProjectCreate() {
         deliverableInput: '',
       }));
       setDeliverables(['Final project report (PDF)', 'Peer review form']);
+      setDisengagementConfig(DEFAULT_DISENGAGEMENT_CONFIG);
       fetchProjects(form.classId);
     } catch (e: any) {
       setError(e.message || 'Failed to create project');
@@ -185,11 +189,11 @@ export function TeacherProjectCreate() {
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto w-full">
-      <div className="bg-white rounded-xl shadow-2xl border border-[#e5e7eb] overflow-hidden">
+    <div className="p-8 w-full">
+      <div className="bg-white rounded-xl shadow-2xl border border-[#e5e7eb] max-w-[1400px] mx-auto">
         <div className="px-8 pt-8 pb-4">
           <h2 className="text-[#111318] text-2xl font-bold leading-tight tracking-tight">Create New Project</h2>
-          <p className="text-[#616f89] text-sm mt-1">Set the foundations for transparent group collaboration and fair grading.</p>
+          <p className="text-[#616f89] text-sm mt-1">Establish a new academic workspace. Define project goals and configure automated student engagement tracking.</p>
         </div>
 
         <div className="px-8 pb-6">
@@ -197,8 +201,10 @@ export function TeacherProjectCreate() {
           {success && <div className="mb-3 text-sm text-green-600">{success}</div>}
         </div>
 
-        <div className="px-8 pb-6 overflow-y-auto custom-scrollbar max-h-[70vh]">
-          <div className="space-y-6">
+        <div className="px-8 pb-6 max-h-[70vh] overflow-y-auto">
+          <div className="grid grid-cols-2 gap-6">
+            {/* Left Column - Project Identity */}
+            <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col">
                 <label className="text-sm font-semibold text-[#111318] mb-2">Class</label>
@@ -334,6 +340,15 @@ export function TeacherProjectCreate() {
                 </button>
               </div>
             </div>
+            </div>
+
+            {/* Right Column - Disengagement Flagging */}
+            <div className="lg:sticky lg:top-0 lg:self-start">
+              <DisengagementFlaggingConfig
+                value={disengagementConfig}
+                onChange={setDisengagementConfig}
+              />
+            </div>
           </div>
         </div>
 
@@ -344,6 +359,7 @@ export function TeacherProjectCreate() {
             onClick={() => {
               setForm((prev) => ({ ...prev, name: '', dueDate: '', description: '', rubricText: '', expectations: '', deliverableInput: '' }));
               setDeliverables(['Final project report (PDF)', 'Peer review form']);
+              setDisengagementConfig(DEFAULT_DISENGAGEMENT_CONFIG);
               setSuccess(null);
               setError(null);
             }}
@@ -356,8 +372,8 @@ export function TeacherProjectCreate() {
             disabled={!canSubmit || saving || loading}
             onClick={handleSubmit}
           >
-            <span className="material-symbols-outlined text-lg">check_circle</span>
-            {saving ? 'Saving...' : 'Create Project'}
+            <span className="material-symbols-outlined text-lg">rocket_launch</span>
+            {saving ? 'Initializing...' : 'Initialize Project'}
           </button>
         </div>
 

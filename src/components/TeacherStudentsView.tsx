@@ -43,32 +43,14 @@ export default function TeacherStudentsView() {
     const fetchEngagement = async () => {
       setLoading(true);
       try {
-        console.log('[Students Page] Fetching engagement data...');
         const res = await fetch('/api/teacher/engagement');
-        console.log('[Students Page] Response status:', res.status);
         
         if (res.ok) {
           const data = await res.json();
-          console.log('[Students Page] Data received:', data);
-          console.log('[Students Page] Students count:', data.students?.length || 0);
-          
-          if (data.debug) {
-            console.log('[Students Page] Debug Info:');
-            console.log('  - Classes found:', data.debug.classesCount);
-            console.log('  - Projects found:', data.debug.projectsCount);
-            console.log('  - Groups found:', data.debug.groupsCount);
-            console.log('  - Group members found:', data.debug.groupMembersCount);
-            console.log('  - Classes:', data.debug.classes);
-            console.log('  - Projects:', data.debug.projects);
-            console.log('  - Groups:', data.debug.groups);
-          }
-          
           setStudents(data.students || []);
-        } else {
-          console.error('[Students Page] API error:', res.status, res.statusText);
         }
       } catch (err) {
-        console.error('[Students Page] Failed to fetch engagement data:', err);
+        console.error('Failed to fetch engagement data:', err);
       } finally {
         setLoading(false);
       }

@@ -6,6 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { tasksCache } from "@/lib/tasksCache";
 import StudentProjectDetail from "@/components/StudentProjectDetail";
 import { TeacherClassDetail } from "@/components/TeacherClassDetail";
+import { DisengagementFlaggingConfig, DisengagementConfig, DEFAULT_DISENGAGEMENT_CONFIG } from "@/components/DisengagementFlaggingConfig";
 
 type ProjectData = {
   id: string;
@@ -20,6 +21,7 @@ type ProjectData = {
   rubric_file_url: string | null;
   created_at: string | null;
   updated_at: string | null;
+  disengagement_config: any;
   is_professor: boolean;
   groups: { id: string; name: string; members: { id: string; name: string; email: string; avatar_url?: string | null }[] }[];
 };
@@ -107,6 +109,7 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
   const [editDeliverables, setEditDeliverables] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
   const [editRubricFile, setEditRubricFile] = useState<File | null>(null);
+  const [disengagementConfig, setDisengagementConfig] = useState<DisengagementConfig>(DEFAULT_DISENGAGEMENT_CONFIG);
 
   const url = `/api/projects/${projectId}`;
 
@@ -123,6 +126,20 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
         setEditExpectations(p.expectations || "");
         setEditDeliverables(p.deliverables || "");
         setEditDueDate(toLocalInput(p.due_date));
+        // Load disengagement config
+        if (p.disengagement_config) {
+          try {
+            const config = typeof p.disengagement_config === 'string' 
+              ? JSON.parse(p.disengagement_config)
+              : p.disengagement_config;
+            setDisengagementConfig(config);
+          } catch (e) {
+            console.error('Failed to parse disengagement_config:', e);
+            setDisengagementConfig(DEFAULT_DISENGAGEMENT_CONFIG);
+          }
+        } else {
+          setDisengagementConfig(DEFAULT_DISENGAGEMENT_CONFIG);
+        }
       }
     } catch (e: any) {
       setError(e.message || "Failed to load project");
@@ -141,6 +158,20 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
         setEditExpectations(p.expectations || "");
         setEditDeliverables(p.deliverables || "");
         setEditDueDate(toLocalInput(p.due_date));
+        // Load disengagement config
+        if (p.disengagement_config) {
+          try {
+            const config = typeof p.disengagement_config === 'string' 
+              ? JSON.parse(p.disengagement_config)
+              : p.disengagement_config;
+            setDisengagementConfig(config);
+          } catch (e) {
+            console.error('Failed to parse disengagement_config:', e);
+            setDisengagementConfig(DEFAULT_DISENGAGEMENT_CONFIG);
+          }
+        } else {
+          setDisengagementConfig(DEFAULT_DISENGAGEMENT_CONFIG);
+        }
       }
     });
 
@@ -171,6 +202,7 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
     const dueDate = fromLocalInput(editDueDate);
     if (dueDate) formData.append('due_date', dueDate);
     if (editRubricFile) formData.append('rubric_file', editRubricFile);
+    formData.append('disengagement_config', JSON.stringify(disengagementConfig));
     
     const res = await fetch(`/api/projects/${projectId}`, {
       method: "PATCH",
@@ -521,6 +553,13 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
                           )}
                         </div>
                       </label>
+                    </div>
+
+                    <div className="mt-6">
+                      <DisengagementFlaggingConfig
+                        value={disengagementConfig}
+                        onChange={setDisengagementConfig}
+                      />
                     </div>
                     
                     {error && <p className="text-sm text-red-600">{error}</p>}

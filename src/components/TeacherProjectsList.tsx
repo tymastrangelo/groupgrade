@@ -5,6 +5,7 @@ import { tasksCache } from "@/lib/tasksCache";
 import DashboardLayout from "@/components/DashboardLayout";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DisengagementFlaggingConfig, DisengagementConfig, DEFAULT_DISENGAGEMENT_CONFIG } from "@/components/DisengagementFlaggingConfig";
 
 type ProjectWithClass = {
   id: string;
@@ -45,6 +46,7 @@ export default function TeacherProjectsList() {
   const [projectExpectations, setProjectExpectations] = useState("");
   const [deliverables, setDeliverables] = useState<string[]>(["Final project report (PDF)", "Peer review form"]);
   const [deliverableInput, setDeliverableInput] = useState("");
+  const [disengagementConfig, setDisengagementConfig] = useState<DisengagementConfig>(DEFAULT_DISENGAGEMENT_CONFIG);
 
   const url = "/api/teacher/projects";
   const classesUrl = "/api/classes";
@@ -96,6 +98,7 @@ export default function TeacherProjectsList() {
     setProjectExpectations("");
     setDeliverables(["Final project report (PDF)", "Peer review form"]);
     setDeliverableInput("");
+    setDisengagementConfig(DEFAULT_DISENGAGEMENT_CONFIG);
     setCreateError(null);
   };
 
@@ -127,6 +130,7 @@ export default function TeacherProjectsList() {
         rubric_text: projectRubric,
         expectations: projectExpectations,
         deliverables,
+        disengagement_config: disengagementConfig,
       }),
     });
 
@@ -222,8 +226,8 @@ export default function TeacherProjectsList() {
       </div>
 
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-[#e5e7eb]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-6xl rounded-xl shadow-2xl overflow-hidden border border-[#e5e7eb]">
             <div className="p-6 border-b border-[#eef2f7] flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-black text-[#111318]">Create New Project</h2>
@@ -241,12 +245,14 @@ export default function TeacherProjectsList() {
               </button>
             </div>
             <form
-              className="p-6 space-y-5 max-h-[80vh] overflow-y-auto"
+              className="p-6 max-h-[80vh] overflow-y-auto"
               onSubmit={(e) => {
                 e.preventDefault();
                 handleCreateProject();
               }}
             >
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-5">
               {createError && (
                 <div className="text-sm text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
                   {createError}
@@ -394,8 +400,17 @@ export default function TeacherProjectsList() {
                   ))}
                 </div>
               </div>
+              </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#eef2f7]">
+              <div>
+                <DisengagementFlaggingConfig
+                  value={disengagementConfig}
+                  onChange={setDisengagementConfig}
+                />
+              </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#eef2f7] mt-6">
                 <button
                   className="px-6 py-2.5 text-sm font-bold text-[#616f89] hover:text-[#111318] border border-gray-200 rounded-lg transition-colors"
                   type="button"
