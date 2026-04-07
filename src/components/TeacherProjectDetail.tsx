@@ -364,7 +364,7 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
         )}
 
         {/* Project Overview Modal */}
-        {showProjectOverviewModal && (
+        {showProjectOverviewModal && !editMode && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e7eb] shrink-0">
@@ -383,7 +383,6 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
                 </button>
               </div>
               <div className="p-6 overflow-y-auto space-y-6">
-                {!editMode ? (
                   <>
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -446,13 +445,34 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
                       )}
                     </div>
                   </>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-bold text-[#111318]">Edit project details</h3>
-                      <button onClick={() => setEditMode(false)} className="text-[#616f89] hover:text-[#111318]">
-                        <span className="material-symbols-outlined">close</span>
-                      </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Project Modal */}
+        {editMode && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl border border-[#e5e7eb] w-full max-w-6xl flex flex-col max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#e5e7eb]">
+                <div>
+                  <h3 className="text-lg font-bold text-[#111318]">Edit project details</h3>
+                  <p className="text-sm text-[#616f89]">Update project information and settings</p>
+                </div>
+                <button onClick={() => setEditMode(false)} className="text-[#616f89] hover:text-[#111318] transition-colors">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto px-6 py-6 bg-gradient-to-b from-[#fafbfc] to-white">
+                <div className="grid grid-cols-2 gap-8 divide-x divide-[#e5e7eb]">
+                  <div className="flex flex-col gap-5 pr-8">
+                    <div className="pb-3 border-b border-[#e5e7eb]">
+                      <h5 className="text-base font-bold text-[#111318] flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary">description</span>
+                        Project Details
+                      </h5>
+                      <p className="text-xs text-[#616f89] mt-1">Basic information and settings</p>
                     </div>
                     <label className="text-sm font-semibold text-[#111318]">
                       Project name
@@ -554,35 +574,37 @@ export default function TeacherProjectDetail({ projectId }: { projectId: string 
                         </div>
                       </label>
                     </div>
-
-                    <div className="mt-6">
-                      <DisengagementFlaggingConfig
-                        value={disengagementConfig}
-                        onChange={setDisengagementConfig}
-                      />
-                    </div>
-                    
-                    {error && <p className="text-sm text-red-600">{error}</p>}
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => setEditMode(false)}
-                        className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] text-[#111318]"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={async () => {
-                          await handleSave();
-                          setEditMode(false);
-                        }}
-                        disabled={saving || !editName.trim()}
-                        className="px-4 py-2 rounded-lg text-sm font-bold bg-primary text-white disabled:opacity-50"
-                      >
-                        {saving ? "Saving..." : "Save changes"}
-                      </button>
-                    </div>
                   </div>
-                )}
+                  
+                  <div className="pl-8">
+                    <DisengagementFlaggingConfig
+                      value={disengagementConfig}
+                      onChange={setDisengagementConfig}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between px-6 py-4 border-t border-[#e5e7eb] bg-[#fafbfc]">
+                {error && <p className="text-sm text-red-600">{error}</p>}
+                <div className="flex items-center justify-end gap-3 ml-auto">
+                  <button
+                    onClick={() => setEditMode(false)}
+                    className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] text-[#111318]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await handleSave();
+                      setEditMode(false);
+                    }}
+                    disabled={saving || !editName.trim()}
+                    className="px-4 py-2 rounded-lg text-sm font-bold bg-primary text-white disabled:opacity-50"
+                  >
+                    {saving ? "Saving..." : "Save changes"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

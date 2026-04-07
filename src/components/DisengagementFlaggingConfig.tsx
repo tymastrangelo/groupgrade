@@ -175,16 +175,16 @@ export function DisengagementFlaggingConfig({ value, onChange }: DisengagementFl
   const idleDecayValues = getDecayValues(config.idleDecay);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-[#e5e7eb] overflow-hidden">
-      <div className="px-6 py-4 border-b border-[#e5e7eb] bg-gradient-to-r from-primary/5 to-transparent">
-        <h3 className="text-lg font-bold text-primary flex items-center gap-2">
-          <span className="material-symbols-outlined">flag</span>
+    <div className="flex flex-col gap-5">
+      <div className="pb-3 border-b border-[#e5e7eb]">
+        <h5 className="text-base font-bold text-[#111318] flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary">flag</span>
           Disengagement Flagging
-        </h3>
-        <p className="text-sm text-[#616f89] mt-1">Configure automated student engagement tracking</p>
+        </h5>
+        <p className="text-xs text-[#616f89] mt-1">Configure automated student engagement tracking</p>
       </div>
 
-      <div className="p-6">
+      <div>
         <details open className="group">
           <summary className="flex items-center justify-between cursor-pointer list-none p-4 rounded-lg bg-[#f9fafb] hover:bg-[#f3f4f6] transition-colors border border-[#e5e7eb]">
             <span className="text-sm font-bold text-primary">Configure Weighting & Status Levels</span>

@@ -1087,19 +1087,27 @@ export function TeacherClassDetail({
 
       {showProjectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
-          <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl border border-[#e5e7eb] p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-start justify-between">
+          <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl border border-[#e5e7eb] flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#e5e7eb]">
               <div>
                 <h4 className="text-lg font-bold text-[#111318]">Create project</h4>
                 <p className="text-sm text-[#616f89]">Set basics and grouping preferences.</p>
               </div>
-              <button onClick={() => setShowProjectModal(false)} className="text-[#616f89] hover:text-[#111318]">
+              <button onClick={() => setShowProjectModal(false)} className="text-[#616f89] hover:text-[#111318] transition-colors">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="flex flex-col gap-3">
+            <div className="flex-1 overflow-y-auto px-6 py-6 bg-gradient-to-b from-[#fafbfc] to-white">
+            <div className="grid grid-cols-2 gap-8 divide-x divide-[#e5e7eb]">
+              <div className="flex flex-col gap-5 pr-8">
+                <div className="pb-3 border-b border-[#e5e7eb]">
+                  <h5 className="text-base font-bold text-[#111318] flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary">description</span>
+                    Project Details
+                  </h5>
+                  <p className="text-xs text-[#616f89] mt-1">Basic information and settings</p>
+                </div>
               <label className="text-sm font-semibold text-[#111318]">
                 Project name
                 <input
@@ -1265,15 +1273,16 @@ export function TeacherClassDetail({
               {projectError && <div className="text-sm text-red-600">{projectError}</div>}
               </div>
 
-              <div>
+              <div className="pl-8">
                 <DisengagementFlaggingConfig
                   value={disengagementConfig}
                   onChange={setDisengagementConfig}
                 />
               </div>
             </div>
+            </div>
 
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#e5e7eb] bg-[#fafbfc]">
               <button
                 onClick={() => setShowProjectModal(false)}
                 className="px-4 py-2 rounded-lg text-sm font-bold border border-[#e5e7eb] text-[#111318]"

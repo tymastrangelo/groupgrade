@@ -227,14 +227,14 @@ export default function TeacherProjectsList() {
 
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-6xl rounded-xl shadow-2xl overflow-hidden border border-[#e5e7eb]">
-            <div className="p-6 border-b border-[#eef2f7] flex justify-between items-center">
+          <div className="bg-white w-full max-w-6xl rounded-xl shadow-2xl overflow-hidden border border-[#e5e7eb] flex flex-col max-h-[90vh]">
+            <div className="px-6 pt-6 pb-4 border-b border-[#e5e7eb] flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-black text-[#111318]">Create New Project</h2>
-                <p className="text-xs text-[#616f89] mt-1">Add project info, then assign groups.</p>
+                <h2 className="text-lg font-bold text-[#111318]">Create New Project</h2>
+                <p className="text-sm text-[#616f89] mt-1">Add project info, then assign groups.</p>
               </div>
               <button
-                className="text-[#616f89] hover:text-primary transition-colors"
+                className="text-[#616f89] hover:text-[#111318] transition-colors"
                 onClick={() => {
                   setShowCreate(false);
                   resetCreateForm();
@@ -245,14 +245,21 @@ export default function TeacherProjectsList() {
               </button>
             </div>
             <form
-              className="p-6 max-h-[80vh] overflow-y-auto"
+              className="flex-1 overflow-y-auto px-6 py-6 bg-gradient-to-b from-[#fafbfc] to-white"
               onSubmit={(e) => {
                 e.preventDefault();
                 handleCreateProject();
               }}
             >
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-8 divide-x divide-[#e5e7eb]">
+                <div className="flex flex-col gap-5 pr-8">
+                  <div className="pb-3 border-b border-[#e5e7eb]">
+                    <h5 className="text-base font-bold text-[#111318] flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary">description</span>
+                      Project Details
+                    </h5>
+                    <p className="text-xs text-[#616f89] mt-1">Basic information and settings</p>
+                  </div>
               {createError && (
                 <div className="text-sm text-red-600 bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
                   {createError}
@@ -402,15 +409,16 @@ export default function TeacherProjectsList() {
               </div>
               </div>
 
-              <div>
+              <div className="pl-8">
                 <DisengagementFlaggingConfig
                   value={disengagementConfig}
                   onChange={setDisengagementConfig}
                 />
               </div>
               </div>
+            </form>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#eef2f7] mt-6">
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#e5e7eb] bg-[#fafbfc]">
                 <button
                   className="px-6 py-2.5 text-sm font-bold text-[#616f89] hover:text-[#111318] border border-gray-200 rounded-lg transition-colors"
                   type="button"
@@ -430,7 +438,6 @@ export default function TeacherProjectsList() {
                   {createBusy ? "Saving..." : "Next: Assign Groups"}
                 </button>
               </div>
-            </form>
           </div>
         </div>
       )}
