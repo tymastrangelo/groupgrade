@@ -265,16 +265,16 @@ export default function GroupAnalyticsView() {
                             <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden max-w-[120px]">
                               <div
                                 className={`h-full ${
-                                  group.avgEngagement === 100 ? 'bg-green-500' :
-                                  group.avgEngagement >= 75 ? 'bg-orange-500' : 
+                                  group.avgEngagement >= 76 ? 'bg-green-500' :
+                                  group.avgEngagement >= 65 ? 'bg-orange-500' : 
                                   'bg-red-500'
                                 }`}
                                 style={{ width: `${group.avgEngagement}%` }}
                               />
                             </div>
                             <span className={`text-sm font-bold ${
-                              group.avgEngagement === 100 ? 'text-green-600' :
-                              group.avgEngagement >= 75 ? 'text-orange-600' : 
+                              group.avgEngagement >= 76 ? 'text-green-600' :
+                              group.avgEngagement >= 65 ? 'text-orange-600' : 
                               'text-red-600'
                             }`}>{group.avgEngagement}%</span>
                           </div>

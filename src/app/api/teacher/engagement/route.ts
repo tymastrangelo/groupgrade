@@ -425,9 +425,12 @@ export async function GET(request: NextRequest) {
       const atRiskPercentage = members.length > 0 ? (atRiskStudents / members.length) * 100 : 0;
       const groupAtRisk = projectConfig.hardFlagTriggers.groupRiskThreshold.enabled 
         && atRiskPercentage >= projectConfig.hardFlagTriggers.groupRiskThreshold.percentage;
+      
+      // Convert avgGroupEngagement from 0-100 scale to 0-10 scale to match thresholds
+      const avgGroupEngagementOn10Scale = avgGroupEngagement / 10;
       const groupRiskLevel = groupAtRisk ? 'needs-attention' 
-        : avgGroupEngagement >= projectConfig.thresholds.needsAttention ? 'healthy' 
-        : avgGroupEngagement >= projectConfig.thresholds.atRisk ? 'watch'
+        : avgGroupEngagementOn10Scale >= projectConfig.thresholds.needsAttention ? 'healthy' 
+        : avgGroupEngagementOn10Scale >= projectConfig.thresholds.atRisk ? 'watch'
         : 'needs-attention';
 
       groupEngagementData.push({
